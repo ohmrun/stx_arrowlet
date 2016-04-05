@@ -1,0 +1,6 @@
+-main Test
+-cp src/main/haxe
+-cp src/test/haxe
+
+
+-neko test/neko_test.n

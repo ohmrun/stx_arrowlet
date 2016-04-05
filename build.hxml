@@ -1,0 +1,10 @@
+-lib stx_tuple
+-lib stx_maybe
+-lib stx_chunk
+-lib tink_core
+-lib compiletime
+
+-lib utest
+
+
+hxml/test/nodejs.hxml
