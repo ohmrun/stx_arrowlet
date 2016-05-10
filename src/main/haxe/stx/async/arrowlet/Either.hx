@@ -7,7 +7,7 @@ import stx.core.Blocks.upply;
 
 
 
-using hx.Maybe;
+using stx.Maybe;
 import haxe.ds.Option;
 import tink.core.Future;
 import stx.data.*;

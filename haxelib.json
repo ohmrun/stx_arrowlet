@@ -4,13 +4,14 @@
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for pain free asynchronous programming",
-    "version": "0.9.3",
-    "releasenote": "Exact versions",
+    "version": "0.9.5",
+    "releasenote": "stx.Vouch dependency",
     "contributors": ["0b1kn00b"],
     "dependencies": {
-        "tink_core": "1.0.0-rc.11",
-        "pointwise": "0.8.5",
-	      "stx_maybe": "0.0.6",
+        "tink_core": "",
+        "pointwise": "0.8.7",
+        "stx_vouch": "",
+	    "stx_maybe": "0.0.7",
         "stx_tuple": "0.0.3"
     },
     "classPath": "src/main/haxe"

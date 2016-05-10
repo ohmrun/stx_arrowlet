@@ -1,6 +1,6 @@
 package stx.async.arrowlet;
 
-using hx.Maybe;
+using stx.Maybe;
 
 import stx.core.Blocks.upply;
 

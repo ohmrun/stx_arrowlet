@@ -1,6 +1,6 @@
 package stx.async.types;
 
-import hx.Maybe;
+import stx.Maybe;
 import stx.data.*;
 import tink.core.Callback;
 
