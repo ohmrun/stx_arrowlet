@@ -1,13 +1,15 @@
 -lib pointwise
 
+-lib thx.core
 -lib stx_tuple
 -lib stx_maybe
 -lib stx_chunk
 -lib stx_vouch
 -lib tink_core
--lib compiletime
+
 
 -lib utest
 
+--each
 
-hxml/test/nodejs.hxml
+hxml/test/js_browser.hxml

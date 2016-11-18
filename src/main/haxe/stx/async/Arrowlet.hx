@@ -3,7 +3,7 @@ package stx.async;
 import tink.CoreApi;
 
 import stx.data.*;
-import stx.core.Blocks.NIL in noop;
+
 
 import stx.async.arrowlet.types.State in TState;
 import tink.core.Callback;
@@ -46,6 +46,9 @@ import stx.async.arrowlet.Either;
   }
   public function then<N>(r:Arrowlet<O,N>):Arrowlet<I,N>{
     return Arrowlets.then(this,r);
+  }
+  public function compose<N>(r:Arrowlet<N,I>):Arrowlet<N,O>{
+    return Arrowlets.then(r,this);
   }
   public function new(v:TArrowlet<I,O>){
     this  = v;

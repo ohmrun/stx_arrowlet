@@ -6,7 +6,6 @@ using stx.core.Blocks;
 import stx.core.Blocks.upply;
 
 
-
 using stx.Maybe;
 import haxe.ds.Option;
 import tink.core.Future;

@@ -1,12 +1,14 @@
 package;
 
 import stx.async.arrowlet.Windmill;
+import stx.async.arrowlet.Crank;
+import stx.async.arrowlet.crank.CrankApply;
 
 using Lambda;
 
 class Test{
   static function main(){
-    CompileTime.importPackage("test");
+    //CompileTime.importPackage("test");
     //CompileTime.importPackage("stx.async");
 
     var a = new utest.Runner();

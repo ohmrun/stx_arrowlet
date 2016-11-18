@@ -4,17 +4,17 @@ using stx.async.Arrowlet;
 using stx.Tuple;
 
 #if (!nodejs && js)
-import js.JQuery.JqEvent;
-import js.JQuery in TJQuery;
+import js.jquery.Event in JqEvent;
+import js.jquery.JQuery in TJQuery;
 
 
-abstract JQueryEvent(Arrowlet<String,JqEvent>) from Arrowlet<String,JqEvent> to Arrowlet<String,JqEvent>{
-  public function new(j:TJQuery){
+@:callable abstract JQueryEvent(Arrowlet<String,JqEvent>) from Arrowlet<String,JqEvent> to Arrowlet<String,JqEvent>{
+  public function new(j:js.jquery.JQuery){
     this =
       function withInput(?i: String, cont : JqEvent -> Void){
         var cancel    = null;
         var listener  =
-          function(x:JqEvent){
+          function(x:js.jquery.Event){
             //trace('call: $event');
             cont(x);
           };

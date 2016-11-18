@@ -15,5 +15,4 @@ abstract RightSwitch<A,B,C,D>(Arrowlet<Either<A,B>,Either<A,D>>) from Arrowlet<E
       }
     });
   }
-
 }
