@@ -13,3 +13,5 @@
 --each
 
 hxml/test/js_browser.hxml
+--next
+hxml/test/neko.hxml 

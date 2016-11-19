@@ -3,16 +3,16 @@
     "url": "https://github.com/0b1kn00b/arrowlets",
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
-    "description": "A library for pain free asynchronous programming",
-    "version": "0.9.8",
-    "releasenote": "typo",
+    "description": "A library for (somewhat) pain free asynchronous programming",
+    "version": "0.10.3",
+    "releasenote": "Crank.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
         "tink_core": "",
         "pointwise": "",
         "stx_vouch": "",
-	      "stx_maybe": "",
-        "stx_tuple": "0.0.3"
+	    "stx_maybe": "",
+        "stx_tuple": ""
     },
     "classPath": "src/main/haxe"
 }

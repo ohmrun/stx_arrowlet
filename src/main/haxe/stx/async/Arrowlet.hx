@@ -44,6 +44,9 @@ import stx.async.arrowlet.Either;
       cont(v);
     });
   }
+  public function apply(v:I):Future<O>{
+    return Arrowlets.apply(this,v);
+  }
   public function then<N>(r:Arrowlet<O,N>):Arrowlet<I,N>{
     return Arrowlets.then(this,r);
   }

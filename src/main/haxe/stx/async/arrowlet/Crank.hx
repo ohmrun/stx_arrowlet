@@ -8,6 +8,7 @@ import stx.Maybe;
 import stx.Chunk;
 import stx.Error;
 
+import stx.Vouch;
 import tink.core.Future;
 import tink.core.Noise;
 import tink.core.Callback;
@@ -30,14 +31,23 @@ using stx.Chunk;
 typedef ArrowletCrank<I,O> = Arrowlet<Chunk<I>,Chunk<O>>;
 
 @:forward @:callable abstract Crank<I,O>(ArrowletCrank<I,O>) from ArrowletCrank<I,O> to ArrowletCrank<I,O>{
+  static public function unit<I>():Crank<I,I>{
+    return function(chk:Chunk<I>,cont){
+      cont(chk);
+      return null;
+    }
+  }
   /*
   @:from static public function fromCreateArrow<I,O>(arw:Arrowlet<I,Chunk<O>>):Crank<I,O>{
     return function(x:Chunk<I>,cont:(Chunk<O> -> Void) -> Void){
       switch()
     }
   }*/
-  public function imply(v:I):Future<Chunk<O>>{
-    return Cranks.imply(this,v);
+  public function apply(v:Chunk<I>):Vouch<O>{
+    return (this.apply(v):Vouch<O>);
+  }
+  public function imply(v:I):Vouch<O>{
+    return (Cranks.imply(this,v):Vouch<O>);
   }
 }
 class Cranks{
@@ -74,6 +84,17 @@ class Cranks{
         case End(e) : cont.invoke(End(e));
         case Nil    : cont.invoke(Nil);
       }
+      return null;
+    }
+  }
+  static public function resolve<A,B>(arw:Arrowlet<Chunk<A>,B>):Arrowlet<Chunk<A>,Chunk<B>>{
+    return function(chk:Chunk<A>,cont:Callback<Chunk<B>>){
+      arw(
+        chk,
+        function(b:B){
+          return cont.invoke(Val(b));
+        }
+      );
       return null;
     }
   }

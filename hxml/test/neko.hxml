@@ -3,4 +3,4 @@
 -cp src/test/haxe
 
 
--neko test/neko_test.n
+-x test/neko_test.n
