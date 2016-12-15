@@ -5,7 +5,6 @@
 -lib stx_maybe
 -lib stx_chunk
 -lib stx_vouch
--lib tink_core
 
 
 -lib utest

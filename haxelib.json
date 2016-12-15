@@ -12,7 +12,8 @@
         "pointwise": "",
         "stx_vouch": "",
 	    "stx_maybe": "",
-        "stx_tuple": ""
+        "stx_tuple": "",
+        "stx_chunk": ""
     },
     "classPath": "src/main/haxe"
 }

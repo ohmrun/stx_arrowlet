@@ -1,8 +1,6 @@
 package;
 
-import stx.async.arrowlet.Windmill;
-import stx.async.arrowlet.Crank;
-import stx.async.arrowlet.crank.CrankApply;
+using stx.async.arrowlet.Package;
 
 using Lambda;
 
