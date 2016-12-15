@@ -116,6 +116,9 @@ import stx.async.arrowlet.Either;
   }
 }
 class Arrowlets{
+  static public function lift(){
+    return new Lift();
+  }
   static public function later<A,B>(arw:Arrowlet<A,B>,v:A):Arrowlet<Noise,B>{
     return function(n:Noise,cont){
       return arw(v,cont);

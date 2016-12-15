@@ -1,4 +1,4 @@
-package stx.async.data;
+package stx.async.arrowlet.head.data;
 
 import tink.CoreApi;
 

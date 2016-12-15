@@ -49,6 +49,9 @@ typedef ArrowletCrank<I,O> = Arrowlet<Chunk<I>,Chunk<O>>;
   public function imply(v:I):Vouch<O>{
     return (Cranks.imply(this,v):Vouch<O>);
   }
+  public function attempt(arw){
+    return Cranks.attempt(this);
+  }
 }
 class Cranks{
   static public function imply<A,B>(arw:ArrowletCrank<A,B>,v:A):Future<Chunk<B>>{
@@ -77,7 +80,7 @@ class Cranks{
       return null;
     }
   }
-  static public function attempt<A,B>(arw:Arrowlet<A,Chunk<B>>):Arrowlet<Chunk<A>,Chunk<B>>{
+  @:noUsing static public function attempt<A,B>(arw:Arrowlet<A,Chunk<B>>):Arrowlet<Chunk<A>,Chunk<B>>{
     return function(chk:Chunk<A>,cont:Callback<Chunk<B>>){
       switch(chk){
         case Val(v) : arw.withInput(v,cont.invoke);

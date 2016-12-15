@@ -5,8 +5,8 @@ using stx.Tuple;
 using stx.core.Blocks;
 import stx.core.Blocks.upply;
 
+using tink.core.Option;
 
-using stx.Maybe;
 import haxe.ds.Option;
 import tink.core.Future;
 import stx.data.*;

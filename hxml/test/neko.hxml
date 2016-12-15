@@ -2,5 +2,4 @@
 -cp src/main/haxe
 -cp src/test/haxe
 
-
 -x test/neko_test.n
