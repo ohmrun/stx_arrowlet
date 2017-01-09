@@ -130,10 +130,6 @@ class Arrowlets{
       }
     );
   }
-  @doc("Produces an Arrowlet that is applied if the input is Some.")
-  public static function only<I,O>(a:Arrowlet<I,O>):Only<I,O>{
-    return new Only(a);
-  }
   @doc("Produces an Arrowlet that patches the output with `n`.")
   public static function exchange<I,O,N>(a:Arrowlet<I,O>,n:N):Arrowlet<I,N>{
     return then(a,
@@ -152,15 +148,6 @@ class Arrowlets{
         }
       }
     );
-  }
-  @doc("Takes an Arrowlet that produces an Option and returns one that takes an Option also.")
-  static public function fromOption<I,O>(arw:Arrowlet<I,Option<O>>):Arrowlet<Option<I>,Option<O>>{
-    return flatten(only(arw));
-  }
-  @doc("Print the output of an Arrowlet")
-  static public function printA<A,B>(a:Arrowlet<A,B>):Arrowlet<A,B>{
-    var m : B->B = function(x:B):B { haxe.Log.trace(x) ; return x;};
-    return new Then( a, m );
   }
   @doc("Runs a `then` operation where the creation of the second arrow requires a function call to produce it.")
   static public function invoke<A,B,C>(a:Arrowlet<A,B>,b:Thunk<Arrowlet<B,C>>){

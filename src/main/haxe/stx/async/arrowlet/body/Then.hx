@@ -2,7 +2,7 @@ package stx.async.arrowlet.body;
 
 import stx.core.Blocks.upply;
 
-abstract Then<A,B,C>(Arrowlet<A,C>) from Arrowlet<A,C> to Arrowlet<A,C>{
+@:forward @:callable abstract Then<A,B,C>(Arrowlet<A,C>) from Arrowlet<A,C> to Arrowlet<A,C>{
 	public function new(fst:Arrowlet<A,B>,snd:Arrowlet<B,C>){
 		this = function(v:A,cont:C->Void){
 			var cn0,cn1 = null;

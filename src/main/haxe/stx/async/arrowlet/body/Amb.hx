@@ -4,7 +4,7 @@ package stx.async.arrowlet.body;
 using stx.core.Blocks;
 import stx.core.Blocks.upply;
 
-abstract Amb<I,O>(Arrowlet<I,O>) from Arrowlet<I,O> to Arrowlet<I,O>{
+@:forward @:callable abstract Amb<I,O>(Arrowlet<I,O>) from Arrowlet<I,O> to Arrowlet<I,O>{
 	public function new(l:Arrowlet<I,O>,r:Arrowlet<I,O>){
 		this = function(v:I,cont:Sink<O>){
 			var out 	= None;
