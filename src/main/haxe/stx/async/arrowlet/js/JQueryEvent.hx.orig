@@ -1,0 +1,42 @@
+package stx.async.arrowlet.js;
+
+using stx.async.Arrowlet;
+using stx.Tuple;
+
+#if (!nodejs && js)
+<<<<<<< HEAD
+import js.jquery.Event in JqEvent;
+import js.jquery.JQuery in TJQuery;
+
+
+@:callable abstract JQueryEvent(Arrowlet<String,JqEvent>) from Arrowlet<String,JqEvent> to Arrowlet<String,JqEvent>{
+  public function new(j:js.jquery.JQuery){
+=======
+import js.JQuery.JqEvent;
+import js.JQuery in TJQuery;
+
+
+abstract JQueryEvent(Arrowlet<String,JqEvent>) from Arrowlet<String,JqEvent> to Arrowlet<String,JqEvent>{
+  public function new(j:TJQuery){
+>>>>>>> d6c559d74df211d5cbbe5895859181637e5e0e4b
+    this =
+      function withInput(?i: String, cont : JqEvent -> Void){
+        var cancel    = null;
+        var listener  =
+<<<<<<< HEAD
+          function(x:js.jquery.Event){
+=======
+          function(x:JqEvent){
+>>>>>>> d6c559d74df211d5cbbe5895859181637e5e0e4b
+            //trace('call: $event');
+            cont(x);
+          };
+        j.one(
+          i,
+          listener
+        );
+        return function(){};
+      }
+  }
+}
+#end

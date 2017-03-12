@@ -1,0 +1,10 @@
+-main Test
+-cp src/main/haxe
+-cp src/test/haxe
+
+<<<<<<< HEAD
+-x test/neko_test.n
+=======
+
+-neko test/neko_test.n
+>>>>>>> d6c559d74df211d5cbbe5895859181637e5e0e4b

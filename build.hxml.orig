@@ -1,0 +1,27 @@
+-lib pointwise
+<<<<<<< HEAD
+
+-lib thx.core
+-lib stx_tuple
+-lib stx_maybe
+-lib stx_chunk
+-lib stx_vouch
+
+
+-lib utest
+
+--each
+
+hxml/test/js_browser.hxml
+--next
+hxml/test/neko.hxml 
+=======
+-lib stx_tuple
+-lib tink_core
+-lib compiletime
+
+-lib utest
+
+
+hxml/test/nodejs.hxml
+>>>>>>> d6c559d74df211d5cbbe5895859181637e5e0e4b
