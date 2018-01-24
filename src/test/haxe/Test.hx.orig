@@ -1,7 +1,7 @@
 package;
 
 <<<<<<< HEAD
-using stx.async.arrowlet.Package;
+using stx.arrowlet.Package;
 
 =======
 >>>>>>> d6c559d74df211d5cbbe5895859181637e5e0e4b
@@ -21,7 +21,7 @@ class Test{
     utest.ui.Report.create(a);
     var arr : Array<Dynamic> = [
       #if (js && !nodejs)
-        //new stx.async.arrowlet.js.JQueryEventTest()
+        //new stx.arrowlet.js.JQueryEventTest()
       #end
     ];
     arr.iter(

@@ -1,6 +1,6 @@
 package;
 
-using stx.async.arrowlet.Package;
+using stx.arrowlet.Package;
 
 using Lambda;
 
@@ -13,7 +13,7 @@ class Test{
     utest.ui.Report.create(a);
     var arr : Array<Dynamic> = [
       #if (js && !nodejs)
-        //new stx.async.arrowlet.js.JQueryEventTest()
+        //new stx.arrowlet.js.JQueryEventTest()
       #end
     ];
     arr.iter(

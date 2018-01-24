@@ -1,7 +1,7 @@
-package test.stx.async.arrowlet.js;
+package test.stx.arrowlet.js;
 
 
-import stx.async.arrowlet.js.JQueryEvent;
+import stx.arrowlet.js.JQueryEvent;
 
 class JQueryEventTest{
   public function new(){}

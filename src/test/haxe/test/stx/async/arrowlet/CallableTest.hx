@@ -1,6 +1,6 @@
-package test.stx.async.arrowlet;
+package test.stx.arrowlet;
 
-using stx.async.Arrowlet;
+using stx.arrowlet;
 
 class CallableTest{
   public function new(){
