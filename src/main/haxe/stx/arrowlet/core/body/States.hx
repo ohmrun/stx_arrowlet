@@ -12,7 +12,7 @@ class States{
       );
   }
   static public function access<S,A,B>(arw0:StateT<S,A>,arw1:Arrowlet<Tuple2<A,S>,B>):StateT<S,B>{
-    return arw0.join(arw1)
+    return arw0.joint(arw1)
       .then(
         function(l:Tuple2<A,S>,r:B){
           return tuple2(r,l.snd());

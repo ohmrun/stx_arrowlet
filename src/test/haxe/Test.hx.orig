@@ -34,7 +34,7 @@ class Test{
     var a = function(x:Int) return x * 2;
     var b = function(x:Int) return x + 1;
 
-    _.then(a).then(b).join(
+    _.then(a).then(b).joint(
       function(x){
         trace(x);
         return x + 3;

@@ -24,7 +24,7 @@ import stx.arrowlet.core.head.Data.Repeat in TRepeat;
 	}
 	static public function collect<I,O,Z>(arw:Arrowlet<I,O>,selector:O->Bool,fold:Z->O->Z,init:Z):Arrowlet<I,Z>{
 		var op = init;
-		return return new Repeat(arw.bind(
+		return return new Repeat(arw.bound(
 			function(i:I,o:O){
 				return switch (selector(o)) {
 					case true 	: op = fold(op,o); 		

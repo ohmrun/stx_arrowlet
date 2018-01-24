@@ -1,18 +1,17 @@
 package stx.arrowlet.core.body;
 
 class Arrowlets{
-  /*
   static public function later<A,B>(arw:Arrowlet<A,B>,v:A):Arrowlet<Noise,B>{
     return function(n:Noise,cont:Sink<B>){
-      return arw(Fly(v,cont));
+      return arw.withInput(v,cont);
     }
   }
   static public function inject<A,B,C>(arw:Arrowlet<A,B>,v:C):Arrowlet<A,C>{
     return arw.then(
       (b:B) -> v
     );
-  }*/
-  static public inline function tap<I,O>(arw:Arrowlet<I,O>,fn:O->Void){
+  }
+  static public inline function tapO<I,O>(arw:Arrowlet<I,O>,fn:O->Void){
     return then(arw,
       Lift.fromSink(function(i,cont){
         fn(i);
@@ -49,7 +48,7 @@ class Arrowlets{
   static public function second<A,B,C>(second:Arrowlet<A,B>):Arrowlet<Tuple2<C,A>,Tuple2<C,B>>{
     return pair(Arrowlet.unit(), second);
   }
-  @doc("Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with thesame input.")
+  @doc("Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with the same input.")
   static public function split<A, B, C>(split_:Arrowlet<A, B>, _split:Arrowlet<A, C>):Arrowlet<A, Tuple2<B,C>> {
     return function(i:A, cont:Sink<Tuple2<B,C>>) : Block{
       return withInput(pair(split_,_split),tuple2(i,i) , cont);
@@ -84,14 +83,14 @@ class Arrowlets{
     );
   }
   @doc("Runs the first Arrowlet, then the second, preserving the output of the first on the left-hand side.")
-  static public function join<A,B,C>(joinl:Arrowlet<A,B>,joinr:Arrowlet<B,C>):Arrowlet<A,Tuple2<B,C>>{
-    return joinl.then(
-      Arrowlet.unit().split(joinr)
+  static public function joint<A,B,C>(jointl:Arrowlet<A,B>,jointr:Arrowlet<B,C>):Arrowlet<A,Tuple2<B,C>>{
+    return jointl.then(
+      Arrowlet.unit().split(jointr)
     );
   }
   @doc("Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet.")
-  static public function bind<A,B,C>(bindl:Arrowlet<A,B>,bindr:Arrowlet<Tuple2<A,B>,C>):Arrowlet<A,C>{
-    return Arrowlet.unit().split(bindl).then(bindr);
+  static public function bound<A,B,C>(boundl:Arrowlet<A,B>,boundr:Arrowlet<Tuple2<A,B>,C>):Arrowlet<A,C>{
+    return Arrowlet.unit().split(boundl).then(boundr);
   }
   @doc("Runs an Arrowlet until it returns Done(out).")
   static public function repeat<I,O>(a:Arrowlet<I,tink.Either<I,O>>):Repeat<I,O>{
@@ -138,16 +137,16 @@ class Arrowlets{
       }
     );
   }
-  /*
+
   @doc("Flattens the output of an Arrowlet where it is Option<Option<O>> ")
   static public function flatten<I,O>(arw:Arrowlet<Option<I>,Option<Option<O>>>):Arrowlet<Option<I>,Option<O>>{
     return arw.then(
-      (i:Option<Option<I>>) -> switch(i){
+      (i:Option<Option<O>>) -> switch(i){
           case Some(Some(v))  : Some(v);
           default             : None;
       }
     );
-  }*/
+  }
   @doc("Runs a `then` operation where the creation of the second arrow requires a function call to produce it.")
   static public function invoke<A,B,C>(a:Arrowlet<A,B>,b:Thunk<Arrowlet<B,C>>){
     return then(a,

@@ -484,8 +484,8 @@
 				"Observables"
 			],
 			[
-				"bind",
-				"bindFold"
+				"bound",
+				"boundFold"
 			],
 			[
 				"del",
@@ -677,7 +677,7 @@
 			],
 			[
 				"key",
-				"Preferences: Key Bindings - User"
+				"Preferences: Key boundings - User"
 			],
 			[
 				"o",
@@ -765,7 +765,7 @@
 			],
 			[
 				"ke",
-				"Preferences: Key Bindings - Default"
+				"Preferences: Key boundings - Default"
 			],
 			[
 				"Instal",
@@ -783,7 +783,7 @@
 		"height": 205.0,
 		"history":
 		[
-			"import urllib.request,os; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); open(os.path.join(ipp, pf), 'wb').write(urllib.request.urlopen( 'http://sublime.wbond.net/' + pf.replace(' ','%20')).read())"
+			"import urllib.request,os; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); open(os.path.joint(ipp, pf), 'wb').write(urllib.request.urlopen( 'http://sublime.wbond.net/' + pf.replace(' ','%20')).read())"
 		]
 	},
 	"distraction_free":

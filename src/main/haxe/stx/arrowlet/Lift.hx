@@ -66,13 +66,12 @@ class LiftFunction2ToArrowlet{
         });
     }
 }
-/*
 class LiftOptionArrowletToOnly{
     @doc("Takes an Arrowlet that produces an Option and returns one that takes an Option also.")
     static public function toOnly<I,O>(arw:Arrowlet<I,Option<O>>):Only<I,O>{
         return Arrowlets.flatten(LiftArrowletToOnly.toOnly(arw));
     }
-}*/
+}
 class LiftArrowletToOnly{
     @doc("Produces an Arrowlet that is applied if the input is Some.")
     public static function toOnly<I,O>(a:Arrowlet<I,O>):Only<I,O>{
