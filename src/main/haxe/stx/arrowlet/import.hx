@@ -11,5 +11,7 @@ import stx.Chunk;
 import stx.Maybe;
 import stx.core.Blocks.upply;
 
+import stx.arrowlet.core.head.Data;
 import stx.arrowlet.Package;
+
 using stx.arrowlet.Lift;

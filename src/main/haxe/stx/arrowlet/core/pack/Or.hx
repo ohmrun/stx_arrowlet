@@ -4,8 +4,8 @@ package stx.arrowlet.core.pack;
   public function new(l:Arrowlet<L,R0>,r:Arrowlet<R,R0>){
     this = Lift.fromSink(function(i:Either<L,R>,cont:R0->Void){
       switch (i) {
-        case Left(v)  : l(v,cont);
-        case Right(v) : r(v,cont);
+        case Left(v)  : l.withInput(v,cont);
+        case Right(v) : r.withInput(v,cont);
       }
     });
   }

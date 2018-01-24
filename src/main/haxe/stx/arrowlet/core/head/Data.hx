@@ -15,3 +15,4 @@ typedef Repeat<I,O>             = stx.arrowlet.core.head.data.Repeat<I,O>;
 typedef LeftChoice<B,C,D>       = stx.arrowlet.core.head.data.LeftChoice<B,C,D>;
 typedef RightChoice<B,C,D>      = stx.arrowlet.core.head.data.RightChoice<B,C,D>;
 typedef Only<I,O>               = stx.arrowlet.core.head.data.Only<I,O>;
+typedef Wildcard                = stx.arrowlet.core.head.data.Wildcard;

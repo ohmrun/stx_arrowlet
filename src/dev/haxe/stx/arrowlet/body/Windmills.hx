@@ -1,8 +1,8 @@
 package stx.arrowlet.body;
 
 import stx.Vouch;
-import stx.arrowlet.head.data.State     in TState;
-import stx.arrowlet.head.data.Windmill  in TWindmill;
+import stx.arrowlet.core.head.Data.State     in TState;
+import stx.arrowlet.core.head.Data.Windmill  in TWindmill;
 
 using stx.Pointwise;
 

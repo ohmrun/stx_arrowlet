@@ -8,7 +8,7 @@ import stx.arrowlet.core.head.Data.LeftChoice in LeftChoiceT;
 			function(v:Either<B,D>,cont:Sink<Either<C,D>>){
 				switch (v) {
 					case Left(v) 	:
-						new Apply().then(Left)(tuple2(arw,v),cont);
+						new Apply().then(Left).withInput(tuple2(arw,v),cont);
 					case Right(v) :
 						cont(Right(v));
 				}

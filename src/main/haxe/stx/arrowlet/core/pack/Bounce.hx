@@ -13,12 +13,12 @@ abstract Bounce<T>(BounceT<T>) from BounceT<T> to BounceT<T>{
         handler = function(bounce:Bounce<T>){
           switch(bounce){
             case Call(arw):
-              arw(Noise,handler);
+              arw.withInput(Noise,handler);
             case Done(r):
               trg.trigger(r);
           }
         }
-    handler.upply(this);
+    handler(this);
     
     return trg;
   }

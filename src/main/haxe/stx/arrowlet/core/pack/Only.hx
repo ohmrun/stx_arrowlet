@@ -6,7 +6,7 @@ import stx.arrowlet.core.head.Data.Only in OnlyT;
   public function new(arw:Arrowlet<I,O>){
     this = Lift.fromSink(function(v:Option<I>,cont:Sink<Option<O>>){
       switch (v) {
-        case Some(v) : arw.then(Some)(v,cont);
+        case Some(v) : arw.then(Some).withInput(v,cont);
         case None    : cont(None);
       }
     });

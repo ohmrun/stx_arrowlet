@@ -1,5 +1,6 @@
 package;
 
+using stx.arrowlet.Lift;
 import tink.CoreApi;
 using stx.Tuple;
 using stx.arrowlet.Package;
@@ -12,7 +13,7 @@ class Test{
     //CompileTime.importPackage("stx.async");
 
     var a = new utest.Runner();
-    utest.ui.Report.create(a);
+    //utest.ui.Report.create(a);
     var arr : Array<Dynamic> = [
       #if (js && !nodejs)
         //new stx.arrowlet.js.JQueryEventTest()
@@ -23,26 +24,17 @@ class Test{
         a.addCase(x);
       }
     );
-    a.run();
+    //a.run();
     var _ = function(x:Dynamic) {trace(x); return x;}
     var a = function(x:Int) return x * 2;
     var b = function(x:Int) return x + 1;
 
     _.then(a).then(b).join(
-      function(x){
-        trace(x);
-        return x + 3;
-      }
+      (x) -> x + 3
     ).then(
-      function(x,y){
-        return x + y;
-      }.tupled()
+        (x:Int,y:Int) -> x + y
     ).bind(
-      function(x,y){
-        trace(x);
-        //x == 10
-        return x + y;
-      }.tupled()
+      (x,y) -> x + y
     ).pair(
       function(x){
         return x * 3;
@@ -53,6 +45,7 @@ class Test{
         ft.asFuture().then(
           function(x:Int,cont:Int->Void){
             cont(x*3);
+            return ()  -> {}
           }
         ).handle(
           function(x){

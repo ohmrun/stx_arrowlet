@@ -7,7 +7,7 @@ import stx.arrowlet.core.head.Data.RightChoice in RightChoiceT;
 		this = Lift.fromSink(function(i:Either<D,B>,cont:Sink<Either<D,C>>){
 			switch (i) {
 				case Right(v) 	:
-					new Apply().then(Right)(tuple2(arw,v),cont);
+					new Apply().then(Right).withInput(tuple2(arw,v),cont);
 				case Left(v) :
 					cont(Left(v));
 			}

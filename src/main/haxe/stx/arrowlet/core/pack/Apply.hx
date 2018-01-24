@@ -6,7 +6,7 @@ import stx.arrowlet.core.head.Data.Apply in ApplyA;
 	public function new(){
     this = Lift.fromSink(
       function(v:Tuple2<Arrowlet<I,O>,I>,cont:Sink<O>){
-        v.fst()(v.snd(),cont);
+        v.fst().withInput(v.snd(),cont);
       }
     );
 	}

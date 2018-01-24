@@ -1,9 +1,5 @@
 package stx.arrowlet.core.body;
 
-import stx.arrowlet.core.head.Data.Arrowlet in ArrowletT;
-
-import stx.arrowlet.Package;
-
 class Arrowlets{
   /*
   static public function later<A,B>(arw:Arrowlet<A,B>,v:A):Arrowlet<Noise,B>{
@@ -26,7 +22,7 @@ class Arrowlets{
   }
   @doc("Arrowlet application primitive. Calls Arrowlet with `i` and places result in `cont`.")
   static public inline function withInput<I,O>(arw:Arrowlet<I,O>,i:I,cont:Sink<O>):Block{
-    return arw(Fly(i,cont));
+    return arw.withInput(i,cont);
   }
   static public inline function apply<I,O>(arw:Arrowlet<I,O>,i:I):Future<O>{
     var trg       = new FutureTrigger();
@@ -42,10 +38,9 @@ class Arrowlets{
     return apply(arw,i);
   }
   @doc("left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`.")
-  static public function then<A,B,C>(before:Arrowlet<A,B>, after:Arrowlet<B,C>):ArrowletT<A,C> {
+  static public function then<A,B,C>(before:Arrowlet<A,B>, after:Arrowlet<B,C>):Arrowlet<A,C> {
     return new Then(before,after);
   }
-  /*
   @doc("Takes an Arrowlet<A,B>, and produces one taking a Tuple2 that runs the Arrowlet on the left-hand side, leaving the right-handside untouched.")
   static public function first<A,B,C>(first:Arrowlet<A,B>):Arrowlet<Tuple2<A,C>,Tuple2<B,C>>{
     return pair(first, Arrowlet.unit());
@@ -55,7 +50,7 @@ class Arrowlets{
     return pair(Arrowlet.unit(), second);
   }
   @doc("Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with thesame input.")
-  static public function split<A, B, C>(split_:ArrowletT<A, B>, _split:ArrowletT<A, C>):Arrowlet<A, Tuple2<B,C>> {
+  static public function split<A, B, C>(split_:Arrowlet<A, B>, _split:Arrowlet<A, C>):Arrowlet<A, Tuple2<B,C>> {
     return function(i:A, cont:Sink<Tuple2<B,C>>) : Block{
       return withInput(pair(split_,_split),tuple2(i,i) , cont);
     };
@@ -71,7 +66,7 @@ class Arrowlets{
   @doc("Produces a Tuple2 output of any Arrowlet.")
   static public function fan<I,O>(a:Arrowlet<I,O>):Arrowlet<I,Tuple2<O,O>>{
     return a.then(
-      tuple2
+      (v) -> tuple2(v,v)
     );
   }
   @doc("Pinches the input stage of an Arrowlet. `<I,I>` as `<I>`")
@@ -95,8 +90,8 @@ class Arrowlets{
     );
   }
   @doc("Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet.")
-  static public function bind<A,B,C>(bindl:ArrowletT<A,B>,bindr:ArrowletT<Tuple2<A,B>,C>):Arrowlet<A,C>{
-    Arrowlet.unit().split(bindl).then(bindr);
+  static public function bind<A,B,C>(bindl:Arrowlet<A,B>,bindr:Arrowlet<Tuple2<A,B>,C>):Arrowlet<A,C>{
+    return Arrowlet.unit().split(bindl).then(bindr);
   }
   @doc("Runs an Arrowlet until it returns Done(out).")
   static public function repeat<I,O>(a:Arrowlet<I,tink.Either<I,O>>):Repeat<I,O>{
@@ -122,7 +117,7 @@ class Arrowlets{
   @doc("Takes an Arrowlet that produces an Either, and produces one that will run that Arrowlet if the input is Right.")
   public static function fromRight<A,B,C,D>(arr:Arrowlet<B,Either<C,D>>):Arrowlet<Either<C,B>,Either<C,D>>{
     return new RightSwitch(arr);
-  }
+  }*/
   @doc("Takes an Arrowlet that produces an Either, and produces one that will run that Arrowlet if the input is Left.")
   public static function fromLeft<A,B,C,D>(arr:Arrowlet<A,Either<C,D>>):Arrowlet<Either<A,D>,Either<C,D>>{
     return then(new LeftChoice(arr),
@@ -143,6 +138,7 @@ class Arrowlets{
       }
     );
   }
+  /*
   @doc("Flattens the output of an Arrowlet where it is Option<Option<O>> ")
   static public function flatten<I,O>(arw:Arrowlet<Option<I>,Option<Option<O>>>):Arrowlet<Option<I>,Option<O>>{
     return arw.then(
@@ -151,7 +147,7 @@ class Arrowlets{
           default             : None;
       }
     );
-  }
+  }*/
   @doc("Runs a `then` operation where the creation of the second arrow requires a function call to produce it.")
   static public function invoke<A,B,C>(a:Arrowlet<A,B>,b:Thunk<Arrowlet<B,C>>){
     return then(a,
@@ -170,15 +166,14 @@ class Arrowlets{
   }
   #if (flash || js )
   static public function delay<A>(ms:Int):Arrowlet<A,A>{
-    var out = function(i:A,cont:Handler<A>){
+    var out = function(i:A,cont:Sink<A>){
     haxe.Timer.delay(
         function(){
-          cont.upply(i);
+          cont(i);
         },ms);
       return () -> {}
     }
     return out;
   }
   #end
-  */
 }

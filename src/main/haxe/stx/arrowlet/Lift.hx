@@ -12,19 +12,31 @@ class Lift{
   @:noUsing static public inline function fromFunction<A,B>(fn:A->B):Arrowlet<A,B>{
       return LiftFunctionToArrowlet.toArrowlet(fn);
   }
+  @:noUsing inline static public function fromFunction2<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>{
+      return LiftFunction2ToArrowlet.toArrowlet(fn);
+  }
+  static public function then<A,B>(ft:Future<A>,then:Arrowlet<A,B>):Future<B>{
+    return ft.flatMap(
+      function(x:A){
+        var trg = Future.trigger();
+            then.withInput(x,trg.trigger);
+        return trg.asFuture();
+      }
+    );
+  }
 }
 
 class LiftFutureConstructorToArrowlet{
     static public function toArrowlet<I,O>(fn:I->Future<O>):Arrowlet<I,O>{
-        return function(i,cont){
-        fn(i).handle(cont);
-        return null;
+        return function(i:I,cont:Sink<O>){
+            fn(i).handle(cont);
+            return null;
         }
     }
 }
 class LiftSinkToArrowlet{
     static public function toArrowlet<A,B>(fn:A -> Sink<B> -> Void):Arrowlet<A,B>{
-        return new Arrowlet(function(i:A,cont:Sink<B>):Block{
+        return new Arrowlet(function(_,cont:Sink<B>,i:A):Block{
         var cancelled = false;
 
         if(!cancelled){
@@ -54,12 +66,13 @@ class LiftFunction2ToArrowlet{
         });
     }
 }
+/*
 class LiftOptionArrowletToOnly{
     @doc("Takes an Arrowlet that produces an Option and returns one that takes an Option also.")
     static public function toOnly<I,O>(arw:Arrowlet<I,Option<O>>):Only<I,O>{
         return Arrowlets.flatten(LiftArrowletToOnly.toOnly(arw));
     }
-}
+}*/
 class LiftArrowletToOnly{
     @doc("Produces an Arrowlet that is applied if the input is Some.")
     public static function toOnly<I,O>(a:Arrowlet<I,O>):Only<I,O>{
