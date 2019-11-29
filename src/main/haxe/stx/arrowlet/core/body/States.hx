@@ -6,17 +6,17 @@ class States{
   static public function change<S,A>(arw0:StateT<S,A>,arw1:Arrowlet<Tuple2<A,S>,S>):StateT<S,A>{
     return arw0.fan().then(arw1.second())
       .then(
-        function(l:Tuple2<A,S>,r:S){
-          return tuple2(l.fst(),r);
-        }.tupled()
+        (t:Tuple2<Tuple2<A,S>,S>) -> t.into(
+          (l,r) -> tuple2(l.fst(),r)
+        )
       );
   }
-  static public function access<S,A,B>(arw0:StateT<S,A>,arw1:Arrowlet<Tuple2<A,S>,B>):StateT<S,B>{
+  static public function modify<S,A,B>(arw0:StateT<S,A>,arw1:Arrowlet<Tuple2<A,S>,B>):StateT<S,B>{
     return arw0.joint(arw1)
       .then(
-        function(l:Tuple2<A,S>,r:B){
-          return tuple2(r,l.snd());
-        }.tupled()
+        (t:Tuple2<Tuple2<A,S>,B>) -> t.into(
+         (l,r) -> tuple2(r,l.snd())
+        )
       );
   }
   static public function put<S,A,B>(arw0:StateT<S,A>,v:S):StateT<S,A>{
@@ -36,14 +36,15 @@ class States{
   static public function request<S,A>(arw0:StateT<S,A>):Arrowlet<S,A>{
     return arw0.then(
       function(t:Tuple2<A,S>){
-        return Tuples2.fst(t);
+        return t.fst();
       }
     );
   }
+  
   static public function resolve<S,A>(arw0:StateT<S,A>){
     return arw0.then(
       function(t:Tuple2<A,S>){
-        return Tuples2.snd(t);
+        return t.snd();
       }
     );
   }

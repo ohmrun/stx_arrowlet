@@ -1,81 +1,87 @@
 package stx.arrowlet.core.body;
 
+import stx.arrowlet.core.head.data.Crank in CrankT;
+
 class Cranks{
-  static public function imply<A,B>(arw:Crank<A,B>,v:A):Future<Chunk<B>>{
-    return arw.apply(Chunks.create(v));
+  static public function imply<A,B,E>(arw:CrankT<A,B,E>,v:A):Future<Chunk<B,E>>{
+    return arw.apply(Chunk.pure(v));
   }
-  static public function apply<A,B>(arw:Crank<A,B>,v:Chunk<A>):Future<Chunk<B>>{
+  static public function apply<A,B,E>(arw:CrankT<A,B,E>,v:Chunk<A,E>):Future<Chunk<B,E>>{
     return Arrowlets.apply(arw,v);
   }
-  static public function recover<A>(arw:Arrowlet<Error,A>):Arrowlet<Chunk<A>,Chunk<A>>{
-    return function(chk:Chunk<A>,cont:Callback<Chunk<A>>):Maybe<Block>{
+  static public function recover<A,E>(arw:Arrowlet<E,A>):Arrowlet<Chunk<A,E>,Chunk<A,E>>{
+    return function(chk:Chunk<A,E>,cont:Sink<Chunk<A,E>>):Block{
       switch(chk){
-        case Val(v) : cont.invoke(Val(v));
-        case End(e) : arw(e,Val.then(cont.invoke));
-        case Nil    : cont.invoke(Nil);
+        case Val(v) : cont(Val(v));
+        case End(e) : 
+          arw.then(Val).withInput(
+            e,
+            cont
+          );
+        case Tap    : cont(Tap);
       }
-      return null;
+      return ()->{};
     }
   }
-  static public function resume<A>(arw:Arrowlet<Noise,A>):Arrowlet<Chunk<A>,Chunk<A>>{
-    return function(chk:Chunk<A>,cont:Callback<Chunk<A>>){
+  static public function resume<A,E>(arw:Arrowlet<Noise,A>):Arrowlet<Chunk<A,E>,Chunk<A,E>>{
+    return function(chk:Chunk<A,E>,cont:Sink<Chunk<A,E>>){
       switch(chk){
-        case Val(v) : cont.invoke(Val(v));
-        case End(e) : cont.invoke(End(e));
-        case Nil    : arw.withInput(Noise,Val.then(cont.invoke));
+        case Val(v) : cont(Val(v));
+        case End(e) : cont(End(e));
+        case Tap    : arw.then(Val).withInput(Noise,cont);
       }
-      return null;
+      return ()->{};
     }
   }
-  @:noUsing static public function attempt<A,B>(arw:Arrowlet<A,Chunk<B>>):Arrowlet<Chunk<A>,Chunk<B>>{
-    return function(chk:Chunk<A>,cont:Callback<Chunk<B>>){
+  @:noUsing static public function attempt<A,B,E>(arw:Arrowlet<A,Chunk<B,E>>):Arrowlet<Chunk<A,E>,Chunk<B,E>>{
+    return function(chk:Chunk<A,E>,cont:Sink<Chunk<B,E>>){
       switch(chk){
-        case Val(v) : arw.withInput(v,cont.invoke);
-        case End(e) : cont.invoke(End(e));
-        case Nil    : cont.invoke(Nil);
+        case Val(v) : arw.withInput(v,cont);
+        case End(e) : cont(End(e));
+        case Tap    : cont(Tap);
       }
-      return null;
+      return ()->{};
     }
   }
-  static public function resolve<A,B>(arw:Arrowlet<Chunk<A>,B>):Arrowlet<Chunk<A>,Chunk<B>>{
-    return function(chk:Chunk<A>,cont:Callback<Chunk<B>>){
-      arw(
+  static public function resolve<A,B,E>(arw:Arrowlet<Chunk<A,E>,B>):Arrowlet<Chunk<A,E>,Chunk<B,E>>{
+    return function(chk:Chunk<A,E>,cont:Sink<Chunk<B,E>>){
+      arw.withInput(
         chk,
         function(b:B){
-          return cont.invoke(Val(b));
+          return cont(Val(b));
         }
       );
-      return null;
+      return ()->{};
     }
   }
-  static public function manage<A,B>(arw:Arrowlet<A,B>):Arrowlet<Chunk<A>,Chunk<B>>{
-    return function(chk:Chunk<A>,cont:Callback<Chunk<B>>){
+  static public function manage<A,B,E>(arw:Arrowlet<A,B>):Arrowlet<Chunk<A,E>,Chunk<B,E>>{
+    return function(chk:Chunk<A>,cont:Sink<Chunk<B>>){
       switch(chk){
-        case Val(v) : arw.withInput(v,Val.then(cont.invoke));
-        case End(e) : cont.invoke(End(e));
-        case Nil    : cont.invoke(Nil);
+        case Val(v) : arw.then(Val).withInput(v,cont);
+        case End(e) : cont(End(e));
+        case Tap    : cont(Tap);
       }
-      return null;
+      return ()->{};
     }
   }
-  static public function execute<A>(arw:Arrowlet<Chunk<A>,Chunk<Bool>>,?err:Error):Arrowlet<Chunk<A>,Chunk<A>>{
+  static public function executor<A,E>(arw:Arrowlet<Chunk<A,TypedError<E>>,Chunk<Bool,E>>,?err:TypedError<E>):Arrowlet<Chunk<A,TypedError<E>>,Chunk<A,TypedError<E>>>{
     err = err == null ? new Error(500,'execution failed') : err;
-    return function(chk:Chunk<A>,cont:Callback<Chunk<A>>){
+    return function(chk:Chunk<A,E>,cont:Sink<Chunk<A,E>>){
       arw.withInput(chk,
         function(chk0){
           switch(chk0){
             case Val(v)   :
               if (v==true){
-                cont.invoke(chk);
+                cont(chk);
               }else{
-                cont.invoke(End(err));
+                cont(End(err));
               }
-            case End(e) : cont.invoke(End(e));
-            case Nil    : cont.invoke(Nil);
+            case End(e) : cont(End(e));
+            case Tap    : cont(Tap);
           }
         }
       );
-      return null;
+      return ()->{};
     }
   }
   /*

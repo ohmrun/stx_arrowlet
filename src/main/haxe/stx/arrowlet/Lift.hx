@@ -1,19 +1,13 @@
 package stx.arrowlet;
 
 class Lift{
+  static public function arrowlet<I,O>(stx:Stx<Wildcard>,c:Construct<I,O>):Arrowlet<I,O>{
+    return c.reply();
+  }
   @doc("Print the output of an Arrowlet")
   @:noUsing static public function printer<A,B>(a:Arrowlet<A,B>,?pos:haxe.PosInfos):Arrowlet<A,B>{
     var m : B->B = function(x:B):B { haxe.Log.trace(x,pos) ; return x;};
     return new Then( a, m );
-  }
-  @:noUsing static public inline function fromSink<A,B>(fn:A -> Sink<B> -> Void):Arrowlet<A,B>{
-      return LiftSinkToArrowlet.toArrowlet(fn);
-  }
-  @:noUsing static public inline function fromFunction<A,B>(fn:A->B):Arrowlet<A,B>{
-      return LiftFunctionToArrowlet.toArrowlet(fn);
-  }
-  @:noUsing inline static public function fromFunction2<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>{
-      return LiftFunction2ToArrowlet.toArrowlet(fn);
   }
   static public function then<A,B>(ft:Future<A>,then:Arrowlet<A,B>):Future<B>{
     return ft.flatMap(
@@ -25,11 +19,34 @@ class Lift{
     );
   }
 }
-
 class LiftFutureConstructorToArrowlet{
     static public function toArrowlet<I,O>(fn:I->Future<O>):Arrowlet<I,O>{
         return function(i:I,cont:Sink<O>){
             fn(i).handle(cont);
+            return null;
+        }
+    }
+}
+class LiftZeroFutureConstructorToArrowlet{
+    static public function toArrowlet<O>(fn:Void->Future<O>):Arrowlet<Noise,O>{
+        return function(_:Noise,cont:Sink<O>){
+            fn().handle(cont);
+            return null;
+        }
+    }
+}
+class LiftHandlerToArrowlet{
+    static public function toArrowlet<O>(fn:(O->Void)->Void):Arrowlet<Noise,O>{
+        return function(_:Noise,cont:Sink<O>){
+            fn(cont);
+            return null;
+        }
+    }
+}
+class LiftThunk{
+    static public function toArrowlet<O>(fn:Noise->O):Arrowlet<Noise,O>{
+        return function(_:Noise,cont:Sink<O>){
+            cont(fn(Noise));
             return null;
         }
     }
@@ -61,9 +78,10 @@ class LiftFunctionToArrowlet{
 }
 class LiftFunction2ToArrowlet{
     inline static public function toArrowlet<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>{
-        return Lift.fromSink(function(a:Tuple2<A,B>,b:Sink<C>){
-            b(fn.tupled()(a));
-        });
+        return function(a:Tuple2<A,B>,b:Sink<C>){
+            b(a.into(fn));
+            return ()->{};
+        };
     }
 }
 class LiftOptionArrowletToOnly{

@@ -1,13 +1,9 @@
 -lib pointwise
 
+-lib stx_core
 -lib thx.core
 -lib tink_core
--lib stx_tuple
--lib stx_error
--lib stx_maybe
--lib stx_chunk
--lib stx_vouch
-
+-lib stx_fp
 
 -lib utest
 

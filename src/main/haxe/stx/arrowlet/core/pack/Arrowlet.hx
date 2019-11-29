@@ -12,12 +12,6 @@ import stx.arrowlet.core.body.Arrowlets;
   @:noUsing static public function unit<A>():Arrowlet<A,A>{
     return new Unit();
   }
-  @doc("Produces an arrow returning `v`.")
-  @:noUsing static public function pure<A,B>(v:B):Arrowlet<A,B>{
-    return Lift.fromSink(function(a:A,cont:Sink<B>){
-      cont(v);
-    });
-  }
   static function lift<I,O>(arw:ArrowletT<I,O>):Arrowlet<I,O>{
     return new Arrowlet(arw);
   }
@@ -32,6 +26,9 @@ import stx.arrowlet.core.body.Arrowlets;
   }
   public function then<N>(that:Arrowlet<O,N>):Arrowlet<I,N>{
     return Arrowlets.then(lift(this),that);
+  }
+  public function both<I0,O0>(that:Arrowlet<I0,O0>):Both<I,O,I0,O0>{
+    return Arrowlets.both(lift(this),that);
   }
   public function split<C>(that:Arrowlet<I, C>):Arrowlet<I, Tuple2<O,C>> {
     return Arrowlets.split(lift(this),that);
@@ -64,7 +61,12 @@ import stx.arrowlet.core.body.Arrowlets;
     );
   }  
   @:from static public function fromFunction2<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>{
-    return Lift.fromFunction2(fn);
+    return new Arrowlet(
+      function(_:Wildcard,cont:Sink<C>,tp:Tuple2<A,B>){
+        cont(tp.into(fn));
+        return Block.unit();
+      }
+    );
   }
   @:from static public function fromFunction<A,B>(fn:A->B):Arrowlet<A,B>{
     return new FunctionArrowlet(fn);
@@ -72,11 +74,4 @@ import stx.arrowlet.core.body.Arrowlets;
   public inline function tapO(fn:O->Void){
     return Arrowlets.tapO(lift(this),fn);
   }
-  /*
-  @:from static inline public function fromStateFunction<A,B>(fn:A->Tuple2<B,A>):Arrowlet<A,Tuple2<B,A>>{
-    //trace('fromStateFunction');
-    return Lift.fromSink(function(a:A,b:Sink<Tuple2<B,A>>){
-      b(fn(a));
-    });
-  }*/
 }

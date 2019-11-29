@@ -10,10 +10,7 @@
     "dependencies": {
         "tink_core": "",
         "pointwise": "",
-        "stx_vouch": "",
-	    "stx_maybe": "",
-        "stx_tuple": "",
-        "stx_chunk": ""
+        "stx_fp": ""
     },
     "classPath": "src/main/haxe"
 }

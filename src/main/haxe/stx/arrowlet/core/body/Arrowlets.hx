@@ -13,11 +13,12 @@ class Arrowlets{
   }
   static public inline function tapO<I,O>(arw:Arrowlet<I,O>,fn:O->Void){
     return then(arw,
-      Lift.fromSink(function(i,cont){
+      function(i,cont){
         fn(i);
         cont(i);
+        return () -> {};
       }
-    ));
+    );
   }
   @doc("Arrowlet application primitive. Calls Arrowlet with `i` and places result in `cont`.")
   static public inline function withInput<I,O>(arw:Arrowlet<I,O>,i:I,cont:Sink<O>):Block{
@@ -42,25 +43,25 @@ class Arrowlets{
   }
   @doc("Takes an Arrowlet<A,B>, and produces one taking a Tuple2 that runs the Arrowlet on the left-hand side, leaving the right-handside untouched.")
   static public function first<A,B,C>(first:Arrowlet<A,B>):Arrowlet<Tuple2<A,C>,Tuple2<B,C>>{
-    return pair(first, Arrowlet.unit());
+    return both(first, Arrowlet.unit());
   }
   @doc("Takes an Arrowlet<A,B>, and produces one taking a Tuple2 that runs the Arrowlet on the right-hand side, leaving the left-hand side untouched.")
   static public function second<A,B,C>(second:Arrowlet<A,B>):Arrowlet<Tuple2<C,A>,Tuple2<C,B>>{
-    return pair(Arrowlet.unit(), second);
+    return both(Arrowlet.unit(), second);
   }
   @doc("Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with the same input.")
   static public function split<A, B, C>(split_:Arrowlet<A, B>, _split:Arrowlet<A, C>):Arrowlet<A, Tuple2<B,C>> {
     return function(i:A, cont:Sink<Tuple2<B,C>>) : Block{
-      return withInput(pair(split_,_split),tuple2(i,i) , cont);
+      return withInput(both(split_,_split),tuple2(i,i) , cont);
     };
   }
   @doc("Takes two Arrowlets and produces on that runs them in parallel, waiting for both responses before output.")
-  static public function pair<A,B,C,D>(pair_:Arrowlet<A,B>,_pair:Arrowlet<C,D>):Both<A,B,C,D>{
+  static public function both<A,B,C,D>(pair_:Arrowlet<A,B>,_pair:Arrowlet<C,D>):Both<A,B,C,D>{
     return new Both(pair_,_pair);
   }
   @doc("Changes <B,C> to <C,B> on the output of an Arrowlet")
   static public function swap<A,B,C>(a:Arrowlet<A,Tuple2<B,C>>):Arrowlet<A,Tuple2<C,B>>{
-    return a.then(Tuples2.swap);
+    return a.then((tp:Tuple2<B,C>) -> tp.swap());
   }
   @doc("Produces a Tuple2 output of any Arrowlet.")
   static public function fan<I,O>(a:Arrowlet<I,O>):Arrowlet<I,Tuple2<O,O>>{
@@ -71,10 +72,6 @@ class Arrowlets{
   @doc("Pinches the input stage of an Arrowlet. `<I,I>` as `<I>`")
   static public function pinch<I,O1,O2>(a:Arrowlet<Tuple2<I,I>,Tuple2<O1,O2>>):Arrowlet<I,Tuple2<O1,O2>>{
     return then(fan(Arrowlet.unit()),a);
-  }
-  @doc("Produces an Arrowlet that runs the same Arrowlet on both sides of a Tuple2")
-  static public function both<A,B>(a:Arrowlet<A,B>):Arrowlet<Tuple2<A,A>,Tuple2<B,B>>{
-    return pair(a,a);
   }
   @doc("Casts the output of an Arrowlet to `type`.")
   static public function as<A,B,C>(a:Arrowlet<A,B>,type:Class<C>):Arrowlet<A,C>{
