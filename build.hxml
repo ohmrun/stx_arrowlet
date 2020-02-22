@@ -1,14 +1,22 @@
--lib pointwise
-
--lib stx_core
--lib thx.core
--lib tink_core
--lib stx_fp
+-main Main
+--interp
 
 -lib utest
 
---each
+-lib tink_core
 
-hxml/test/js_browser.hxml
---next
-hxml/test/neko.hxml 
+
+-lib stx_core
+-lib stx_fn
+-lib stx_run
+-lib stx_proxy
+
+
+-D test=stx_arrowlet
+#-D error_stack
+
+-cp src/main/haxe
+
+
+
+--connect 9090

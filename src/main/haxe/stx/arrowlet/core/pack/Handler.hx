@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack;
 
-import stx.arrowlet.core.head.Data.Handler in HandlerT;
+import stx.arrowlet.core.head.data.Handler in HandlerT;
 
 @:forward  abstract Handler<T>(HandlerT<T>) from HandlerT<T>{
     @:from static public function fromFunction<T>(fn:T->Void):Handler<T>{

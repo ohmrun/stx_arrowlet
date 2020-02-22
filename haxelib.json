@@ -1,16 +1,18 @@
 {
-    "name": "arrowlets",
+    "name": "stx_arrowlet",
     "url": "https://github.com/0b1kn00b/arrowlets",
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
     "version": "0.10.3",
-    "releasenote": "Crank.unit()",
+    "releasenote": "Channel.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
         "tink_core": "",
-        "pointwise": "",
-        "stx_fp": ""
+        "stx_core": "",
+        "stx_fn": "",
+        "stx_run": "",
+        "stx_proxy": ""
     },
     "classPath": "src/main/haxe"
 }

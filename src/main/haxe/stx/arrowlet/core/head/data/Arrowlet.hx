@@ -9,4 +9,4 @@ package stx.arrowlet.core.head.data;
  *      (A -> B -> C) -> Arrowlet<Tuple2<A,B>,C>
  *  works.
  */
-typedef Arrowlet<I,O> = Wildcard -> Sink<O> -> I -> Block;
+typedef Arrowlet<I,O> = Wildcard -> (Continue<O>) -> I -> Automation;
