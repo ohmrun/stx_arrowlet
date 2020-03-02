@@ -6,7 +6,7 @@ import stx.arrowlet.core.head.data.Only in OnlyT;
   public function  new(arw:Arrowlet<I,O>){
     this = __.arw().cont()(method.bind(arw));
   }
-  static private function method<I,O>(arw:Arrowlet<I,O>,opt:Option<I>,cont:Continue<Option<O>>){
+  static private function method<I,O>(arw:Arrowlet<I,O>,opt:Option<I>,cont:Sink<Option<O>>){
     return opt.map(
       (i) -> arw.postfix(Some.fn().then(_ -> _.core())).fulfill(i)
     ).defv(

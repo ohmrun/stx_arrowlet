@@ -22,7 +22,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     var a = Arrowlets.fromFunction(
       (i:Int) -> return value = Some('booo $i')
     );
-    var b = a.prepare(10,Continue.unit());
+    var b = a.prepare(10,Sink.unit());
   
     b.crunch();
     Assert.same(Some('booo 10'),value);
@@ -35,7 +35,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
         value = Some(i);
         next(i);
       }
-    ).prepare(10,Continue.unit());
+    ).prepare(10,Sink.unit());
 
     a.crunch();
     Assert.same(Some(10),value);
@@ -47,7 +47,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
         async.done();
         next(i);
       }
-    ).prepare(10,Continue.unit());
+    ).prepare(10,Sink.unit());
 
     a.crunch();
   }
@@ -58,14 +58,14 @@ class FromTheGroundUpAgainTest extends utest.Test{
         async.done();
         next(i);
       }
-    ).prepare(10,Continue.unit());
+    ).prepare(10,Sink.unit());
 
     a.submit();
   }
   public function testThen(async:Async){
     var fun = __.arw().fn()((int:Int) -> int + 1);
     var two = fun.then(fun);
-    two.prepare(0,Continue.unit().command(
+    two.prepare(0,Sink.unit().command(
       __.tracer().fn()
         .then(
           __.command(
@@ -80,9 +80,9 @@ class FromTheGroundUpAgainTest extends utest.Test{
     var a = __.channel().unit().postfix(
       (i) -> i + 1
     );
-    a.prepare(1,Continue.unit()).crunch();
+    a.prepare(__.success(1),Sink.unit()).crunch();
     var b = a.reframe();
-    b.prepare(Val(1),Continue.unit()).crunch();
+    b.prepare(__.success(1),Sink.unit()).crunch();
     Assert.pass();
   }
   function arw(){
@@ -90,7 +90,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
   }
   public function test_broach(){
     //var a = __.channel().unit().postfix(i -> i + i).prj().broach();
-    //a.prepare(1,Continue.unit()).crunch();
+    //a.prepare(1,Sink.unit()).crunch();
     //var b = __.arw().fn()(i -> i +1).broach();
   }
   public function test_fan(){
@@ -99,11 +99,11 @@ class FromTheGroundUpAgainTest extends utest.Test{
   }
   public function test_both(){
     var a = arw().both(arw());
-    var b = a.prepare(tuple2(1,1),Continue.unit());
+    var b = a.prepare(tuple2(1,1),Sink.unit());
   }
   public function test_unit(){
     var a = Arrowlet.unit();
-    var b = a.prepare(1,Continue.unit());
+    var b = a.prepare(1,Sink.unit());
         b.crunch();
   }
   public function test_split(){
@@ -114,6 +114,6 @@ class FromTheGroundUpAgainTest extends utest.Test{
   }
   public function test_process(){
     var proc  = __.channel().process(arw());
-    proc.prepare(Val(1),Continue.unit().command((x)-> trace(x))).crunch();
+    proc.prepare(__.success(1),Sink.unit().command((x)-> trace(x))).crunch();
   }
 }

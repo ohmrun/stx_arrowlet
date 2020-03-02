@@ -5,7 +5,7 @@ import stx.channel.head.data.Attempt in AttemptT;
 class Attempts{
   static public var _(default,null) = new stx.channel.body.Attempts();
   @:noUsing static public function lift<I,O,E>(self:AttemptT<I,O,E>) return new Attempt(self);
-  @:noUsing static public function pure<I,O,E>(v:Chunk<O,E>):Attempt<I,O,E>{
+  @:noUsing static public function pure<I,O,E>(v:Outcome<O,E>):Attempt<I,O,E>{
     return lift(__.arw().fn()(
       (chk:I) -> v
     ));
@@ -13,11 +13,13 @@ class Attempts{
   @:noUsing static public function fromIOConstructor<I,R,E>(fn:I->IO<R,E>){
     return Attempts.lift(
       Arrowlets.fromReceiverArrowlet(
-        fn.fn().then(f -> f(__)).then(Receiver.lift)
+        fn.fn().then(
+          f -> f(Automation.unit()).prj()
+        )
       )
     );  
-  }  
-  @:noUsing static public function  fromAttemptFunction<PI,R,E>(fn:PI->Chunk<R,E>){
+  }
+  @:noUsing static public function  fromAttemptFunction<PI,R,E>(fn:PI->Outcome<R,E>){
     return lift(__.arw().fn()(fn));
   }
 }

@@ -12,6 +12,6 @@ abstract Action(ActionT) from ActionT to ActionT{
 
 
   public function  forward():Automation{
-    return this.prepare(Noise,Continue.unit());
+    return this.prepare(Noise,Sink.unit());
   }
 }

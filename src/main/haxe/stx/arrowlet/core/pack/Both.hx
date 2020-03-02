@@ -6,8 +6,8 @@ import stx.arrowlet.core.head.data.Both in BothT;
   public function new(fst:Arrowlet<A,B>,snd:Arrowlet<C,D>){
 		this = __.arw().cont()(method.bind(fst,snd));
 	}
-	static function  method<A,B,C,D>(fst:Arrowlet<A,B>,snd:Arrowlet<C,D>,tp:Tuple2<A,C>,cont:Continue<Tuple2<B,D>>):Automation{
-		return Automations.later(Receiver.lift( 
+	static function  method<A,B,C,D>(fst:Arrowlet<A,B>,snd:Arrowlet<C,D>,tp:Tuple2<A,C>,cont:Sink<Tuple2<B,D>>):Automation{
+		return Automation.inj.interim(Receiver.lift( 
 			(next:Automation->Void) -> {
 				var cancelled 	 	= false;	
 
@@ -37,8 +37,8 @@ import stx.arrowlet.core.head.data.Both in BothT;
 					}
 				).fulfill(tp.snd()));
 				
-				var instigator	= __.run().perform(go);
-				var automation 	= lhs.forward().concat(rhs.forward()).snoc(instigator);
+				var instigator	= Task.inj.pursue(go);
+				var automation 	= lhs.forward().concat(rhs.forward()).cons(instigator);
 				return automation;
 			}
 		));

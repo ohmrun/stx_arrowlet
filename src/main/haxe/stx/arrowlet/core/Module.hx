@@ -7,20 +7,23 @@ package stx.arrowlet.core;
   public function lift<I,O>(fn:stx.arrowlet.core.head.data.Arrowlet<I,O>):Arrowlet<I,O>{
     return new Arrowlet(fn);
   }
-  public function fn<I,O>():Unary<Unary<I,O>,Arrowlet<I,O>>{
-    return (f:I->O) -> new FunctionArrowlet(f);
+  public function fn<I,O>(fn:I->O):Arrowlet<I,O>{
+    return new FunctionArrowlet(f);
   }
-  public function fn2<PI,PII,R>():Unary<PI->PII->R,Arrowlet<Tuple2<PI,PII>,R>>{
-    return f -> new FunctionArrowlet(__.into2(f));
+  public function fn2<PI,PII,R>(fn:PI->PII->R):Arrowlet<Tuple2<PI,PII>,R>{
+    return new FunctionArrowlet(__.into2(f));
   }
-  public function cb<I,O>():Unary<I->(O->Void)->Void,Arrowlet<I,O>>{
-    return f -> new CallbackArrowlet(f);
+  public function cb<I,O>(cb:I->(O->Void)->Void):Arrowlet<I,O>{
+    return new CallbackArrowlet(f);
   }
-  public function cont<I,O>():Unary<I->Continue<O>->Automation,Arrowlet<I,O>>{
-    return Arrowlets.fromContinueAutomation.fn();
+  public function cont<I,O>(fn:I->Sink<O>->Automation):Arrowlet<I,O>{
+    return Arrowlets.fromStrandAutomation(fn);
   }
-  public function receive<I,O>():Unary<I->Receiver<O>,Arrowlet<I,O>>{
-    return f -> new ReceiverArrowlet(f);
+  public function receive<I,O>(f:I->Receiver<O>):Arrowlet<I,O>{
+    return new ReceiverArrowlet(f);
+  }
+  public function recall<I,O>(fn:I -> Reactor<O>):Arrowlet<I,O>{
+    return new ReactArrowlet(fn);
   }
   public function uio<I,O,E>(fn:I->UIO<O>):Arrowlet<I,O>{
     return __.arw().receive()(

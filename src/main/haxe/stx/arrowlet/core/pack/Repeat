@@ -8,18 +8,18 @@ import stx.arrowlet.core.head.data.Repeat in TRepeat;
 	public function new(arw:Arrowlet<I,Either<I,O>>){
 		this = __.arw().cont()(method.bind(arw));
 	}
-	static function method<I,O>(arw:Arrowlet<I,Either<I,O>>,i:I,cont:Continue<O>){
+	static function method<I,O>(arw:Arrowlet<I,Either<I,O>>,i:I,cont:Sink<O>){
 		function rec(o) {
 			return switch (o) {
 				case Left(rv) 	: arw.prepare(rv,
-					Continue.unit().command(
+					Sink.unit().command(
 						rec.trampoline()
 					)	
 				);
 				case Right(dn) 	: cont(dn,Automation.unit());
 			}
 		}
-		return arw.prepare(i,Continue.unit().command(rec));
+		return arw.prepare(i,Sink.unit().command(rec));
 	}
 
 	static public function sample<I,O,Z>(arw:Arrowlet<I,O>,selector:O->Bool,fold:O->Z->Z,init:Z):Arrowlet<I,Z>{

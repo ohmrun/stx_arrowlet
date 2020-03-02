@@ -4,7 +4,7 @@ abstract AutomationArrowlet<I,O>(Arrowlet<I,O>) from Arrowlet<I,O> to Arrowlet<I
   public function  new(fn:I->Automation){
     this = new Arrowlet(method.bind(fn));
   }
-  static private function method<I,O>(fn:I->Automation,__:Wildcard,cb:Continue<O>,v:I){
+  static private function method<I,O>(fn:I->Automation,__:Wildcard,cb:Sink<O>,v:I){
     return Later(
       () -> fn(v).map(
         (o) -> cb.prepare(o).prj()

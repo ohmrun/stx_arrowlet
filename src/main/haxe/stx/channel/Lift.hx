@@ -11,12 +11,12 @@ class LiftArrowletToChannel{
   }
 }
 class LiftResolveToChannel{
-  static public function toChannel<A,B,E>(arw:Arrowlet<Chunk<A,E>,B>):Channel<A,B,E>{
+  static public function toChannel<A,B,E>(arw:Arrowlet<Outcome<A,E>,B>):Channel<A,B,E>{
     return Channels.fromResolve(arw);
   }
 }
 class LiftAttemptToChannel{
-  static public function toChannel<A,B,E>(arw:Arrowlet<A,Chunk<B,E>>):Channel<A,B,E>{
+  static public function toChannel<A,B,E>(arw:Arrowlet<A,Outcome<B,E>>):Channel<A,B,E>{
     return Channels.fromAttempt(arw);
   }
 }
@@ -31,7 +31,7 @@ class LiftExecuteToChannel{
   }
 }
 class LiftAttemptFunctionToAttempt{
-  static public function toAttempt<PI,R,E>(fn:PI->Chunk<R,E>):Attempt<PI,R,E>{
+  static public function toAttempt<PI,R,E>(fn:PI->Outcome<R,E>):Attempt<PI,R,E>{
     return Attempts.fromAttemptFunction(fn);
   }
 }

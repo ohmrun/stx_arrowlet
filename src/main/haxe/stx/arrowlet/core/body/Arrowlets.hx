@@ -13,7 +13,7 @@ class Arrowlets extends Clazz{
     return Receiver.lift(
       (next) -> arw.prepare(
           i, 
-          Continue.lift(
+          Sink.lift(
             (o,auto) -> {
               next(o);
               return auto;
@@ -93,12 +93,12 @@ class Arrowlets extends Clazz{
   }*/
   @doc("Takes an Arrowlet that produces an Either, and produces one that will run that Arrowlet if the input is Left.")
   public function fromLeft<A,B,C,D>(arr:Arrowlet<A,Either<C,D>>):Arrowlet<Either<A,D>,Either<C,D>>{
-    return then(new LeftChoice(arr),
+    return postfix(new LeftChoice(arr),
       function(e){
         return switch(e){
-          case Left(Left(l))  : Left(l);
-          case Left(Right(r)) : Right(r);
-          case Right(r) : Right(r);
+          case Left(Left(l))    : Left(l);
+          case Left(Right(r))   : Right(r);
+          case Right(r)         : Right(r);
         }
       }
     );
@@ -124,7 +124,7 @@ class Arrowlets extends Clazz{
   
   #if (flash || js )
   public function delay<A>(ms:Int):Arrowlet<A,A>{
-    var out = function(i:A,cont:Continue<A>){
+    var out = function(i:A,cont:Sink<A>){
       haxe.Timer.delay(
         function(){
           cont(i,Automation.unit()).submit();
@@ -135,7 +135,7 @@ class Arrowlets extends Clazz{
   }
   #end
   // @:noUsing public function fromReceiverConstructor<I,O>(fn:I->Receiver<O>):Arrowlet<I,O>{  
-  //   return ((i:I,cont:Continue<O>) -> 
+  //   return ((i:I,cont:Sink<O>) -> 
   //     Automation.cont(
   //       UIO.fromReceiverThunk(fn.bind(i)),
   //       cont
@@ -157,12 +157,12 @@ class Arrowlets extends Clazz{
   }
   @:noUsing public function fulfill<I,O>(arw:Arrowlet<I,O>,i:I):Arrowlet<Noise,O>{
     return __.arw().cont()(
-      (_:Noise,cont:Continue<O>) -> arw.prepare(i,cont)
+      (_:Noise,cont:Sink<O>) -> arw.prepare(i,cont)
     );
   }
   @:noUsing public function deliver<I,O>(arw:Arrowlet<I,O>,cb:O->Void):Arrowlet<I,Noise>{
     return __.arw().cont()(
-      (i:I,cont:Continue<Noise>) -> {
+      (i:I,cont:Sink<Noise>) -> {
         return arw.prepare(
           i,
           (o:O,auto:Automation) -> {

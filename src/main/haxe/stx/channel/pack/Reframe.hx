@@ -5,7 +5,6 @@ import stx.channel.head.data.Command in CommandT;
 import stx.channel.type.Reframe           in ReframeT;
 import stx.arrowlet.core.head.data.State     in StateT;
 
-
 @:callable @:forward abstract Reframe<S,A,E>(ReframeT<S,A,E>) from ReframeT<S,A,E> to ReframeT<S,A,E>{
   public function new(self) this = self;
   static public function lift<S,A,E>(wml:ReframeT<S,A,E>):Reframe<S,A,E> return new Reframe(wml);
@@ -14,17 +13,8 @@ import stx.arrowlet.core.head.data.State     in StateT;
       (s:S) -> tuple2(a,s)
     ));
   }
-  static public function unit<S,A,E>():Reframe<S,A,E>{
-    return lift(
-      Channel.unit().prj().then(
-        __.arw().fn()(
-          (chk:Chunk<S,E>) -> (Tap:Chunk<Tuple2<A,S>,E>)
-        )
-      )  
-    );
-  }
   public function attempt<R>(that:Attempt<A,R,E>):Reframe<S,R,E>{
-    var fn = (chk:Chunk<Tuple2<Chunk<R,E>,S>,E>) -> chk.fmap(
+    var fn = (chk:Outcome<Tuple2<Outcome<R,E>,S>,E>) -> chk.fmap(
       (tp) -> tp.fst().map(
         (r) -> tuple2(r,tp.snd())
       )
@@ -44,29 +34,39 @@ import stx.arrowlet.core.head.data.State     in StateT;
         .prj()
         .broach()
         .postfix(
-          (tp:Tuple2<Chunk<S,E>,Chunk<Z,E>>) -> switch(tp){
-            case tuple2(Val(s),Val(z))  : Val(tuple2(z,s));
-            case tuple2(l,r)            : __.into2(Chunks._.zip)(tp);
+          (tp:Tuple2<Outcome<S,E>,Outcome<Z,E>>) -> switch(tp){
+            case tuple2(Right(s),Right(z))  : __.success(tuple2(z,s));
+            case tuple2(l,r)                : __.into2(Outcome.inj._.zip)(tp);
           }
         )
     );
     return arw;
   }
+  public function rearrange<B,C>(that:A->Arrange<S,B,C,E>):Attempt<Tuple2<B,S>,C,E>{
+    return __.arw().cont()(
+      (ipt:Tuple2<B,S>,contN:Sink<Outcome<C,E>>) -> this.prepare(Right(ipt.snd()),
+         (chk:Outcome<Tuple2<A,S>,E>,auto:Automation) -> 
+         chk.fold(
+           (tp) -> that(tp.fst()).prepare(ipt.map(_ -> tp.snd()),contN),
+           (e)  -> contN(__.failure(e),Automation.unit())
+         )
+      )
+    );
+  }
   public function commander<Z>(fN:A->Command<S,E>):Reframe<S,A,E>{
     return lift(__.arw().cont()(
-      (ipt:Chunk<S,E>,contN:Continue<Chunk<Tuple2<A,S>,E>>) ->
+      (ipt:Outcome<S,E>,contN:Sink<Outcome<Tuple2<A,S>,E>>) ->
         this.prepare(
           ipt,
-          Continue.lift(
-            (out:Chunk<Tuple2<A,S>,E>,auto) -> out.fold(
+          Sink.lift(
+            (out:Outcome<Tuple2<A,S>,E>,auto) -> out.fold(
               (tp) -> fN(tp.fst()).postfix(
                 (opt) -> opt.fold(
-                  (err) -> End(err),
-                  ()    -> Val(tp)
+                  (err) -> __.failure(err),
+                  ()    -> __.success(tp)
                 )
               ).prepare(tp.snd(),contN),
-              (err) -> contN(End(err),Automation.unit()),
-              ()    -> contN(Tap,Automation.unit())
+              (err) -> contN(__.failure(err),Automation.unit())
             )
           )
         )
@@ -83,4 +83,3 @@ import stx.arrowlet.core.head.data.State     in StateT;
     return this.postfix(tp -> tp.snd());
   }
 }
- 

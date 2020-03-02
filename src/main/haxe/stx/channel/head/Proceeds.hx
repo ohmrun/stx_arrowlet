@@ -8,27 +8,26 @@ class Proceeds{
   @:noUsing static public function lift<T,E>(arw:ProceedT<T,E>):Proceed<T,E> return new Proceed(arw);
 
   @:noUsing static public function pure<T,E>(v:T):Proceed<T,E>{
-    return lift(((_:Noise) -> Val(v))
+    return lift(((_:Noise) -> __.success(v))
     .broker(
       F -> __.arw().fn()
     ));
   }
   
   @:noUsing static public function fromThunkT<T,E>(v:Void->T):Proceed<T,E>{
-    return lift(((_:Noise) -> Val(v()))
+    return lift(((_:Noise) -> __.success(v()))
     .broker(
       F -> __.arw().fn()
     ));
   }
   @:noUsing static public function fromIO<T,E>(io:IO<T,E>):Proceed<T,E>{
     return lift(__.arw().cont()(
-      (_:Noise,cont) -> Automations.later(
-        Waiter.lift(io.apply((Automation.unit()))).fold(
+      (_:Noise,cont) -> Automation.inj.interim(
+        io((Automation.unit())).fold(
           (v) -> cont(v,Automation.unit()),
-          (e) -> Automations.error(__.fault().of(HaltedAt(e))),//
-          ()  -> Automation.unit()
+          (e) -> Automation.inj.default_(__.fault().of(HaltedAt(e)))
         )
       )
-    ).postfix(Val));
+    ).postfix(__.success));
   }
 }

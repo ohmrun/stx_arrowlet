@@ -5,11 +5,9 @@
 
 -lib tink_core
 
-
 -lib stx_core
 -lib stx_fn
 -lib stx_run
--lib stx_proxy
 
 
 -D test=stx_arrowlet

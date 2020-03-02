@@ -7,14 +7,14 @@ class Commands{
     return new Command(arw);
   }
   static public function fromEIOConstructor<PI,E>(fn:PI->EIO<E>):Command<PI,E>{
-    var fn = (i:PI,cont:Continue<Option<TypedError<E>>>) -> 
-      Automations.later(
+    var fn = (i:PI,cont:Sink<Report<E>>) -> 
+      Automation.inj.interim(
         fn(i)
         .toUIO()(Automation.unit())
         .broker(
           F -> Receiver.lift
         ).map(
-          (opt:Option<TypedError<E>>) -> cont(opt,Automations.unit())
+          (opt:Report<E>) -> cont(opt,Automation.unit())
         )
       );
     var arw  = lift(__.arw().cont()(fn));

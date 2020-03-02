@@ -5,6 +5,8 @@ class Arrowlets{
 
   @:noUsing static public function unit<I>():Arrowlet<I,I> return new Unit();
 
+  @:noUsing static public function fromRecall<A,B>(fn:A->Reactor<B>):Arrowlet<A,B>      return new RecallArrowlet(fn);
+
   @:noUsing static public function lift<I,O>(fn:stx.arrowlet.core.head.data.Arrowlet<I,O>):Arrowlet<I,O>{
     return new Arrowlet(fn);
   }
@@ -17,10 +19,10 @@ class Arrowlets{
   @:noUsing static public function fromCallbackSink<I,O>(f:I->(O->Void)->Void):Arrowlet<I,O>{
     return new CallbackArrowlet(f);
   }
-  @:noUsing static public function fromContinueAutomation<I,O>(f):Arrowlet<I,O>{
-    return new Arrowlet((__:Wildcard,cont:Continue<O>,i:I) ->{
+  @:noUsing static public function fromStrandAutomation<I,O>(f):Arrowlet<I,O>{
+    return new Arrowlet(Recall.anon((i:I,cont:O->Void) ->{
       return f(i,cont);
-    });
+    }));
   }
   @:noUsing static public function fromReceiverArrowlet<I,O>(f):Arrowlet<I,O>{
     return new ReceiverArrowlet(f);

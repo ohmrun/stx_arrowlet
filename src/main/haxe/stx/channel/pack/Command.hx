@@ -10,16 +10,14 @@ import stx.channel.head.data.Command in CommandT;
     return new Command(self);
   }
   public function toChannel():Channel<I,I,E>{
-    return Channels.fromCommand(this);
+    return Channels.fromCommand(this.postfix(report -> report.prj()));
   }
   public function prj():CommandT<I,E>{
     return this;
   }
   public function and(that:Command<I,E>):Command<I,E>{
     return this.split(that).postfix(
-      (tp) -> tp.fst().zip(tp.snd()).map(
-        e -> e.fst().next(e.snd())
-      ).or(tp.snd)
+      (tp) -> tp.fst().merge(tp.snd())
     );
   }
   public function forward(i:I):EIO<E>{
@@ -27,11 +25,13 @@ import stx.channel.head.data.Command in CommandT;
       (auto) -> 
         Receiver.lift(
           (next) ->
-            this.prepare(i,Continue.unit().command(next))
+            this.prepare(i,Sink.unit().command(next))
        )
     );
   }
   public function errata<EE>(fn:TypedError<E>->TypedError<EE>){
-    return this.then(Options._.map.bind(fn));
+    return this.postfix(
+      (report) -> report.errata(fn)
+    );
   }
 } 
