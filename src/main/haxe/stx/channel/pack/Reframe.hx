@@ -23,7 +23,7 @@ import stx.arrowlet.core.head.data.State     in StateT;
       this.process(
         that.first()
       ).then(
-        __.arw().fn()(fn)
+        __.arw().fn(fn)
       )
     );
     return arw;
@@ -43,7 +43,7 @@ import stx.arrowlet.core.head.data.State     in StateT;
     return arw;
   }
   public function rearrange<B,C>(that:A->Arrange<S,B,C,E>):Attempt<Tuple2<B,S>,C,E>{
-    return __.arw().cont()(
+    return __.arw().cont(
       (ipt:Tuple2<B,S>,contN:Sink<Outcome<C,E>>) -> this.prepare(Right(ipt.snd()),
          (chk:Outcome<Tuple2<A,S>,E>,auto:Automation) -> 
          chk.fold(
@@ -54,7 +54,7 @@ import stx.arrowlet.core.head.data.State     in StateT;
     );
   }
   public function commander<Z>(fN:A->Command<S,E>):Reframe<S,A,E>{
-    return lift(__.arw().cont()(
+    return lift(__.arw().cont(
       (ipt:Outcome<S,E>,contN:Sink<Outcome<Tuple2<A,S>,E>>) ->
         this.prepare(
           ipt,

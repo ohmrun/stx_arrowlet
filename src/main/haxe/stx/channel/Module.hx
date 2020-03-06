@@ -17,18 +17,15 @@ class Module extends Clazz{
     );
   }
   public function eio<I,E>(fn:I->EIO<E>):Command<I,E>{
-   return Command.lift(__.arw().cont()(
-      (i:I,cont) -> 
-        Automation.inj.interim(Receiver.lift(
-          fn(i)(Automation.unit())
-        ).map(
-          (next) -> cont(next,Automation.unit())
-        ))
-   ));
+   return Command.lift(
+      Arrowlet.lift(Recall.anon(
+        (i,cont:Sink<Report<E>>) -> fn(i).apply(cont)
+      ))
+   );
   }
   public function err<I,E>(fn:I->Option<TypedError<E>>):Command<I,E>{
     return Command.lift(
-      __.arw().fn()(fn.fn().then(e -> new Report(e)))
+      __.arw().fn(fn.fn().then(e -> new Report(e)))
     );
   }
   public function outcome<I,O,E>(arw:Arrowlet<I,Outcome<O,E>>):Attempt<I,O,E>{
@@ -39,7 +36,7 @@ class Module extends Clazz{
   }
   // public function reframe<I,O,Z,E>(fN:O->Channel<I,Z,E>):Channel<I,O,E>->Reframe<I,Z,E>{
   //   return (chn:Channel<I,O,E>) -> chn.reframe().arrange(
-  //     Arrange.lift(__.arw().cont()(
+  //     Arrange.lift(__.arw().cont(
   //       (ipt:Tuple2<O,I>,cont:Sink<Outcome<Z,E>>) -> fN(ipt.fst()).prepare(ipt.snd(),cont)
   //     ))
   //   );

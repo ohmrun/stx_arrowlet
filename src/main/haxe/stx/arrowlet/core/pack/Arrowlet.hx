@@ -17,8 +17,8 @@ import stx.arrowlet.core.head.data.Arrowlet in ArrowletT;
   public function deliver(cb:O->Void):Arrowlet<I,Noise>                  return Arrowlets._.deliver(self,cb);
   
   @:deprecated
-  public function withInput(i:I,cont:Sink<O>):Automation                        return this(__,cont,i); 
-  public function prepare(i:I,cont:Sink<O>):Automation                          return this(__,cont,i); 
+  public function withInput(i:I,cont:Sink<O>):Automation                          return this.duoply(i,cont); 
+  public function prepare(i:I,cont:Sink<O>):Automation                            return this.duoply(i,cont); 
   public function receive(i:I):Receiver<O>                                        return Arrowlets._.receive(self,i);
   
   public function then<N>(that:Arrowlet<O,N>):Arrowlet<I,N>                       return Arrowlets._.then(self,that);

@@ -10,7 +10,7 @@ class Channels extends Clazz{
   }
   public function postfix<I,O,Z,E>(fn:O->Z,thiz:Channel<I,O,E>){
     return process(
-      __.arw().fn()(fn),
+      __.arw().fn(fn),
       thiz
     );
   }

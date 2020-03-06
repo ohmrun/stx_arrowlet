@@ -6,7 +6,7 @@ class Attempts{
   static public var _(default,null) = new stx.channel.body.Attempts();
   @:noUsing static public function lift<I,O,E>(self:AttemptT<I,O,E>) return new Attempt(self);
   @:noUsing static public function pure<I,O,E>(v:Outcome<O,E>):Attempt<I,O,E>{
-    return lift(__.arw().fn()(
+    return lift(__.arw().fn(
       (chk:I) -> v
     ));
   }
@@ -20,6 +20,6 @@ class Attempts{
     );  
   }
   @:noUsing static public function  fromAttemptFunction<PI,R,E>(fn:PI->Outcome<R,E>){
-    return lift(__.arw().fn()(fn));
+    return lift(__.arw().fn(fn));
   }
 }

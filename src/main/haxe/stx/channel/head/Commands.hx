@@ -14,10 +14,10 @@ class Commands{
         .broker(
           F -> Receiver.lift
         ).map(
-          (opt:Report<E>) -> cont(opt,Automation.unit())
+          (opt:Report<E>) -> cont(opt)
         )
       );
-    var arw  = lift(__.arw().cont()(fn));
+    var arw  = lift(__.arw().cont(fn));
     return arw;
   }
 }

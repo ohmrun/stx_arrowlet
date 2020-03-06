@@ -9,13 +9,12 @@ class Channels{
     return new Channel(self);
   }
   @:noUsing static public function unit<I,E>():Channel<I,I,E>{
-    return __.arw().fn()(
+    return __.arw().fn(
       (chk:Outcome<I,E>) -> chk
     );
   }
   @:noUsing static public function pure<I,O,E>(v:Outcome<O,E>):Channel<I,O,E>{
-    return lift(__.arw().fn()(
-      (chk:Outcome<I,E>) -> v
+    return lift(__.arw().fn((chk:Outcome<I,E>) -> v
     ));
   }
   @:noUsing public function fromProcess<I,O,E>(thiz:Arrowlet<I,O>):Channel<I,O,E>{
@@ -49,8 +48,8 @@ class Channels{
     ));
   }
   @:noUsing static public function fromCommand<A,E>(arw:Arrowlet<A,Option<TypedError<E>>>):Channel<A,A,E>{
-    return __.arw().cont()(
-      (ipt:Outcome<A,E>,cont:Sink<Outcome<A,E>>) -> {
+    return __.arw().cont(
+      (ipt:Outcome<A,E>,cont:Strand<Outcome<A,E>>) -> {
         return switch(ipt){
           case Right(v) : 
             arw.postfix(
@@ -65,7 +64,7 @@ class Channels{
     );
   }
   @:noUsing static public function fromProceed<A,E>(arw:Arrowlet<Noise,Outcome<A,E>>):Channel<Noise,A,E>{
-    return __.arw().cont()(
+    return __.arw().cont(
       (i,cont) -> Outcome.inj._.fold.bind(
         (v) -> arw,
         (e)   -> __.arw().secrete(__.failure(e))

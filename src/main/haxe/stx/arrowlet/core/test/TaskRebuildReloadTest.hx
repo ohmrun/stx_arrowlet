@@ -19,8 +19,8 @@ class TaskRebuildReloadTest extends utest.Test{
     log.debug('function finished');
   }
   public function testAyncThenCalls(async:Async){
-    var a = __.arw().fn()(c -> c);
-    var b = __.arw().fn()((c) -> c++);
+    var a = __.arw().fn(c -> c);
+    var b = __.arw().fn((c) -> c++);
     var c = a.then(b);
     var auto = c.deliver(10,
       (x) -> {

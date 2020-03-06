@@ -63,7 +63,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     a.submit();
   }
   public function testThen(async:Async){
-    var fun = __.arw().fn()((int:Int) -> int + 1);
+    var fun = __.arw().fn((int:Int) -> int + 1);
     var two = fun.then(fun);
     two.prepare(0,Sink.unit().command(
       __.tracer().fn()
@@ -86,12 +86,12 @@ class FromTheGroundUpAgainTest extends utest.Test{
     Assert.pass();
   }
   function arw(){
-    return __.arw().fn()(i -> i + 1);
+    return __.arw().fn(i -> i + 1);
   }
   public function test_broach(){
     //var a = __.channel().unit().postfix(i -> i + i).prj().broach();
     //a.prepare(1,Sink.unit()).crunch();
-    //var b = __.arw().fn()(i -> i +1).broach();
+    //var b = __.arw().fn(i -> i +1).broach();
   }
   public function test_fan(){
     var a = arw().fan();
@@ -110,7 +110,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     //var a = arw().split(arw());
   }
   public function test_bound(){
-    //var b = __.arw().fn()(i -> i +1).bound(__.arw().fn()(__.through()));
+    //var b = __.arw().fn(i -> i +1).bound(__.arw().fn(__.through()));
   }
   public function test_process(){
     var proc  = __.channel().process(arw());

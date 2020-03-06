@@ -32,7 +32,7 @@ import stx.channel.head.data.Channel in ChannelT;
 
   public function errata<EE>(fn:TypedError<E>->TypedError<EE>):Channel<I,O,EE>{
     return lift(
-      __.arw().cont()(
+      __.arw().cont(
         (chunkN:Outcome<I,EE>,cont:Sink<Outcome<O,EE>>) -> chunkN.fold(
           (v) -> this.postfix(Outcome.inj._.errata.bind(fn)).prepare(__.success(v),cont),
           (e) -> cont(__.failure(e),Automation.unit())
@@ -46,7 +46,7 @@ import stx.channel.head.data.Channel in ChannelT;
         (opt:Outcome<O,E>,auto) -> cont(opt.zip(ipt),auto)
       );
     }
-    return lift(__.arw().cont()(fN));
+    return lift(__.arw().cont(fN));
   }
   public function forward(i:I):IO<O,E>{
     return IO.inj.fromIOT((auto)->(next:Outcome<O,E>->Void) ->

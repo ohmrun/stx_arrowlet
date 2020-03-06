@@ -7,7 +7,7 @@ import stx.channel.head.data.Attempt in AttemptT;
   public function new(self) this = self;
   static public var inj(default,null) = new Constructor();
 
-  @:noUsing static public function unit<I,E>():Attempt<I,I,E>                     return lift(__.arw().fn()(__.success));
+  @:noUsing static public function unit<I,E>():Attempt<I,I,E>                     return lift(__.arw().fn(__.success));
   @:noUsing static public function lift<I,O,E>(self:AttemptT<I,O,E>)              return new Attempt(self);
   @:noUsing static public function pure<I,O,E>(v:Outcome<O,E>):Attempt<I,O,E>     return Attempts.pure(v);
 

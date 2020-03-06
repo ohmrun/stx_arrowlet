@@ -7,7 +7,7 @@ import stx.channel.head.data.Arrange in ArrangeT;
 @:forward abstract Arrange<S,A,R,E>(ArrangeT<S,A,R,E>) from ArrangeT<S,A,R,E> to ArrangeT<S,A,R,E>{
   public function new(self) this = self;
   static public function lift<S,A,R,E>(self:ArrangeT<S,A,R,E>):Arrange<S,A,R,E> return new Arrange(self);
-  static public function pure<S,A,R,E>(r:R) return lift(Attempt.lift(__.arw().fn()( (tp:Tuple2<A,S>) -> __.success(r))));
+  static public function pure<S,A,R,E>(r:R) return lift(Attempt.lift(__.arw().fn( (tp:Tuple2<A,S>) -> __.success(r))));
 
   
 

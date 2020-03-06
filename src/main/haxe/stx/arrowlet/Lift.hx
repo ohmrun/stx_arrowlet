@@ -46,17 +46,17 @@ class LiftHandlerToArrowlet{
 }
 class LiftThunk{
   static public function toArrowlet<O>(fn:Void->O):Arrowlet<Noise,O>{
-    return __.arw().fn()((_) -> fn());
+    return __.arw().fn((_) -> fn());
   }
 }
 class LiftFunctionToArrowlet{
     inline static public function toArrowlet<A,B,C>(fn:A->B):Arrowlet<A,B>{
-      return __.arw().fn()(fn);
+      return __.arw().fn(fn);
     }
 }
 class LiftFunction2ToArrowlet{
     inline static public function toArrowlet<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>{
-      return __.arw().fn()(__.into2(fn));
+      return __.arw().fn(__.into2(fn));
     }
 }
 // class LiftOptionArrowletToOnly{

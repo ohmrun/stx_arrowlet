@@ -7,7 +7,7 @@ import stx.arrowlet.core.head.data.Apply in ApplyT;
     this = (
       (v:Tuple2<Arrowlet<I,O>,I>,cont) -> v.fst().prepare(v.snd(),cont)
     ).broker(
-      (F) -> __.arw().cont()
+      (F) -> __.arw().cont
     );    
   }
   public function toArrowlet():Arrowlet<Tuple2<Arrowlet<I,O>,I>,O>{

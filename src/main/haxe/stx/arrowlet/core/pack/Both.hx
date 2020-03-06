@@ -4,16 +4,17 @@ import stx.arrowlet.core.head.data.Both in BothT;
 
 @:forward @:callable abstract Both<A,B,C,D>(BothT<A,B,C,D>) from BothT<A,B,C,D> to BothT<A,B,C,D>{
   public function new(fst:Arrowlet<A,B>,snd:Arrowlet<C,D>){
-		this = __.arw().cont()(method.bind(fst,snd));
+		this = __.arw().cont(method.bind(fst,snd));
 	}
 	static function  method<A,B,C,D>(fst:Arrowlet<A,B>,snd:Arrowlet<C,D>,tp:Tuple2<A,C>,cont:Sink<Tuple2<B,D>>):Automation{
-		return Automation.inj.interim(Receiver.lift( 
+		return Automation.inj.interim(
 			(next:Automation->Void) -> {
 				var cancelled 	 	= false;	
 
 				var a 						= None;
 				var b 						= None;
 		
+				
 				function ready():Bool{
 					return (a != None) && (b != None);
 				}
@@ -41,6 +42,6 @@ import stx.arrowlet.core.head.data.Both in BothT;
 				var automation 	= lhs.forward().concat(rhs.forward()).cons(instigator);
 				return automation;
 			}
-		));
+		);
 	}
 }

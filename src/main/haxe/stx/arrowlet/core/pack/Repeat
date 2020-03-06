@@ -6,7 +6,7 @@ import stx.arrowlet.core.head.data.Repeat in TRepeat;
 
 @:forward @:callable abstract Repeat<I,O>(Arrowlet<I,O>) from Arrowlet<I,O> to Arrowlet<I,O>{
 	public function new(arw:Arrowlet<I,Either<I,O>>){
-		this = __.arw().cont()(method.bind(arw));
+		this = __.arw().cont(method.bind(arw));
 	}
 	static function method<I,O>(arw:Arrowlet<I,Either<I,O>>,i:I,cont:Sink<O>){
 		function rec(o) {
@@ -16,7 +16,7 @@ import stx.arrowlet.core.head.data.Repeat in TRepeat;
 						rec.trampoline()
 					)	
 				);
-				case Right(dn) 	: cont(dn,Automation.unit());
+				case Right(dn) 	: cont(dn);
 			}
 		}
 		return arw.prepare(i,Sink.unit().command(rec));

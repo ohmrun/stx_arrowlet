@@ -7,20 +7,10 @@ class Arrowlets extends Clazz{
     );
   }
   public function tapO<I,O>(arw:Arrowlet<I,O>,fn:O->Void):Arrowlet<I,O>{
-    return then(arw,__.arw().fn()(__.command(fn)));
+    return then(arw,__.arw().fn(__.command(fn)));
   }
-  public function receive<I,O>(arw:Arrowlet<I,O>,i:I):Receiver<O>{
-    return Receiver.lift(
-      (next) -> arw.prepare(
-          i, 
-          Sink.lift(
-            (o,auto) -> {
-              next(o);
-              return auto;
-            }
-          )
-        )
-    );
+  public function receive<I,O>(arw:Arrowlet<I,O>,i:I):ReceiverDef<O>{
+    return Receiver.inj().into(arw.prepare.bind(i));
   }
   @doc("left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`.")
   public function then<A,B,C>(before:Arrowlet<A,B>, after:Arrowlet<B,C>):Arrowlet<A,C> {
@@ -127,11 +117,11 @@ class Arrowlets extends Clazz{
     var out = function(i:A,cont:Sink<A>){
       haxe.Timer.delay(
         function(){
-          cont(i,Automation.unit()).submit();
+          cont(i).submit();
         },ms);
       return Automation.unit();
     }
-    return __.arw().cont()(out);
+    return __.arw().cont(out);
   }
   #end
   // @:noUsing public function fromReceiverConstructor<I,O>(fn:I->Receiver<O>):Arrowlet<I,O>{  
@@ -145,10 +135,10 @@ class Arrowlets extends Clazz{
   //   );
   // }
   @:noUsing public function prefix<I,O,P>(arw:Arrowlet<I,O>,fn:P->I):Arrowlet<P,O>{
-    return __.arw().fn()(fn).then(arw);
+    return __.arw().fn(fn).then(arw);
   }
   @:noUsing public function postfix<I,O,R>(arw:Arrowlet<I,O>,fn:O->R):Arrowlet<I,R>{
-    return arw.then(__.arw().fn()(fn));
+    return arw.then(__.arw().fn(fn));
   }
   @:noUsing public function choose<I,O,R>(arw0:Arrowlet<I,O>,arw1:Arrowlet<O,Arrowlet<O,R>>):Arrowlet<I,R>{
     return arw0.then(
@@ -156,12 +146,12 @@ class Arrowlets extends Clazz{
     );
   }
   @:noUsing public function fulfill<I,O>(arw:Arrowlet<I,O>,i:I):Arrowlet<Noise,O>{
-    return __.arw().cont()(
+    return __.arw().cont(
       (_:Noise,cont:Sink<O>) -> arw.prepare(i,cont)
     );
   }
   @:noUsing public function deliver<I,O>(arw:Arrowlet<I,O>,cb:O->Void):Arrowlet<I,Noise>{
-    return __.arw().cont()(
+    return __.arw().cont(
       (i:I,cont:Sink<Noise>) -> {
         return arw.prepare(
           i,

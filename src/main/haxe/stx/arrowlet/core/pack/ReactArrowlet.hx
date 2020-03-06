@@ -1,13 +1,16 @@
 package stx.arrowlet.core.pack;
 
 abstract ReactArrowlet<I,O>(Arrowlet<I,O>) from Arrowlet<I,O> to Arrowlet<I,O>{
-  public function new(self:Recall<I,O,Noise>){
-    this = __.arw().cont()(method.bind(self));
+  public function new(self:RecallDef<I,O,Void>){
+    this = __.arw().cont(method.bind(self));
   } 
-  static function method<I,O>(self:Recall<I,O,Noise>,i:I,cont:Sink<O>):Automation{
-    return Automation.inj.interim(
-      self(i).toReceiver().map(
-        (o) -> cont(o,Automation.unit())
+  static function method<I,O>(self:RecallDef<I,O,Void>,i:I,cont:Sink<O>):Automation{
+    return Automation.inj().interim(
+      self.fulfill(i).map(
+        (o:O) -> {
+          cont(o);
+          return Automation.unit();
+        }
       )
     );
   }
