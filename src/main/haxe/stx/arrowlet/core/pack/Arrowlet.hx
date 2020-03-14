@@ -1,49 +1,30 @@
 package stx.arrowlet.core.pack;
 
-import stx.arrowlet.core.head.data.Arrowlet in ArrowletT;
+import stx.arrowlet.core.pack.arrowlet.Constructor;
+
+@:allow(stx.arrowlet.core.pack.arrowlet)
+@:using(stx.arrowlet.core.pack.arrowlet.Implementation)
+@:forward(duoply)
+abstract Arrowlet<I,O>(ArrowletDef<I,O>){
+  private function new(self:ArrowletDef<I,O>) this  = self;
+  static public inline function _() return Constructor.ZERO;
+
+  static public function lift<I,O>(self:ArrowletDef<I,O>):Arrowlet<I,O>                           return _().lift(self);
+  static public function unit<I>():Arrowlet<I,I>                                                  return _().unit();
+  static public function pure<I,O>(o:O):Arrowlet<I,O>                                             return _().pure(o);
+
+  static public function fromRecallFun<I,O>(f1OR):Arrowlet<I,O>                                   return _().fromRecallFun(f1OR);
+
+  static public function Apply<I,O>():Arrowlet<Tuple2<Arrowlet<I,O>,I>,O>                         return _().Apply();
 
 
-@:forward abstract Arrowlet<I,O>(ArrowletT<I,O>){
+  @:from static public function fromFunXR<O>(fxr:Void->O):Arrowlet<Noise,O>                       return _().fromFunXR(fxr);
+  @:from static public function fromFun2R<Ii,Iii,O>(f2r:Ii->Iii->O):Arrowlet<Tuple2<Ii,Iii>,O>    return _().fromFun2R(f2r);
+  @:from static public function fromFun1R<I,O>(f1r:I->O):Arrowlet<I,O>                            return _().fromFun1R(f1r);
+  //@:from static public function fromFunXX
+  //@:from static public function fromFun1X
 
-  public function new(self:ArrowletT<I,O>) this  = self;
-  @:noUsing static public function lift<I,O>(arw:ArrowletT<I,O>):Arrowlet<I,O>               return new Arrowlet(arw);
-  
-  @:from static public function fromFunction2<A,B,C>(fn:A->B->C):Arrowlet<Tuple2<A,B>,C>     return fromFunction(__.into2(fn));
-  @:from static public function fromFunction<A,B>(fn:A->B):Arrowlet<A,B>                     return new FunctionArrowlet(fn);
-
-  @:noUsing static public function unit<A>():Arrowlet<A,A>                                   return new Unit();
-  
-  public function fulfill(v:I):Arrowlet<Noise,O>                         return Arrowlets._.fulfill(self,v);
-  public function deliver(cb:O->Void):Arrowlet<I,Noise>                  return Arrowlets._.deliver(self,cb);
-  
-  @:deprecated
-  public function withInput(i:I,cont:Sink<O>):Automation                          return this.duoply(i,cont); 
-  public function prepare(i:I,cont:Sink<O>):Automation                            return this.duoply(i,cont); 
-  public function receive(i:I):Receiver<O>                                        return Arrowlets._.receive(self,i);
-  
-  public function then<N>(that:Arrowlet<O,N>):Arrowlet<I,N>                       return Arrowlets._.then(self,that);
-  public function both<I0,O0>(that:Arrowlet<I0,O0>):Both<I,O,I0,O0>               return Arrowlets._.both(self,that);
-  public function split<C>(that:Arrowlet<I, C>):Arrowlet<I, Tuple2<O,C>>          return Arrowlets._.split(self,that);
-  public function bound<C>(that:Arrowlet<Tuple2<I,O>,C>):Arrowlet<I,C>            return Arrowlets._.bound(self,that);
-  public function broach():Arrowlet<I,Tuple2<I,O>>                                return Arrowlets._.bound(self,unit());
-  public function fan():Arrowlet<I,Tuple2<O,O>>                                   return Arrowlets._.fan(self);
-  public function first<C>():Arrowlet<Tuple2<I,C>,Tuple2<O,C>>                    return Arrowlets._.first(self);
-  public function second<C>():Arrowlet<Tuple2<C,I>,Tuple2<C,O>>                   return Arrowlets._.second(self);
-  public function joint<C>(that:Arrowlet<O,C>):Arrowlet<I,Tuple2<O,C>>            return Arrowlets._.joint(self,that);
-  public function compose<N>(r:Arrowlet<N,I>):Arrowlet<N,O>                       return Arrowlets._.then(r,self);
-  public function tapO(fn:O->Void)                                                return Arrowlets._.tapO(self,fn);
-  public function only():Only<I,O>                                                return new Only(self);
-  public function choose<R>(arw:Arrowlet<O,Arrowlet<O,R>>):Arrowlet<I,R>          return Arrowlets._.choose(self,arw);
-  public function or<II>(that:Arrowlet<II,O>):Arrowlet<Either<I,II>,O>            return Arrowlets._.or(self,that);
-  
-  public function postfix<R>(fn:O->R):Arrowlet<I,R>                               return Arrowlets._.postfix(self,fn);
-  public function prefix<P>(fn:P->I):Arrowlet<P,O>                                return Arrowlets._.prefix(self,fn);
-  
-
-
-  
-
-  var self(get,never) : Arrowlet<I,O>;
-  function get_self():Arrowlet<I,O> return lift(this);
-  public function prj():ArrowletT<I,O> return this;
+  @:to public function toRecallDef():RecallDef<I,O,Automation>{
+    return this;
+  }
 }

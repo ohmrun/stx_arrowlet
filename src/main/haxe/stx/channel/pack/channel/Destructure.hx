@@ -7,7 +7,7 @@ class Destructure extends Clazz{
         switch(ipt){
           case Right(Left(l))   : self.prepare(Right(l),cont);
           case Right(Right(r))  : that.prepare(Right(r),cont);
-          case Left(e)          : cont(Left(e),Automation.unit());
+          case Left(e)          : cont(Left(e),Automation.inj().unit());
         }
     ));
   }

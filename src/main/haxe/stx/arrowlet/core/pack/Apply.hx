@@ -1,16 +1,28 @@
 package stx.arrowlet.core.pack;
 
-import stx.arrowlet.core.head.data.Apply in ApplyT;
+import stx.run.pack.recall.term.Base;
 
-@:forward @:callable abstract Apply<I,O>(ApplyT<I,O>) from ApplyT<I,O> to ApplyT<I,O>{
-	public function  new(){
-    this = (
-      (v:Tuple2<Arrowlet<I,O>,I>,cont) -> v.fst().prepare(v.snd(),cont)
-    ).broker(
-      (F) -> __.arw().cont
-    );    
+@:allow(stx.arrowlet.core.pack)
+@:forward abstract Apply<I,O>(ApplyDef<I,O>) from ApplyDef<I,O> to ApplyDef<I,O>{
+  static public inline function _() return Constructor.ZERO;
+
+  @:deprecated
+  static public inline function inj() return Constructor.ZERO;
+	private function new(){
+    this = new ApplyImplementation();
   }
-  public function toArrowlet():Arrowlet<Tuple2<Arrowlet<I,O>,I>,O>{
-    return this;
+  static public function unit<I,O>(){
+    return _().unit();
+  }
+}
+private class Constructor extends Clazz{
+  static public var ZERO(default,never) = new Constructor();
+  public function unit<I,O>():Apply<I,O>{
+    return new Apply();
+  }
+}
+private class ApplyImplementation<I,O> extends Base<Tuple2<Arrowlet<I,O>,I>,O,Automation>{
+  override public function duoply(i:Tuple2<Arrowlet<I,O>,I>,cont:Sink<O>):Automation{
+    return i.fst().prepare(i.snd(),cont);
   }
 }

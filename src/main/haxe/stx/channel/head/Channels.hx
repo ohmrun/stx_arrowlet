@@ -58,7 +58,7 @@ class Channels{
                 ()  -> __.success(v)
               )
             ).prepare(v,cont);
-          case Left(e) : cont(__.failure(e),Automation.unit());
+          case Left(e) : cont(__.failure(e),Automation.inj().unit());
         }
       }
     );

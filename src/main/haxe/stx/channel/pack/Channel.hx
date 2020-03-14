@@ -35,7 +35,7 @@ import stx.channel.head.data.Channel in ChannelT;
       __.arw().cont(
         (chunkN:Outcome<I,EE>,cont:Sink<Outcome<O,EE>>) -> chunkN.fold(
           (v) -> this.postfix(Outcome.inj._.errata.bind(fn)).prepare(__.success(v),cont),
-          (e) -> cont(__.failure(e),Automation.unit())
+          (e) -> cont(__.failure(e),Automation.inj().unit())
         )
       )
     );
@@ -58,6 +58,7 @@ import stx.channel.head.data.Channel in ChannelT;
     return this;
   }
 }
-class Constructor extends Clazz{
+private class Constructor extends Clazz{
+  static public var ZERO(default,never) = new Constructor();
   public var _ = new stx.channel.pack.channel.Destructure();
 }

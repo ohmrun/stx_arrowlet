@@ -16,10 +16,10 @@ class Test{
 }
 class FromTheGroundUpAgainTest extends utest.Test{
   @Ignored
-  public function testFunctionArrowlet(){
+  public function testFun1Arrowlet(){
     var value = None;
 
-    var a = Arrowlets.fromFunction(
+    var a = Arrowlet.fromFun1R(
       (i:Int) -> return value = Some('booo $i')
     );
     var b = a.prepare(10,Sink.unit());
@@ -30,7 +30,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
   @Ignored
   public function testCallbackArrowlet(){
     var value = None;
-    var a = Arrowlets.fromCallbackSink(
+    var a = Arrowlet.fromInputReactor(
       (i:Int,next:Int->Void) -> {
         value = Some(i);
         next(i);
@@ -41,7 +41,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     Assert.same(Some(10),value);
   }
   public function testCallbackArrowletAsync(async:utest.Async){
-    var a = Arrowlets.fromCallbackSink(
+    var a = Arrowlet.fromInputReactor(
       (i:Int,next:Int->Void) -> {
         Assert.pass();
         async.done();

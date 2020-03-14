@@ -14,7 +14,7 @@ class Attempts{
     return Attempts.lift(
       Arrowlets.fromReceiverArrowlet(
         fn.fn().then(
-          f -> f(Automation.unit()).prj()
+          f -> f(Automation.inj().unit()).prj()
         )
       )
     );  

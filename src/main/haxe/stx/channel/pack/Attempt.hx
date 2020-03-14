@@ -49,7 +49,7 @@ private class Constructor extends Clazz{
   }
   public function fromIOFunction<I,O,E>(fn:I->IO<O,E>):Attempt<I,O,E>{
     return Arrowlets.fromReceiverArrowlet(
-      (i) -> fn(i)(Automation.unit())
+      (i) -> fn(i)(Automation.inj().unit())
     );
   }
 }

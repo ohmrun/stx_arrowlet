@@ -4,7 +4,7 @@ class TaskRebuildReloadTest extends utest.Test{
   var log : Log = __.log();
 
   public function testVanilla(async:Async){
-    var arrowlet = new FunctionArrowlet(
+    var arrowlet = new Fun1Arrowlet(
       (x) -> {
         log.debug('function arrowlet function called');
         return x;

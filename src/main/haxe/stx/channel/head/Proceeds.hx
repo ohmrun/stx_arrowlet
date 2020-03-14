@@ -23,7 +23,7 @@ class Proceeds{
   @:noUsing static public function fromIO<T,E>(io:IO<T,E>):Proceed<T,E>{
     return lift(__.arw().cont(
       (_:Noise,cont) -> Automation.inj.interim(
-        io((Automation.unit())).fold(
+        io((Automation.inj().unit())).fold(
           (v) -> cont(v),
           (e) -> Automation.inj.default_(__.fault().of(HaltedAt(e)))
         )

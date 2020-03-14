@@ -8,7 +8,7 @@
 -lib stx_core
 -lib stx_fn
 -lib stx_run
-
+-lib stx_convention
 
 -D test=stx_arrowlet
 #-D error_stack

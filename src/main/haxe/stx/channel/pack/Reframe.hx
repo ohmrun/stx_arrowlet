@@ -48,7 +48,7 @@ import stx.arrowlet.core.head.data.State     in StateT;
          (chk:Outcome<Tuple2<A,S>,E>,auto:Automation) -> 
          chk.fold(
            (tp) -> that(tp.fst()).prepare(ipt.map(_ -> tp.snd()),contN),
-           (e)  -> contN(__.failure(e),Automation.unit())
+           (e)  -> contN(__.failure(e),Automation.inj().unit())
          )
       )
     );
@@ -66,7 +66,7 @@ import stx.arrowlet.core.head.data.State     in StateT;
                   ()    -> __.success(tp)
                 )
               ).prepare(tp.snd(),contN),
-              (err) -> contN(__.failure(err),Automation.unit())
+              (err) -> contN(__.failure(err),Automation.inj().unit())
             )
           )
         )
