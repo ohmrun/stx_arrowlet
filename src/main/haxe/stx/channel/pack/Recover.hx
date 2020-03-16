@@ -1,15 +1,13 @@
 package stx.channel.pack;
 
-import stx.channel.head.data.Recover in RecoverT;
-
-@:forward abstract Recover<I,E>(RecoverT<I,E>) from RecoverT<I,E> to RecoverT<I,E>{
+@:forward abstract Recover<I,E>(RecoverDef<I,E>) from RecoverDef<I,E> to RecoverDef<I,E>{
   public function new(self){
     this = self;
   }
   public function toChannel():Channel<I,I,E>{
-    return Channels.fromRecover(this);
+    return Channel.fromRecover(Arrowlet.lift(this));
   }
-  public function prj():RecoverT<I,E>{
+  public function prj():RecoverDef<I,E>{
     return this;
   }
 } 

@@ -11,7 +11,7 @@ import stx.arrowlet.core.head.data.RightChoice in RightChoiceT;
 			case Right(v) 	:
 				new Apply().then(Right).prepare(tuple2(self,v),cont);
 			case Left(v) 		:
-				cont(Left(v),Automation.inj().unit());
+				cont(Left(v),Automation.unit());
 		}
 	}
 }

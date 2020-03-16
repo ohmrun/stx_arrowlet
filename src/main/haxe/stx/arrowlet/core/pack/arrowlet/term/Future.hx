@@ -11,7 +11,7 @@ class Future<O> extends Base<Noise,O,Automation>{
     this.delegate = delegate;
   }
   override public function duoply(i:Noise,cont:O->Void):Automation{
-    var rcv = Receiver.inj().fromFuture(delegate);
+    var rcv = Receiver.fromFuture(delegate);
     return rcv.duoply(i,cont);
   }
 }

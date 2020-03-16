@@ -20,7 +20,7 @@ class Arrowlets{
     return new CallbackArrowlet(f);
   }
   @:noUsing static public function fromStrandAutomation<I,O>(f):Arrowlet<I,O>{
-    return new Arrowlet(Recall.anon((i:I,cont:O->Void) ->{
+    return new Arrowlet(Recall.Anon((i:I,cont:O->Void) ->{
       return f(i,cont);
     }));
   }

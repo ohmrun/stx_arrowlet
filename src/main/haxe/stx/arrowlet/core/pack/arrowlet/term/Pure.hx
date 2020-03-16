@@ -10,6 +10,6 @@ class Pure<I,O> extends Base<I,O,Automation>{
   }
   override public function duoply(i:I,cont:Sink<O>):Automation{
     cont(secreted);
-    return Automation.inj().unit();
+    return Automation.unit();
   }
 }

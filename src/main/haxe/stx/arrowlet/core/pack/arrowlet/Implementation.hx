@@ -1,7 +1,7 @@
 package stx.arrowlet.core.pack.arrowlet;
 
-import stx.arrowlet.Pack.Arrowlet in Arw;
-import stx.core.Package.Tuple2 in Tup2;
+import stx.arrowlet.Pack.Arrowlet     in Arw;
+import stx.core.Package.Tuple2        in Tup2;
 
 class Implementation{
   static public inline function inj<I,O>()  return Arw._();
@@ -26,11 +26,19 @@ class Implementation{
   static public function prefix<I,Ii,O>(self:Arw<Ii,O>,fn:I->Ii):Arw<I,O>                                      return inj()._.prefix(fn,self);
   static public function postfix<I,Oi,Oii>(self:Arw<I,Oi>,fn:Oi->Oii):Arw<I,Oii>                               return inj()._.postfix(fn,self);
 
+  /**
+    The $rhs Arrowlet returns an Arrowlet. The resulting Arrowlet calls $lhs with its output.
+  **/
   static public function inform<I,Oi,Oii>(lhs:Arw<I,Oi>,rhs:Arw<Oi,Arw<Oi,Oii>>):Arw<I,Oii>                    return inj()._.inform(rhs,lhs);
   static public function broach<I,O>(self:Arw<I,O>):Arw<I,Tup2<I,O>>                                           return inj()._.broach(self);
 
   static public function left<I,Oi,Oii>(self:Arw<I,Oi>):Arw<Either<I,Oii>,Either<Oi,Oii>>                      return inj()._.left(self);
   static public function right<I,Oi,Oii>(self:Arw<I,Oi>):Arw<Either<Oii,I>,Either<Oii,Oi>>                     return inj()._.right(self);
 
+  /**
+    Sprinkle liberally, as this operator orchestrates two tasks seperated by an asyncronous step.
+
+    l_automation = 
+  **/
   static public function flat_map<I,Oi,Oii>(self:Arw<I,Oi>,fn:Oi->Arw<I,Oii>):Arw<I,Oii>                       return inj()._.flat_map(fn,self);
 }

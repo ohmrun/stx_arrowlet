@@ -1,15 +1,25 @@
 package stx.channel.pack;
 
-import stx.channel.head.data.Resolve in ResolveT;
 
-@:forward abstract Resolve<I,O,E>(ResolveT<I,O,E>) from ResolveT<I,O,E> to ResolveT<I,O,E>{
+@:forward abstract Resolve<I,O,E>(ResolveDef<I,O,E>) from ResolveDef<I,O,E> to ResolveDef<I,O,E>{
   public function new(self){
     this = self;
   }
-  public function toChannel():Channel<I,O,E>{
-    return Channels.fromResolve(this);
+  static public function lift<I,O,E>(self:ResolveDef<I,O,E>){
+    return new Resolve(self);
   }
-  public function prj():ResolveT<I,O,E>{
+  public function toChannel():Channel<I,O,E>{
+    return Channel.fromResolve(Arrowlet.lift(this));
+  }
+  public function prj():ResolveDef<I,O,E>{
     return this;
+  } 
+  
+  
+  @:to public function toArw():Arrowlet<Outcome<I,E>,O>{
+    return Arrowlet.lift(this.asRecallDef());
+  }
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<Outcome<I,E>,O>):Resolve<I,O,E>{
+    return lift(self.asRecallDef());
   }
 } 

@@ -4,12 +4,12 @@ import stx.arrowlet.core.pack.arrowlet.Constructor;
 
 @:allow(stx.arrowlet.core.pack.arrowlet)
 @:using(stx.arrowlet.core.pack.arrowlet.Implementation)
-@:forward(duoply)
-abstract Arrowlet<I,O>(ArrowletDef<I,O>){
+@:forward(duoply,asRecallDef)
+abstract Arrowlet<I,O>(ArrowletDef<I,O>) from ArrowletDef<I,O> to ArrowletDef<I,O>{
   private function new(self:ArrowletDef<I,O>) this  = self;
   static public inline function _() return Constructor.ZERO;
 
-  static public function lift<I,O>(self:ArrowletDef<I,O>):Arrowlet<I,O>                           return _().lift(self);
+  static public function lift<I,O>(self:ArrowletDef<I,O>):Arrowlet<I,O>                           return new Arrowlet(self);
   static public function unit<I>():Arrowlet<I,I>                                                  return _().unit();
   static public function pure<I,O>(o:O):Arrowlet<I,O>                                             return _().pure(o);
 
@@ -24,7 +24,4 @@ abstract Arrowlet<I,O>(ArrowletDef<I,O>){
   //@:from static public function fromFunXX
   //@:from static public function fromFun1X
 
-  @:to public function toRecallDef():RecallDef<I,O,Automation>{
-    return this;
-  }
 }

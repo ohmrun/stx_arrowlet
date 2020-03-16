@@ -10,7 +10,7 @@ class Commands{
     var fn = (i:PI,cont:Sink<Report<E>>) -> 
       Automation.inj.interim(
         fn(i)
-        .toUIO()(Automation.inj().unit())
+        .toUIO()(Automation.unit())
         .broker(
           F -> Receiver.lift
         ).map(

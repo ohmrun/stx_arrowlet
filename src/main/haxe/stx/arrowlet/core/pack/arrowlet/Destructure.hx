@@ -5,14 +5,14 @@ class Destructure extends Clazz{
   public inline function unto<I,O>(t:RecallDef<I,O,Automation>):Arrowlet<I,O>{
     return lift(t.asRecallDef());
   }
-  private inline function lift<I,O>(def:ArrowletDef<I,O>):Arrowlet<I,O>{
-    return lift(def);
+  private inline function lift<I,O>(def:Arrowlet<I,O>):Arrowlet<I,O>{
+    return Arrowlet.lift(def);
   }
   public function inject<I,Oi,Oii>(v:Oii,self:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
-    return self.then((b:Oi) -> v);
+    return then(Arrowlet.fromFun1R((b:Oi) -> v),self);
   }
   public function receive<I,O>(i:I,self:Arrowlet<I,O>):Receiver<O>{
-    return Receiver.inj().into(self.prepare.bind(i));
+    return Receiver.into(prepare.bind(i,_,self));
   }
   @doc("left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`.")
   public function then<I,Oi,Oii>(rhs:Arrowlet<Oi,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii> {
@@ -96,7 +96,7 @@ class Destructure extends Clazz{
     return unto(new Inform(lhs,rhs));
   }
   public function broach<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Tuple2<I,O>>{
-    return bound(tuple2,self);
+    return bound(Arrowlet.fromFun2R(tuple2),self);
   }
   public function fulfill<I,O>(i:I,self:Arrowlet<I,O>):Arrowlet<Noise,O>{
     return unto(Recall.Anon(

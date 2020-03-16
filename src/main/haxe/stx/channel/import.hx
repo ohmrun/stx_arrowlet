@@ -1,8 +1,9 @@
 package stx.channel;
 
 
+using tink.CoreApi;
+
 import tink.core.Callback;
-import tink.CoreApi;
 import tink.core.Callback;
 
 
@@ -22,12 +23,12 @@ import stx.assert.Package;
 using stx.run.Pack;
 using stx.arrowlet.Pack;
 
-import stx.channel.Package;
+using stx.channel.Package;
 
 
 using stx.core.Lift;
 using stx.fn.Lift;
 using stx.log.Lift;
 
-using stx.channel.Lift;
+
 using stx.ds.Lift;

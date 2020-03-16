@@ -1,15 +1,13 @@
 package stx.channel.pack;
 
-import stx.channel.type.Execute in ExecuteT;
-
-abstract Execute<E>(ExecuteT<E>) from ExecuteT<E> to ExecuteT<E>{
+abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   public function new(self) this = self;
-  static public function lift<E>(self:ExecuteT<E>):Execute<E> return new Execute(self);
+  static public function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
   
 
   
 
-  public function prj():ExecuteT<E> return this;
+  public function prj():ExecuteDef<E> return this;
   private var self(get,never):Execute<E>;
   private function get_self():Execute<E> return lift(this);
 }

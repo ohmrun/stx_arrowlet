@@ -1,20 +1,33 @@
 package stx.channel.pack;
 
-import stx.channel.head.data.Proceed in ProceedT;
-import stx.channel.head.Proceeds;
+import stx.channel.pack.proceed.Constructor;
 
-@:forward(then) abstract Proceed<T,E>(ProceedT<T,E>) from ProceedT<T,E> to ProceedT<T,E>{
-  public function new(self:ProceedT<T,E>) this = self;
+@:using(stx.arrowlet.core.pack.arrowlet.Implementation)
+@:forward(then) abstract Proceed<O,E>(ProceedDef<O,E>) from ProceedDef<O,E> to ProceedDef<O,E>{
+  static public inline function _() return Constructor.ZERO;
 
-  @:noUsing static public function lift<T,E>(arw:ProceedT<T,E>):Proceed<T,E>    return Proceeds.lift(arw);
-  @:noUsing static public function pure<T,E>(v:T):Proceed<T,E>                return Proceeds.pure(v);
-
-  @:noUsing static public function fromThunkT<T,E>(v:Void->T):Proceed<T,E>    return Proceeds.fromThunkT(v);
-  @:noUsing static public function fromIO<T,E>(io:IO<T,E>):Proceed<T,E>       return Proceeds.fromIO(io);
+  public function new(self:ProceedDef<O,E>) this = self;
 
 
+  @:noUsing static public function lift<O,E>(arw:ProceedDef<O,E>):Proceed<O,E>    return _().lift(arw);
+  @:noUsing static public function pure<O,E>(v:O):Proceed<O,E>                    return _().pure(v);
 
-  public function forward():IO<T,E> return Proceeds._.forward(lift(this));
-  public function postfix(fn)       return Proceeds._.postfix(lift(this),fn);
-  public function errata(fn)        return Proceeds._.errata(lift(this),fn);
+  @:noUsing static public function fromThunkT<O,E>(v:Void->O):Proceed<O,E>        return _().fromThunkT(v);
+  @:noUsing static public function fromIO<O,E>(io:IO<O,E>):Proceed<O,E>           return _().fromIO(io);
+
+
+
+  public function forward():IO<O,E> return _()._.forward(self);
+  public function postfix(fn)       return _()._.postfix(self,fn);
+  public function errata(fn)        return _()._.errata(self,fn);
+  
+  private var self(get,never):Proceed<O,E>;
+  private function get_self():Proceed<O,E> return this;
+
+  @:to public function toArw():Arrowlet<Noise,Outcome<O,E>>{
+    return Arrowlet.lift(this.asRecallDef());
+  }
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<Noise,Outcome<O,E>>):Proceed<O,E>{
+    return lift(self.asRecallDef());
+  }
 }

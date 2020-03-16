@@ -9,7 +9,7 @@ class Fun1Future<I,O> extends stx.run.pack.recall.term.Base<I,O,Automation>{
     this.delegate = delegate;
   }
   override public function duoply(i:I,cont:O->Void):Automation{
-    var rcv = Receiver.inj().fromFuture(delegate(i));
+    var rcv = Receiver.fromFuture(delegate(i));
     return rcv.duoply(Noise,cont);
   }
 }

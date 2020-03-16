@@ -10,6 +10,6 @@ class InputReactor<I,O> extends Base<I,O,Automation>{
   }
   override public function duoply(i:I,cont:Sink<O>):Automation{
     delegate(i,cont);
-    return Automation.inj().unit();
+    return Automation.unit();
   }
 }

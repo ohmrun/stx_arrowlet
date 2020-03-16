@@ -1,29 +1,40 @@
 package stx.channel.pack;
 
-import stx.channel.head.data.Arrange in ArrangeT;
+@:forward abstract Arrange<I,S,O,E>(ArrangeDef<I,S,O,E>) from ArrangeDef<I,S,O,E> to ArrangeDef<I,S,O,E>{
+  static public inline function _() return Constructor.ZERO;
 
-//typedef Arrange<S,A,R,E> = Attempt<Tuple2<A,S>,R,E>;
-
-@:forward abstract Arrange<S,A,R,E>(ArrangeT<S,A,R,E>) from ArrangeT<S,A,R,E> to ArrangeT<S,A,R,E>{
   public function new(self) this = self;
-  static public function lift<S,A,R,E>(self:ArrangeT<S,A,R,E>):Arrange<S,A,R,E> return new Arrange(self);
-  static public function pure<S,A,R,E>(r:R) return lift(Attempt.lift(__.arw().fn( (tp:Tuple2<A,S>) -> __.success(r))));
+  static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>         return new Arrange(self);
+  static public function pure<I,S,O,E>(o:O)                                               return _().pure(o);
 
-  
+  public function state()                                                                 return _()._.state(this)                            ;
 
-  public function prj():ArrangeT<S,A,R,E> return this;
-  private var self(get,never):Arrange<S,A,R,E>;
-  private function get_self():Arrange<S,A,R,E> return lift(this);
-
-  public function state():Arrange<S,A,Tuple2<R,S>,E>{
-    return( new Arrange(this.broach().postfix(
-      __.into2(
-        (tp:Tuple2<A,S>,chk:Outcome<R,E>) -> chk.map(tuple2.bind(_,tp.snd()))
-      )
-    )));
+  @:to public function toArw():Arrowlet<Tuple2<I,S>,Outcome<O,E>>{
+    return Arrowlet.lift(this.asRecallDef());
   }
-  
-  public function toArrowlet():Arrowlet<Tuple2<A,S>,Outcome<R,E>>{
-    return this;
+  @:from static public function fromArw<I,S,O,E>(self:Arrowlet<Tuple2<I,S>,Outcome<O,E>>):Arrange<I,S,O,E>{
+    return lift(self.asRecallDef());
+  }
+}
+private class Constructor extends Clazz{
+  static public var ZERO(default,never) = new Constructor();
+  public var _(default,never) = new Destructure();
+
+  static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         return new Arrange(self);
+  static public function unto<I,S,O,E>(self:Arrowlet<Tuple2<I,S>,Outcome<O,E>>):Arrange<I,S,O,E>          return new Arrange(self.asRecallDef());
+
+  public function pure<I,S,O,E>(o:O):Arrange<I,S,O,E>{
+    return unto(Arrowlet.fromFun1R(
+      (i:Tuple2<I,S>) ->  __.success(o)
+    ));
+  }
+}
+private class Destructure extends Clazz{
+  public function state<I,S,O,E>(self:Arrange<I,S,O,E>):Attempt<Tuple2<I,S>,Tuple2<O,S>,E>{
+    return Attempt.lift(self.broach().postfix(
+      __.into2(
+        (tp:Tuple2<I,S>,chk:Outcome<O,E>) -> chk.map(tuple2.bind(_,tp.snd()))
+      )
+    ));
   }
 }

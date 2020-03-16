@@ -15,7 +15,7 @@ import stx.fn.Package;
 import stx.fp.Package;
 
 
-import stx.channel.Package;
+using stx.channel.Package;
 
 using stx.run.Pack;
 using stx.arrowlet.Pack;
@@ -24,5 +24,4 @@ using stx.core.Lift;
 using stx.fn.Lift;
 using stx.log.Lift;
 
-using stx.channel.Lift;
 using stx.assert.Lift;

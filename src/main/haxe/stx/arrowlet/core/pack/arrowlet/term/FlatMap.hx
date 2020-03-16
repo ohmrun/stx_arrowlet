@@ -23,7 +23,8 @@ class FlatMap<I,Oi,Oii> extends Base<I,Oii,Automation>{
 		var outer_task 				= self.duoply(
 			i,
 			(oI) -> {
-        var inner_task = func(oI).duoply(i,
+				var next = func(oI);
+        var inner_task = next.duoply(i,
           (oII) -> cont(oII)
         );
         inner_task_future.fst().trigger(inner_task);

@@ -8,25 +8,24 @@ class Module extends Clazz{
     return Channel.unit();
   }
   public function lift<I,O,E>(fn:ChannelT<I,O,E>):Channel<I,O,E>{
-    return Channels.lift(fn);
+    return Channel.lift(fn);
   }
   public function io<I,O,E>(fn:I->IO<O,E>):Attempt<I,O,E>{
-    
     return Attempt.lift(
-      new ReceiverArrowlet(fn.fn().then( io -> io.wait().prj()))
+      Recall.Anon(
+        (i:I,cont:Sink<Outcome<O,E>>) -> fn(i)(Task.ZERO,cont)
+      )
     );
   }
   public function eio<I,E>(fn:I->EIO<E>):Command<I,E>{
    return Command.lift(
-      Arrowlet.lift(Recall.anon(
+      Arrowlet.lift(Recall.Anon(
         (i,cont:Sink<Report<E>>) -> fn(i).apply(cont)
       ))
    );
   }
   public function err<I,E>(fn:I->Option<TypedError<E>>):Command<I,E>{
-    return Command.lift(
-      __.arw().fn(fn.fn().then(e -> new Report(e)))
-    );
+    return Command.fromFun1Option(fn);
   }
   public function outcome<I,O,E>(arw:Arrowlet<I,Outcome<O,E>>):Attempt<I,O,E>{
     return Attempt.lift(arw);
