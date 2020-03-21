@@ -9,7 +9,7 @@ import stx.arrowlet.core.head.data.RightChoice in RightChoiceT;
 	static private function  method<I,Oi,Oii>(self:Arrowlet<I,Oi>,i:Either<Oii,I>,cont:Sink<Either<Oii,Oi>>){
 		return switch (i) {
 			case Right(v) 	:
-				new Apply().then(Right).prepare(tuple2(self,v),cont);
+				new Apply().then(Right).prepare(__.couple(self,v),cont);
 			case Left(v) 		:
 				cont(Left(v),Automation.unit());
 		}

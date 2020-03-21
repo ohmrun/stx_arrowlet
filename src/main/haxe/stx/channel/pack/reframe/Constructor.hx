@@ -7,8 +7,8 @@ class Constructor extends Clazz{
   public function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
   public function pure<I,O,E>(o:O):Reframe<I,O,E>{
     return lift(Channel.unit().postfix(
-      (oc:Outcome<I,E>
-        ) -> (oc.map(tuple2.bind(o)):Outcome<Tuple2<O,I>,E>)
+      (oc:Res<I,E>
+        ) -> (oc.map(__.couple.bind(o)):Res<Couple<O,I>,E>)
     ));
   }
 }

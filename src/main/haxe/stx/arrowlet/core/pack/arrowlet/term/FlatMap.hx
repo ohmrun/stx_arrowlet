@@ -11,7 +11,7 @@ class FlatMap<I,Oi,Oii> extends Base<I,Oii,Automation>{
 		this.self = self;
 		this.func = func;
 	}
-  override public function duoply(i:I,cont:Sink<Oii>):Automation{
+  override public function applyII(i:I,cont:Sink<Oii>):Automation{
     var outer_task_future = __.future();
     var inner_task_future = __.future();
     
@@ -20,11 +20,11 @@ class FlatMap<I,Oi,Oii> extends Base<I,Oii,Automation>{
 				(task1:Task) -> task0.seq(task1)
 			)
 		);
-		var outer_task 				= self.duoply(
+		var outer_task 				= self.applyII(
 			i,
 			(oI) -> {
 				var next = func(oI);
-        var inner_task = next.duoply(i,
+        var inner_task = next.applyII(i,
           (oII) -> cont(oII)
         );
         inner_task_future.fst().trigger(inner_task);

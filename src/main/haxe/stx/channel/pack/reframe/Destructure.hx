@@ -3,14 +3,14 @@ package stx.channel.pack.reframe;
 
 class Destructure extends Clazz{
   private function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
-  private function unto<I,O,E>(wml:Arrowlet<Outcome<I,E>,Outcome<Tuple2<O,I>,E>>):Reframe<I,O,E> return new Reframe(wml.asRecallDef());
+  private function unto<I,O,E>(wml:Arrowlet<Res<I,E>,Res<Couple<O,I>,E>>):Reframe<I,O,E> return new Reframe(wml.asRecallDef());
 
   public function attempt<I,O,Oi,E>(that:Attempt<O,Oi,E>,self:Reframe<I,O,E>):Reframe<I,Oi,E>{
-    var fn = (chk:Outcome<Tuple2<Outcome<Oi,E>,I>,E>) -> (chk.fmap(
+    var fn = (chk:Res<Couple<Res<Oi,E>,I>,E>) -> (chk.flat_map(
       (tp) -> tp.fst().map(
-        (r) -> tuple2(r,tp.snd())
+        (r) -> __.couple(r,tp.snd())
       )
-    ):Outcome<Tuple2<Oi,I>,E>);
+    ):Res<Couple<Oi,I>,E>);
     var arw =  unto(
       self.process(
         that.first()
@@ -24,19 +24,22 @@ class Destructure extends Clazz{
       self.then(that.toChannel())
         .broach()
         .postfix(
-          (tp:Tuple2<Outcome<I,E>,Outcome<Oi,E>>) -> switch(tp){
-            case tuple2(Right(s),Right(z))  : __.success(tuple2(z,s));
-            case tuple2(l,r)                : __.into2(Outcome.inj._.zip)(tp);
-          }
+          (tp:Couple<Res<I,E>,Res<Oi,E>>) -> 
+            tp.decouple(
+              (l,r) -> switch([l,r]){
+                case [Success(s),Success(z)]  : __.success(__.couple(z,s));
+                default                       : __.decouple(Res._()._.zip)(tp);
+              }
+            )
         )
     );
     return arw;
   }
 
-  public function rearrange<I,Ii,O,Oi,E>(that:O->Arrange<Ii,I,Oi,E>,self:Reframe<I,O,E>):Attempt<Tuple2<Ii,I>,Oi,E>{
+  public function rearrange<I,Ii,O,Oi,E>(that:O->Arrange<Ii,I,Oi,E>,self:Reframe<I,O,E>):Attempt<Couple<Ii,I>,Oi,E>{
     return Recall.Anon(
-      (ipt:Tuple2<Ii,I>,contN:Sink<Outcome<Oi,E>>) -> self.prepare(Right(ipt.snd()),
-         (chk:Outcome<Tuple2<O,I>,E>) -> 
+      (ipt:Couple<Ii,I>,contN:Sink<Res<Oi,E>>) -> self.prepare(__.success(ipt.snd()),
+         (chk:Res<Couple<O,I>,E>) -> 
          chk.fold(
            (tp) -> that(tp.fst()).prepare(ipt.map(_ -> tp.snd()),contN),
            (e)  -> {
@@ -50,10 +53,10 @@ class Destructure extends Clazz{
 
   public function commander<I,O,E>(fN:O->Command<I,E>,self:Reframe<I,O,E>):Reframe<I,O,E>{
     return lift(Recall.Anon(
-      (ipt:Outcome<I,E>,contN:Sink<Outcome<Tuple2<O,I>,E>>) ->
+      (ipt:Res<I,E>,contN:Sink<Res<Couple<O,I>,E>>) ->
         self.prepare(
           ipt,
-          (out:Outcome<Tuple2<O,I>,E>) -> out.fold(
+          (out:Res<Couple<O,I>,E>) -> out.fold(
             (tp) -> fN(tp.fst()).postfix(
               (opt) -> opt.fold(
                 (err) -> __.failure(err),

@@ -18,36 +18,36 @@ class Destructure extends Clazz{
   public function then<I,Oi,Oii>(rhs:Arrowlet<Oi,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii> {
     return unto(new Then(lhs,rhs));
   }
-  @doc("Takes an Arrowlet<A,B>, and produces one taking a Tuple2 that runs the Arrowlet on the left-hand side, leaving the right-handside untouched.")
-  public function first<Ii,Iii,O>(self:Arrowlet<Ii,O>):Arrowlet<Tuple2<Ii,Iii>,Tuple2<O,Iii>>{
+  @doc("Takes an Arrowlet<A,B>, and produces one taking a Couple that runs the Arrowlet on the left-hand side, leaving the right-handside untouched.")
+  public function first<Ii,Iii,O>(self:Arrowlet<Ii,O>):Arrowlet<Couple<Ii,Iii>,Couple<O,Iii>>{
     return both(Arrowlet.unit(),self);
   }
-  @doc("Takes an Arrowlet<A,B>, and produces one taking a Tuple2 that runs the Arrowlet on the right-hand side, leaving the left-hand side untouched.")
-  public function second<Ii,O,Iii>(self:Arrowlet<Ii,O>):Arrowlet<Tuple2<Iii,Ii>,Tuple2<Iii,O>>{
+  @doc("Takes an Arrowlet<A,B>, and produces one taking a Couple that runs the Arrowlet on the right-hand side, leaving the left-hand side untouched.")
+  public function second<Ii,O,Iii>(self:Arrowlet<Ii,O>):Arrowlet<Couple<Iii,Ii>,Couple<Iii,O>>{
     return both(self,Arrowlet.unit());
   }
   @doc("Takes two Arrowlets with thstatic public function pure<I,O>(o:O):Arrowlet<I,O>                                             return _().pure(o);e same input type, and produces one which applies each Arrowlet with the same input.")
-  public function split<I, Oi, Oii>(rhs:Arrowlet<I, Oii>,lhs:Arrowlet<I, Oi>):Arrowlet<I, Tuple2<Oi,Oii>> {
+  public function split<I, Oi, Oii>(rhs:Arrowlet<I, Oii>,lhs:Arrowlet<I, Oi>):Arrowlet<I, Couple<Oi,Oii>> {
     return unto(new Split(lhs,rhs));
   }
   @doc("Takes two Arrowlets and produces on that runs them in parallel, waiting for both responses before output.")
-  public function both<Ii,Oi,Iii,Oii>(rhs:Arrowlet<Iii,Oii>,lhs:Arrowlet<Ii,Oi>):Arrowlet<Tuple2<Ii,Iii>,Tuple2<Oi,Oii>>{
+  public function both<Ii,Oi,Iii,Oii>(rhs:Arrowlet<Iii,Oii>,lhs:Arrowlet<Ii,Oi>):Arrowlet<Couple<Ii,Iii>,Couple<Oi,Oii>>{
     return unto(new Both(lhs,rhs));
   }
   @doc("Changes <B,C> to <C,B> on the output of an Arrowlet")
-  public function swap<I,Oi,Oii>(self:Arrowlet<I,Tuple2<Oi,Oii>>):Arrowlet<I,Tuple2<Oii,Oi>>{
-    return self.then((tp:Tuple2<Oi,Oii>) -> tp.swap());
+  public function swap<I,Oi,Oii>(self:Arrowlet<I,Couple<Oi,Oii>>):Arrowlet<I,Couple<Oii,Oi>>{
+    return self.then((tp:Couple<Oi,Oii>) -> tp.swap());
   }
-  @doc("Produces a Tuple2 output of any Arrowlet.")
-  public function fan<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Tuple2<O,O>>{
-    return self.postfix((v) -> tuple2(v,v));
+  @doc("Produces a Couple output of any Arrowlet.")
+  public function fan<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Couple<O,O>>{
+    return self.postfix((v) -> __.couple(v,v));
   }
   @doc("Runs the first Arrowlet, then the second, preserving the output of the first on the left-hand side.")
-  public function joint<I,Oi,Oii>(rhs:Arrowlet<Oi,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Tuple2<Oi,Oii>>{
+  public function joint<I,Oi,Oii>(rhs:Arrowlet<Oi,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Couple<Oi,Oii>>{
     return lhs.then(Arrowlet.unit().split(rhs));
   }
   @doc("Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet.")
-  public function bound<I,Oi,Oii>(rhs:Arrowlet<Tuple2<I,Oi>,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
+  public function bound<I,Oi,Oii>(rhs:Arrowlet<Couple<I,Oi>,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
     return unto(new Bound(lhs,rhs));
   }
   // @doc("Runs an Arrowlet until it returns Done(out).")
@@ -95,8 +95,8 @@ class Destructure extends Clazz{
   public function inform<I,Oi,Oii>(rhs:Arrowlet<Oi,Arrowlet<Oi,Oii>>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
     return unto(new Inform(lhs,rhs));
   }
-  public function broach<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Tuple2<I,O>>{
-    return bound(Arrowlet.fromFun2R(tuple2),self);
+  public function broach<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Couple<I,O>>{
+    return bound(Arrowlet.fromFun2R(__.couple),self);
   }
   public function fulfill<I,O>(i:I,self:Arrowlet<I,O>):Arrowlet<Noise,O>{
     return unto(Recall.Anon(
@@ -110,7 +110,6 @@ class Destructure extends Clazz{
           (o:O) -> {
             cb(o);
             cont(Noise);
-            return Automation.unit();
           }
         );
       }
@@ -118,7 +117,7 @@ class Destructure extends Clazz{
   }
 
   public function prepare<I,O>(i:I,cont:Sink<O>,self:Arrowlet<I,O>):Automation
-    return self.duoply(i,cont); 
+    return self.applyII(i,cont); 
 
   public function flat_map<I,Oi,Oii>(fn:Oi->Arrowlet<I,Oii>,self:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
     return unto(new FlatMap(self,fn));

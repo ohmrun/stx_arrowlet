@@ -6,12 +6,15 @@ package stx.channel.pack;
   public function new(self){
     this = self;
   }
-  static public function fromFun1Option<I,E>(fn:I->Option<TypedError<E>>){
+  @:from static public function fromFun1Report<I,E>(fn:I->Report<E>):Command<I,E>{
+    return Arrowlet.fromFun1R((i) -> fn(i));
+  }
+  static public function fromFun1Option<I,E>(fn:I->Option<Err<E>>):Command<I,E>{
     return Arrowlet.fromFun1R((i) -> new Report(fn(i)));
   }
   static public function fromFun1EIO<I,E>(fn:I->EIO<E>){
     return Recall.Anon(
-      (i,cont) -> fn(i).duoply(Automation.unit(),cont)
+      (i,cont) -> fn(i).applyII(Automation.unit(),cont)
     );
   }
   static public function lift<I,E>(self:CommandDef<I,E>):Command<I,E>{
@@ -33,7 +36,7 @@ package stx.channel.pack;
       (auto:Automation,cont:Sink<Report<E>>) -> auto.snoc(self.prepare(i,cont))
     );
   }
-  public function errata<EE>(fn:TypedError<E>->TypedError<EE>){
+  public function errata<EE>(fn:Err<E>->Err<EE>){
     return self.postfix((report) -> report.errata(fn));
   }
   private var self(get,never):Command<I,E>;

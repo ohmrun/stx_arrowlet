@@ -11,12 +11,12 @@ class Then<I,Oi,Oii> extends Base<I,Oii,Automation>{
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override public function duoply(i:I,cont:Sink<Oii>):Automation{
+	override public function applyII(i:I,cont:Sink<Oii>):Automation{
 		return new FlatMap(
 			lhs,
 			(oI) -> Arrowlet.lift(
-				Recall.Anon((_:I,cont:Sink<Oii>) -> rhs.duoply(oI,cont))
+				Recall.Anon((_:I,cont:Sink<Oii>) -> rhs.applyII(oI,cont))
 			)
-		).duoply(i,cont);
+		).applyII(i,cont);
 	}
 }

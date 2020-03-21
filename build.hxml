@@ -6,7 +6,9 @@
 -lib tink_core
 
 -lib stx_core
+-lib stx_std
 -lib stx_fn
+-lib stx_assert
 -lib stx_run
 -lib stx_convention
 

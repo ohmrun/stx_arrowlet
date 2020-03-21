@@ -4,7 +4,7 @@ class Lift{
   // static public function arrowlet<I,O>(stx:Wildcard,c:Construction<I,O>):Arrowlet<I,O>{
   //   return c.reply();
   // }
-  //static public function pinch<I,O1,O2>(a:Arrowlet<Tuple2<I,I>,Tuple2<O1,O2>>):Arrowlet<I,Tuple2<O1,O2>> return Arrowlet.inj().fromPair(a);
+  //static public function pinch<I,O1,O2>(a:Arrowlet<Couple<I,I>,Couple<O1,O2>>):Arrowlet<I,Couple<O1,O2>> return Arrowlet.inj().fromPair(a);
 
 }
 

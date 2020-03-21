@@ -73,14 +73,14 @@ class Upshots{
       }
     return arw0.then(arwN);
   }
-  static public function split<I,O,N>(arw0:TUpshot<I,O>,arw1:Upshot<I,N>):Upshot<I,Tuple2<O,N>>{
+  static public function split<I,O,N>(arw0:TUpshot<I,O>,arw1:Upshot<I,N>):Upshot<I,Couple<O,N>>{
     return arw0.split(arw1).then(
-      function(tp,cont:Strand<CUpshot<Tuple2<O,N>>>):Void{
+      function(tp,cont:Strand<CUpshot<Couple<O,N>>>):Void{
         switch (tp) {
-          case tuple2(Success(v),Failure(v1)) : cont(Failure(v1));
-          case tuple2(Failure(v),Success(v1)) : cont(Failure(v));
-          case tuple2(Failure(v),Failure(v1)) : cont(Failure(Error.withData('Errors',ErrorStack([v,v1]))));
-          case tuple2(Success(v),Success(v1)) : cont(Success(tuple2(v,v1)));
+          case __.couple(Success(v),Failure(v1)) : cont(Failure(v1));
+          case __.couple(Failure(v),Success(v1)) : cont(Failure(v));
+          case __.couple(Failure(v),Failure(v1)) : cont(Failure(Error.withData('Errors',ErrorStack([v,v1]))));
+          case __.couple(Success(v),Success(v1)) : cont(Success(__.couple(v,v1)));
         }
       }
     );

@@ -21,8 +21,8 @@ private class Constructor extends Clazz{
     return new Apply();
   }
 }
-private class ApplyImplementation<I,O> extends Base<Tuple2<Arrowlet<I,O>,I>,O,Automation>{
-  override public function duoply(i:Tuple2<Arrowlet<I,O>,I>,cont:Sink<O>):Automation{
+private class ApplyImplementation<I,O> extends Base<Couple<Arrowlet<I,O>,I>,O,Automation>{
+  override public function applyII(i:Couple<Arrowlet<I,O>,I>,cont:Sink<O>):Automation{
     return i.fst().prepare(i.snd(),cont);
   }
 }

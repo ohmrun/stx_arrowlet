@@ -8,7 +8,7 @@ class InputReceiver<I,O> extends Base<I,O,Automation>{
     super();
     this.delegate = delegate;
   }
-  override public function duoply(i:I,cont:Sink<O>):Automation{
-    return delegate(i).duoply(Noise,cont);
+  override public function applyII(i:I,cont:Sink<O>):Automation{
+    return delegate(i).applyII(Noise,cont);
   }
 }

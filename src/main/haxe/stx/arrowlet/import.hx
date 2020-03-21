@@ -5,23 +5,21 @@ import tink.CoreApi;
 import tink.core.Callback;
 
 
-import stx.core.head.Data;
 import stx.arrowlet.core.head.Data;
 
 using stx.run.Pack;
 
-import stx.core.Package;
-import stx.fn.Package;
-import stx.fp.Package;
-
-
-using stx.channel.Package;
-
+using stx.Std;
+using stx.Core;
+using stx.Fn;
+using stx.Log;
+using stx.Assert;
 using stx.run.Pack;
 using stx.arrowlet.Pack;
+using stx.channel.Pack;
 
-using stx.core.Lift;
-using stx.fn.Lift;
-using stx.log.Lift;
 
-using stx.assert.Lift;
+
+
+
+

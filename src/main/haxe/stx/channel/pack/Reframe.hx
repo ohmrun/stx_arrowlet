@@ -19,17 +19,17 @@ import stx.channel.pack.reframe.Constructor;
   private function get_self():Reframe<I,O,E> return this;
 
 
-  @:to public function toArw():Arrowlet<Outcome<I,E>,Outcome<Tuple2<O,I>,E>>{
+  @:to public function toArw():Arrowlet<Res<I,E>,Res<Couple<O,I>,E>>{
     return Arrowlet.lift(this.asRecallDef());
   }
-  @:from static public function fromArw<I,O,E>(self:Arrowlet<Outcome<I,E>,Outcome<Tuple2<O,I>,E>>):Reframe<I,O,E>{
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<Res<I,E>,Res<Couple<O,I>,E>>):Reframe<I,O,E>{
     return lift(self.asRecallDef());
   }
 
-  @:to public function toChannel():Channel<I,Tuple2<O,I>,E>{
+  @:to public function toChannel():Channel<I,Couple<O,I>,E>{
     return Arrowlet.lift(this.asRecallDef());
   }
-  @:from static public function fromChannel<I,O,E>(self:Channel<I,Tuple2<O,I>,E>):Reframe<I,O,E>{
+  @:from static public function fromChannel<I,O,E>(self:Channel<I,Couple<O,I>,E>):Reframe<I,O,E>{
     return lift(self.asRecallDef());
   }
 }

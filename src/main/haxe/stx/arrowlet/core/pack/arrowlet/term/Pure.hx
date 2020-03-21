@@ -8,7 +8,7 @@ class Pure<I,O> extends Base<I,O,Automation>{
     super();
     this.secreted = secreted;
   }
-  override public function duoply(i:I,cont:Sink<O>):Automation{
+  override public function applyII(i:I,cont:Sink<O>):Automation{
     cont(secreted);
     return Automation.unit();
   }

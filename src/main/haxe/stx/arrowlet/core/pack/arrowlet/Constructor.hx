@@ -15,7 +15,7 @@ class Constructor extends Clazz{
     return unto(new Pure(o));
   }
 
-  public function Apply<I,O>():Arrowlet<Tuple2<Arrowlet<I,O>,I>,O>{
+  public function Apply<I,O>():Arrowlet<Couple<Arrowlet<I,O>,I>,O>{
     return unto(new Apply());
   }
   public function fromRecallFun<I,O>(fun:RecallFun<I,O,Void>):Arrowlet<I,O>{
@@ -27,8 +27,8 @@ class Constructor extends Clazz{
   public function fromFun1R<I,O>(f:I->O):Arrowlet<I,O>{
     return lift(new Sync(f));
   }
-  public function fromFun2R<PI,PII,R>(f):Arrowlet<Tuple2<PI,PII>,R>{
-    return lift(new Sync(__.into2(f)));
+  public function fromFun2R<PI,PII,R>(f):Arrowlet<Couple<PI,PII>,R>{
+    return lift(new Sync(__.decouple(f)));
   }
   public function fromInputReactor<I,O>(f:I->(O->Void)->Void):Arrowlet<I,O>{
     return fromRecallFun(f);

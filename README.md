@@ -16,7 +16,7 @@ First
     first(f)::(l,r)<         >(f(l),r))
                     \ - - - /
     _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Tuple2<A,C>,Tuple2<B,C>>
+    Arrowlet<A,B> -> Arrowlet<Couple<A,C>,Couple<B,C>>
 
 Second
 
@@ -27,7 +27,7 @@ Second
                       \ - g - /
 
     _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Tuple2<C,A>,Tuple2<C,B>>
+    Arrowlet<A,B> -> Arrowlet<Couple<C,A>,Couple<C,B>>
 
 Pair
 
@@ -39,7 +39,7 @@ Pair
 
     _____________________________________________
         f         ->      g        -> ((l,r) -> (f(l),g(r))
-    Arrowlet<A,B> -> Arrowlet<C,D> -> Arrowlet<Tuple2<A,C>, Tuple2<B,D>>
+    Arrowlet<A,B> -> Arrowlet<C,D> -> Arrowlet<Couple<A,C>, Couple<B,D>>
 
 Split
     _____________________________________________
@@ -49,7 +49,7 @@ Split
                        \ - g - /
 
     _____________________________________________
-    Arrowlet<A, B> -> Arrowlet<A, C> -> Arrowlet<A, Tuple2<B,C>>
+    Arrowlet<A, B> -> Arrowlet<A, C> -> Arrowlet<A, Couple<B,C>>
 
 Joint
 
@@ -59,7 +59,7 @@ Joint
                      \ - - - - > (f(x),g(f(x)))
 
     _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<B,C> -> Arrowlet<A,Tuple2<B,C>>
+    Arrowlet<A,B> -> Arrowlet<B,C> -> Arrowlet<A,Couple<B,C>>
 
 Bound
 
@@ -70,7 +70,7 @@ Bound
                   \ - f - /   -/
 
     _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Tuple2<A,B>,C> -> Arrowlet<A,C>
+    Arrowlet<A,B> -> Arrowlet<Couple<A,B>,C> -> Arrowlet<A,C>
 
 Repeat / Animate
 

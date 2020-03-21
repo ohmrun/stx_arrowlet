@@ -16,10 +16,10 @@ package stx.channel.pack;
   } 
   
   
-  @:to public function toArw():Arrowlet<Outcome<I,E>,O>{
+  @:to public function toArw():Arrowlet<Res<I,E>,O>{
     return Arrowlet.lift(this.asRecallDef());
   }
-  @:from static public function fromArw<I,O,E>(self:Arrowlet<Outcome<I,E>,O>):Resolve<I,O,E>{
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<Res<I,E>,O>):Resolve<I,O,E>{
     return lift(self.asRecallDef());
   }
 } 

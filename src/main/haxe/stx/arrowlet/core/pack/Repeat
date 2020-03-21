@@ -25,7 +25,7 @@ import stx.arrowlet.core.head.data.Repeat in TRepeat;
 	static public function sample<I,O,Z>(arw:Arrowlet<I,O>,selector:O->Bool,fold:O->Z->Z,init:Z):Arrowlet<I,Z>{
 		var op = init;
 		return return new Repeat(arw.bound(
-			(t:Tuple2<I,O>) -> t.into(
+			(t:Couple<I,O>) -> t.into(
 				(i,o) -> switch (selector(o)) {
 					case true 	: op = fold(o,op); 		
 						Left(i);

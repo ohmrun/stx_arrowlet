@@ -7,13 +7,13 @@ class Pack{
 typedef ArrowletDef<I,O>                      = Recall<I,O,Automation>;
 typedef Arrowlet<I,O>                         = stx.arrowlet.core.pack.Arrowlet<I,O>;
 
-typedef ApplyDef<I,O>                         = ArrowletDef<Tuple2<Arrowlet<I,O>,I>,O>;
+typedef ApplyDef<I,O>                         = ArrowletDef<Couple<Arrowlet<I,O>,I>,O>;
 typedef Apply<I,O>                            = stx.arrowlet.core.pack.Apply<I,O>;
 
 //typedef ActionDef                             = Arrowlet<Noise,Noise>;
 //typedef LeftChoiceDef<I,Oi,Oii>               = ArrowletDef<Either<I,Oii>,Either<Oi,Oii>>;
 //typedef OrDef<Ii,Iii,O>                       = ArrowletDef<Either<Ii,Iii>,O>;
-//typedef BothDef<Ii,Oi,Iii,Oii>                = ArrowletDef<Tuple2<Ii,Iii>,Tuple2<Oi,Oii>>;
+//typedef BothDef<Ii,Oi,Iii,Oii>                = ArrowletDef<Couple<Ii,Iii>,Couple<Oi,Oii>>;
 //typedef OnlyDef<I,O>                          = ArrowletDef<Option<I>,Option<O>>;
 
 typedef RepeatDef<I,O>                        = ArrowletDef<I,Either<I,O>>;

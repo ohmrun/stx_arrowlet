@@ -2,7 +2,7 @@ package stx.arrowlet.core.pack.arrowlet.term;
 
 import stx.run.pack.recall.term.Base;
 
-class Both<Ii,Oi,Iii,Oii> extends Base<Tuple2<Ii,Iii>,Tuple2<Oi,Oii>,Automation>{
+class Both<Ii,Oi,Iii,Oii> extends Base<Couple<Ii,Iii>,Couple<Oi,Oii>,Automation>{
 
 	private var lhs : Arrowlet<Ii,Oi>;
 	private var rhs : Arrowlet<Iii,Oii>;
@@ -12,9 +12,9 @@ class Both<Ii,Oi,Iii,Oii> extends Base<Tuple2<Ii,Iii>,Tuple2<Oi,Oii>,Automation>
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override public function duoply(i:Tuple2<Ii,Iii>,cont:Sink<Tuple2<Oi,Oii>>):Automation{
-		var l_val			= None.core();
-		var r_val			= None.core();
+	override public function applyII(i:Couple<Ii,Iii>,cont:Sink<Couple<Oi,Oii>>):Automation{
+		var l_val			= None;
+		var r_val			= None;
 
 		var guard 		= () -> {
 			l_val.zip(r_val).fold(cont,()->{});

@@ -10,13 +10,13 @@ class Inform<I,Oi,Oii> extends Base<I,Oii,Automation>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function duoply(i:I,cont:Sink<Oii>):Automation{
+  override public function applyII(i:I,cont:Sink<Oii>):Automation{
     return lhs.flat_map(
       (oI) -> Arrowlet.fromRecallFun(
         (_:I,contI:Sink<Oii>) -> rhs.flat_map(
           (aOiOii) -> aOiOii
-        ).duoply(oI,contI)
+        ).applyII(oI,contI)
       )
-    ).duoply(i,cont);
+    ).applyII(i,cont);
   }
 }

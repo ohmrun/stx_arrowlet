@@ -11,7 +11,7 @@ class Or<Ii,Iii,O> extends Base<Either<Ii,Iii>,O,Automation>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function duoply(i:Either<Ii,Iii>,cont:Sink<O>):Automation{
+  override public function applyII(i:Either<Ii,Iii>,cont:Sink<O>):Automation{
     return i.fold(
       (iI)  -> lhs.prepare(iI,cont),
       (iII) -> rhs.prepare(iII,cont)

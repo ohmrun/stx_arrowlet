@@ -1,7 +1,7 @@
 package stx.arrowlet.core.pack.arrowlet;
 
 import stx.arrowlet.Pack.Arrowlet     in Arw;
-import stx.core.Package.Tuple2        in Tup2;
+import stx.core.pack.Couple           in Tup2;
 
 class Implementation{
   static public inline function inj<I,O>()  return Arw._();

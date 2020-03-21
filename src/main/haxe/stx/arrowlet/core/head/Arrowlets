@@ -13,8 +13,8 @@ class Arrowlets{
   @:noUsing static public function fromFunction<I,O>(f:I->O):Arrowlet<I,O>{
     return new Fun1Arrowlet(f);
   }
-  @:noUsing static public function fromFunction2<PI,PII,R>(f):Arrowlet<Tuple2<PI,PII>,R>{
-    return new Fun1Arrowlet(__.into2(f));
+  @:noUsing static public function fromFunction2<PI,PII,R>(f):Arrowlet<Couple<PI,PII>,R>{
+    return new Fun1Arrowlet(__.decouple(f));
   }
   @:noUsing static public function fromCallbackSink<I,O>(f:I->(O->Void)->Void):Arrowlet<I,O>{
     return new CallbackArrowlet(f);
@@ -28,10 +28,10 @@ class Arrowlets{
     return new ReceiverArrowlet(f);
   }
   @doc("Pinches the input stage of an Arrowlet. `<I,I>` as `<I>`")
-  @:noUsing static public function fromPair<I,O1,O2>(a:Arrowlet<Tuple2<I,I>,Tuple2<O1,O2>>):Arrowlet<I,Tuple2<O1,O2>>{
+  @:noUsing static public function fromPair<I,O1,O2>(a:Arrowlet<Couple<I,I>,Couple<O1,O2>>):Arrowlet<I,Couple<O1,O2>>{
     return Arrowlets._.fan(Arrowlet.unit()).then(a);
   }
-  // @:noUsing public function toState<S,A>(a:Arrowlet<S,Tuple2<A,S>>):State<S,A>{
+  // @:noUsing public function toState<S,A>(a:Arrowlet<S,Couple<A,S>>):State<S,A>{
   //   return new State(a);
   // }
 }

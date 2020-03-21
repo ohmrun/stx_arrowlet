@@ -24,10 +24,10 @@ import stx.channel.pack.proceed.Constructor;
   private var self(get,never):Proceed<O,E>;
   private function get_self():Proceed<O,E> return this;
 
-  @:to public function toArw():Arrowlet<Noise,Outcome<O,E>>{
+  @:to public function toArw():Arrowlet<Noise,Res<O,E>>{
     return Arrowlet.lift(this.asRecallDef());
   }
-  @:from static public function fromArw<I,O,E>(self:Arrowlet<Noise,Outcome<O,E>>):Proceed<O,E>{
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<Noise,Res<O,E>>):Proceed<O,E>{
     return lift(self.asRecallDef());
   }
 }

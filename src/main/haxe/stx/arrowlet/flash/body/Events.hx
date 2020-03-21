@@ -16,7 +16,7 @@ class Events{
           done = true;
         });
         arw.augure(dispatcher).apply(printer());
-        arw.tie(tuple2).then(
+        arw.tie(__.couple).then(
           function(l:IEventDispatcher,r:T){
             trace('here');
             cb(r);

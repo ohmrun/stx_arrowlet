@@ -7,25 +7,25 @@ import stx.arrowlet.core.head.data.State in StateT;
     this = self;
   }
   @:noUsing static public function pure<S,A>(a:A):State<S,A>{
-    return new State(function(s:S):Tuple2<A,S>{
-      return tuple2(a,s);
+    return new State(function(s:S):Couple<A,S>{
+      return __.couple(a,s);
     });
   }
   /**
-   *  Using the output Tuple2<A,S>, create a new S, dropping the old one
+   *  Using the output Couple<A,S>, create a new S, dropping the old one
    *  @param arw1 - 
    *  @return StateT<S,A>
    */
-  public function change<S,A>(arw1:Arrowlet<Tuple2<A,S>,S>):StateT<S,A>{
+  public function change<S,A>(arw1:Arrowlet<Couple<A,S>,S>):StateT<S,A>{
     return States.change(this,arw1);
   }
   /**
-   *  Using the output Tuple2<A,S>, create a new A.
+   *  Using the output Couple<A,S>, create a new A.
    *  @param arw1 - 
    *  @param B> - 
    *  @return StateT<S,B>
    */
-  public function modify<S,A,B>(arw1:Arrowlet<Tuple2<A,S>,B>):StateT<S,B>{
+  public function modify<S,A,B>(arw1:Arrowlet<Couple<A,S>,B>):StateT<S,B>{
     return States.modify(this,arw1);
   }
   /**

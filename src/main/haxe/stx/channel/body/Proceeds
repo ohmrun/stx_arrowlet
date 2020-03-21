@@ -2,9 +2,9 @@ package stx.channel.body;
 
 
 class Proceeds extends Clazz{
-  @:noUsing public function forward<I,O,E>(arw:Arrowlet<Noise,Outcome<O,E>>):IO<O,E>{
-    return IO.fromIOT(
-      (auto:Automation, next:Outcome<O,E>->Void)-> auto.snoc(arw.prepare(Noise,next))
+  @:noUsing public function forward<I,O,E>(arw:Arrowlet<Noise,Res<O,E>>):IO<O,E>{
+    return IO.fromIODef(
+      (auto:Automation, next:Res<O,E>->Void)-> auto.snoc(arw.prepare(Noise,next))
     );
   }  
   @:noUsing public function postfix<I,O,Z,E>(self:Proceed<O,E>,fn:O->Z):Proceed<Z,E>{

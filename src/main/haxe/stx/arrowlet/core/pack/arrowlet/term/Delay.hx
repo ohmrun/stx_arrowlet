@@ -8,7 +8,7 @@ class Delay<I> extends Base<I,I,Automation>{
     super();
     this.milliseconds = milliseconds;
   }
-  override public function duoply(i:I,cont:Sink<I>):Automation{
+  override public function applyII(i:I,cont:Sink<I>):Automation{
     Act.Delay(milliseconds).upply(
       () -> cont(i)
     );

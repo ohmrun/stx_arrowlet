@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack;
 
-import stx.channel.Package;
+using stx.channel.Pack;
 import utest.Async;
 import utest.Assert;
 
@@ -124,7 +124,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
   //@Ignored
   public function test_both(){
     var a = arw().both(arw());
-    var b = a.prepare(tuple2(1,1),Sink.unit());
+    var b = a.prepare(__.couple(1,1),Sink.unit());
   }
   //@Ignored
   public function test_unit(async){

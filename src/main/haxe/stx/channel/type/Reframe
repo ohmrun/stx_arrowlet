@@ -1,3 +1,3 @@
 package stx.channel.type;
 
-typedef Reframe<S,A,E> = ChannelDef<S,Tuple2<A,S>,E>;
+typedef Reframe<S,A,E> = ChannelDef<S,Couple<A,S>,E>;

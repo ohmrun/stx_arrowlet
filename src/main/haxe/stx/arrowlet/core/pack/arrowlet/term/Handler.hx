@@ -8,7 +8,7 @@ class Handler<O> extends Base<Noise,O,Automation>{
     super();
     this.delegate = delegate;
   }
-  override public function duoply(i:Noise,cont:O->Void):Automation{
+  override public function applyII(i:Noise,cont:O->Void):Automation{
     delegate(cont);
     return Automation.unit();
   }

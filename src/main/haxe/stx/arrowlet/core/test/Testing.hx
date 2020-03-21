@@ -36,7 +36,7 @@ class Testing extends utest.Test{
       //everything on the rhs passed through here->>>
       .both(
         (x) -> Id(Ting(x),'pair')
-      ).apply(tuple2(Id(Mump,'l'),Id(Mump,'r')))
+      ).apply(__.couple(Id(Mump,'l'),Id(Mump,'r')))
       (
         (x)->{
           async.done();

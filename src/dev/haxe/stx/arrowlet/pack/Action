@@ -1,6 +1,6 @@
 package stx.arrowlet;
 
-import stx.types.Tuple2;
+import stx.types.Couple;
 import haxe.ds.Option in EOption;
 import tink.core.Future;
 using stx.Tuples;
@@ -32,7 +32,7 @@ abstract class Action extends Arrowlet<Noise,EOption<Error>>{
   }
   public function and(a2:Arrowlet<Noise,EOption<Error>>):Action{
     return new Action(Arrowlets.then(this.split(a2),
-    function(tp:Tuple2<EOption<Error>,EOption<Error>>,cont:EOption<Error>->Void){
+    function(tp:Couple<EOption<Error>,EOption<Error>>,cont:EOption<Error>->Void){
       cont(switch ([tp.fst(),tp.snd()]) {
         case [Some(e0),Some(e1)]  : Some(Errors.append(e0,e1));
         case [Some(e0),None]      : Some(e0);

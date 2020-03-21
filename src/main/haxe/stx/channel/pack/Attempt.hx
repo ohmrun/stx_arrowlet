@@ -15,17 +15,19 @@ import stx.channel.pack.attempt.Constructor;
   static public function lift<I,O,E>(self:AttemptDef<I,O,E>)                              return new Attempt(self);
 
   static public function unit<I,E>():Attempt<I,I,E>                                       return _().unit();
-  static public function pure<I,O,E>(v:Outcome<O,E>):Attempt<I,O,E>                       return _().pure(v);
+  static public function pure<I,O,E>(v:Res<O,E>):Attempt<I,O,E>                           return _().pure(v);
 
-  static public function fromIOConstructor<I,R,E>(fn:I->IO<R,E>)                          return _().fromIOConstructor(fn);
-  static public function fromAttemptFunction<PI,R,E>(fn:PI->Outcome<R,E>)                 return _().fromAttemptFunction(fn);
+
+  @:from static public function fromFun1UIO<I,O>(fn:I->UIO<O>):Attempt<I,O,Dynamic>       return _().fromFun1UIO(fn);
+  static public function fromFun1IO<I,O,E>(fn:I->IO<O,E>):Attempt<I,O,E>                  return _().fromFun1IO(fn);
+  @:from static public function fromFun1Res<PI,R,E>(fn:PI->Res<R,E>)                      return _().fromFun1Res(fn);
   static public function fromFun1R<I,O>(fn:I->O):Attempt<I,O,Dynamic>                     return _().fromFun1R(fn);
-  static public function fromIOFunction<I,O,E>(fn:I->IO<O,E>):Attempt<I,O,E>              return _().fromIOFunction(fn);
+  
 
-  @:to public function toArw():Arrowlet<I,Outcome<O,E>>{
+  @:to public function toArw():Arrowlet<I,Res<O,E>>{
     return Arrowlet.lift(this.asRecallDef());
   }
-  @:from static public function fromArw<I,O,E>(self:Arrowlet<I,Outcome<O,E>>):Attempt<I,O,E>{
+  @:from static public function fromArw<I,O,E>(self:Arrowlet<I,Res<O,E>>):Attempt<I,O,E>{
     return lift(self.asRecallDef());
   }
 }

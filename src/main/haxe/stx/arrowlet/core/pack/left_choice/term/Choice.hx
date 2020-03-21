@@ -8,9 +8,9 @@ class Choice<I,O> extends RecallBase<Either<I,I>,Either<O,I>,Automation>{
     super();
     this.delegate = delegate;
 	}
-	override public function duoply(either:Either<I,I>,cont:Sink<Either<O,I>>):Automation{
+	override public function applyII(either:Either<I,I>,cont:Sink<Either<O,I>>):Automation{
     return switch(either){
-      case Left(i)      : Arrowlet.Apply().prepare(tuple2(delegate,i),cont);
+      case Left(i)      : Arrowlet.Apply().prepare(__.couple(delegate,i),cont);
       case Right(oii)   : cont(Right(oii)); Automation.unit();
     }
   }

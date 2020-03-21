@@ -1,7 +1,7 @@
 package stx.channel.body;
 
 class Attempts extends Clazz{
-  // public function  chunk<I,O,E>(fn:I->Outcome<O,E>):Attempt<I,O,E>>{
+  // public function  chunk<I,O,E>(fn:I->Res<O,E>):Attempt<I,O,E>>{
   //   return fn.broker(
   //     _ -> __.arw().fn().then(
   //       __.channel().attempt()

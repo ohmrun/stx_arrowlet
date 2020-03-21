@@ -8,9 +8,9 @@ class Base<Ii,Iii,O> extends RecallBase<Either<Ii,Iii>,Either<O,Iii>,Automation>
     super();
     this.delegate = delegate;
 	}
-	override public function duoply(either:Either<Ii,Iii>,cont:Sink<Either<O,Iii>>):Automation{
+	override public function applyII(either:Either<Ii,Iii>,cont:Sink<Either<O,Iii>>):Automation{
 		return switch (either) {
-			case Left(v) 	: Arrowlet.Apply().then(Left).prepare(tuple2(delegate,v),cont);
+			case Left(v) 	: Arrowlet.Apply().then(Left).prepare(__.couple(delegate,v),cont);
 			case Right(v) : 
 				cont(Right(v)); 
 				Automation.unit();

@@ -8,7 +8,7 @@ class Sync<I,O> extends Base<I,O,Automation>{
     super();
     this.delegate = delegate;
   }
-  override public function duoply(i:I,cont:Sink<O>):Automation{
+  override public function applyII(i:I,cont:Sink<O>):Automation{
     cont(delegate(i));
     return Automation.unit();
   }
