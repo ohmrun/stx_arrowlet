@@ -1,7 +1,7 @@
 package stx.channel.pack.reframe;
 
-import stx.arrowlet.core.pack.arrowlet.Implementation in Arw;
-import stx.channel.pack.channel.Implementation in Chnl;
+import stx.arrowlet.core.pack.Arrowlet.ArrowletLift in Arw;
+import stx.channel.pack.Channel.ChannelLoft in Chnl;
 
 class Implementation{
   private static function _() return Reframe._()._;

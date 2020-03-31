@@ -1,7 +1,7 @@
 package stx.channel.pack;
 
 
-@:using(stx.arrowlet.core.pack.arrowlet.Implementation)
+@:using(stx.arrowlet.core.pack.Arrowlet.ArrowletLift)
 @:forward abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
   public function new(self){
     this = self;

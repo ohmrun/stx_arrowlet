@@ -1,11 +1,11 @@
 package stx.channel.pack.reframe;
 
 
-class Destructure extends Clazz{
-  private function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
-  private function unto<I,O,E>(wml:Arrowlet<Res<I,E>,Res<Couple<O,I>,E>>):Reframe<I,O,E> return new Reframe(wml.asRecallDef());
-
-  public function attempt<I,O,Oi,E>(that:Attempt<O,Oi,E>,self:Reframe<I,O,E>):Reframe<I,Oi,E>{
+class ReframeLift extends Clazz{
+  static private function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
+  static private function unto<I,O,E>(wml:Arrowlet<Res<I,E>,Res<Couple<O,I>,E>>):Reframe<I,O,E> return new Reframe(wml.asRecallDef());
+  
+  static public function attempt<I,O,Oi,E>(self:Reframe<I,O,E>,that:Attempt<O,Oi,E>):Reframe<I,Oi,E>{
     var fn = (chk:Res<Couple<Res<Oi,E>,I>,E>) -> (chk.flat_map(
       (tp) -> tp.fst().map(
         (r) -> __.couple(r,tp.snd())
@@ -18,8 +18,7 @@ class Destructure extends Clazz{
     );
     return arw;
   }
-
-  public function arrange<I,O,Oi,E>(that:Arrange<O,I,Oi,E>,self:Reframe<I,O,E>):Reframe<I,Oi,E>{
+  static public function arrange<I,O,Oi,E>(self:Reframe<I,O,E>,that:Arrange<O,I,Oi,E>):Reframe<I,Oi,E>{
     var arw = lift(
       self.then(that.toChannel())
         .broach()
@@ -36,7 +35,7 @@ class Destructure extends Clazz{
     return arw;
   }
 
-  public function rearrange<I,Ii,O,Oi,E>(that:O->Arrange<Ii,I,Oi,E>,self:Reframe<I,O,E>):Attempt<Couple<Ii,I>,Oi,E>{
+  static public function rearrange<I,Ii,O,Oi,E>(self:Reframe<I,O,E>,that:O->Arrange<Ii,I,Oi,E>):Attempt<Couple<Ii,I>,Oi,E>{
     return Recall.Anon(
       (ipt:Couple<Ii,I>,contN:Sink<Res<Oi,E>>) -> self.prepare(__.success(ipt.snd()),
          (chk:Res<Couple<O,I>,E>) -> 
@@ -51,7 +50,7 @@ class Destructure extends Clazz{
     );
   }
 
-  public function commander<I,O,E>(fN:O->Command<I,E>,self:Reframe<I,O,E>):Reframe<I,O,E>{
+  static public function commander<I,O,E>(self:Reframe<I,O,E>,fN:O->Command<I,E>):Reframe<I,O,E>{
     return lift(Recall.Anon(
       (ipt:Res<I,E>,contN:Sink<Res<Couple<O,I>,E>>) ->
         self.prepare(
@@ -71,12 +70,11 @@ class Destructure extends Clazz{
         )
     ));
   }
-  public function evaluation<I,O,E>(self:Reframe<I,O,E>):Channel<I,O,E>{
+  static public function evaluation<I,O,E>(self:Reframe<I,O,E>):Channel<I,O,E>{
     return self.postfix(o -> o.map(tp -> tp.fst()));
   }
 
-  public function execution<I,O,E>(self:Reframe<I,O,E>):Channel<I,I,E>{
+  static public function execution<I,O,E>(self:Reframe<I,O,E>):Channel<I,I,E>{
     return self.postfix(o -> o.map(tp -> tp.snd()));
   }
-  
 }

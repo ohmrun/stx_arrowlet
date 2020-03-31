@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack;
 
-using stx.channel.Pack;
+using stx.Channel;
 import utest.Async;
 import utest.Assert;
 
@@ -17,6 +17,7 @@ class Test{
 class FromTheGroundUpAgainTest extends utest.Test{
   function wrap(tests,async:Async){
     return Automation.execute(() -> {
+      trace('execute');
       tests();
       async.done();
       return None;
@@ -28,7 +29,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     var a = Arrowlet.fromFun1R(
       (i:Int) -> return value = Some('booo $i')
     );
-    var b = a.prepare(10,Sink.unit());
+    var b : Automation = a.prepare(10,Sink.unit().stage((_) ->{},(_) -> trace("called")));
         b = b.snoc(
           wrap(
             () -> Assert.same(Some('booo 10'),value),

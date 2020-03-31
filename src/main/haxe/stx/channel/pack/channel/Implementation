@@ -1,12 +1,11 @@
 package stx.channel.pack.channel;
 
-import stx.arrowlet.core.pack.arrowlet.Implementation in Arw;
 
 class Implementation{
   static public inline function _() return Channel._()._;
 
-  static public function prepare<I,O,E>(self:Channel<I,O,E>,i:Res<I,E>,cont:Sink<Res<O,E>>):Automation        return Arw.prepare(Arrowlet.lift(self.asRecallDef()),i,cont);
-  static public function then<I,O,Oi,E>(self:Channel<I,O,E>,that:Channel<O,Oi,E>):Channel<I,Oi,E>                     return Arw.then(self,that);
+  static public function prepare<I,O,E>(self:Channel<I,O,E>,i:Res<I,E>,cont:Sink<Res<O,E>>):Automation                return Arrowlet._.prepare(Arrowlet.lift(self.asRecallDef()),i,cont);
+  static public function then<I,O,Oi,E>(self:Channel<I,O,E>,that:Channel<O,Oi,E>):Channel<I,Oi,E>                     return Arrowlet._.then(self,that);
 
   static public function attempt<I,O,Oi,E>(self:Channel<I,O,E>,that:Attempt<O,Oi,E>):Channel<I,Oi,E>                  return _().attempt(that,self);
   static public function process<I,O,Oi,E>(self:Channel<I,O,E>,that:Arrowlet<O,Oi>):Channel<I,Oi,E>                   return _().process(that,self);

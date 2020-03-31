@@ -25,6 +25,6 @@ class Both<Ii,Oi,Iii,Oii> extends Base<Couple<Ii,Iii>,Couple<Oi,Oii>,Automation>
 		var l_task 		= lhs.prepare(i.fst(),l_set);
 		var r_task 		= rhs.prepare(i.snd(),r_set);
 
-		return Task.All([l_task,r_task].toIter().toGenerator());
+		return Task.All([l_task,r_task].iterator());
 	}
 }

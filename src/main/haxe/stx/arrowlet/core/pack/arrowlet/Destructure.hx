@@ -27,11 +27,11 @@ class Destructure extends Clazz{
     return both(self,Arrowlet.unit());
   }
   @doc("Takes two Arrowlets with thstatic public function pure<I,O>(o:O):Arrowlet<I,O>                                             return _().pure(o);e same input type, and produces one which applies each Arrowlet with the same input.")
-  public function split<I, Oi, Oii>(rhs:Arrowlet<I, Oii>,lhs:Arrowlet<I, Oi>):Arrowlet<I, Couple<Oi,Oii>> {
+  public function split<I, Oi, Oii>(lhs:Arrowlet<I, Oi>,rhs:Arrowlet<I, Oii>):Arrowlet<I, Couple<Oi,Oii>> {
     return unto(new Split(lhs,rhs));
   }
   @doc("Takes two Arrowlets and produces on that runs them in parallel, waiting for both responses before output.")
-  public function both<Ii,Oi,Iii,Oii>(rhs:Arrowlet<Iii,Oii>,lhs:Arrowlet<Ii,Oi>):Arrowlet<Couple<Ii,Iii>,Couple<Oi,Oii>>{
+  public function both<Ii,Oi,Iii,Oii>(lhs:Arrowlet<Ii,Oi>,rhs:Arrowlet<Iii,Oii>):Arrowlet<Couple<Ii,Iii>,Couple<Oi,Oii>>{
     return unto(new Both(lhs,rhs));
   }
   @doc("Changes <B,C> to <C,B> on the output of an Arrowlet")
@@ -43,11 +43,11 @@ class Destructure extends Clazz{
     return self.postfix((v) -> __.couple(v,v));
   }
   @doc("Runs the first Arrowlet, then the second, preserving the output of the first on the left-hand side.")
-  public function joint<I,Oi,Oii>(rhs:Arrowlet<Oi,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Couple<Oi,Oii>>{
+  public function joint<I,Oi,Oii>(lhs:Arrowlet<I,Oi>,rhs:Arrowlet<Oi,Oii>):Arrowlet<I,Couple<Oi,Oii>>{
     return lhs.then(Arrowlet.unit().split(rhs));
   }
   @doc("Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet.")
-  public function bound<I,Oi,Oii>(rhs:Arrowlet<Couple<I,Oi>,Oii>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
+  public function bound<I,Oi,Oii>(lhs:Arrowlet<I,Oi>,rhs:Arrowlet<Couple<I,Oi>,Oii>):Arrowlet<I,Oii>{
     return unto(new Bound(lhs,rhs));
   }
   // @doc("Runs an Arrowlet until it returns Done(out).")
@@ -55,7 +55,7 @@ class Destructure extends Clazz{
   //   return new Repeat(a);
   // }
   @doc("Produces an Arrowlet that will run `or_` if the input is Left(in), or '_or' if the input is Right(in);")
-  public function or<Ii,Iii,O>(rhs:Arrowlet<Iii,O>,lhs:Arrowlet<Ii,O>):Arrowlet<Either<Ii,Iii>,O>{
+  public function or<Ii,Iii,O>(lhs:Arrowlet<Ii,O>,rhs:Arrowlet<Iii,O>):Arrowlet<Either<Ii,Iii>,O>{
     return lift(new Or(lhs, rhs).asRecallDef());
   }
   @doc("Produces an Arrowlet that will run only if the input is Left.")
@@ -86,17 +86,17 @@ class Destructure extends Clazz{
   //     F -> __.arw().cont() 
   //   );
   // }
-  public function prefix<Ii,Iii,O>(fn:Ii->Iii,self:Arrowlet<Iii,O>):Arrowlet<Ii,O>{
+  public function prefix<Ii,Iii,O>(self:Arrowlet<Iii,O>,fn:Ii->Iii):Arrowlet<Ii,O>{
     return unto(new Sync(fn)).then(self);
   }
-  public function postfix<I,Oi,Oii>(fn:Oi->Oii,self:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
+  public function postfix<I,Oi,Oii>(self:Arrowlet<I,Oi>,fn:Oi->Oii):Arrowlet<I,Oii>{
     return self.then(unto(new Sync(fn)));
   }
   public function inform<I,Oi,Oii>(rhs:Arrowlet<Oi,Arrowlet<Oi,Oii>>,lhs:Arrowlet<I,Oi>):Arrowlet<I,Oii>{
     return unto(new Inform(lhs,rhs));
   }
   public function broach<I,O>(self:Arrowlet<I,O>):Arrowlet<I,Couple<I,O>>{
-    return bound(Arrowlet.fromFun2R(__.couple),self);
+    return bound(self,Arrowlet.fromFun2R(__.couple));
   }
   public function fulfill<I,O>(i:I,self:Arrowlet<I,O>):Arrowlet<Noise,O>{
     return unto(Recall.Anon(

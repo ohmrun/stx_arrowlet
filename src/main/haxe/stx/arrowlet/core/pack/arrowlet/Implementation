@@ -4,7 +4,7 @@ import stx.arrowlet.Pack.Arrowlet     in Arw;
 import stx.core.pack.Couple           in Tup2;
 
 class Implementation{
-  static public inline function inj<I,O>()  return Arw._();
+  static public inline function inj<I,O>()  return Arw._;
 
   static public function prepare<I,O>(self:Arw<I,O>,i:I,cont:Sink<O>):Automation                               return inj()._.prepare(i,cont,self);
   static public function fulfill<I,O>(self:Arw<I,O>,i:I):Arw<Noise,O>                                          return inj()._.fulfill(i,self);

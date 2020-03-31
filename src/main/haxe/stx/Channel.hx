@@ -1,8 +1,5 @@
-package stx.channel;
+package stx;
 
-class Pack{
-
-}
 typedef ChannelDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>>;
 typedef Channel<I,O,E>                  = stx.channel.pack.Channel<I,O,E>;
 
@@ -30,7 +27,7 @@ typedef Reframe<I,O,E>                  = stx.channel.pack.Reframe<I,O,E>;
 typedef ArrangeDef<I,S,O,E>             = AttemptDef<Couple<I,S>,O,E>;
 typedef Arrange<I,S,O,E>                = stx.channel.pack.Arrange<I,S,O,E>;
 
-//typedef PerformDef                      = Arrowlet<Noise,Noise>;
+
 
 class LiftArrowletToChannel{
   static public function toChannel<A,B,E>(arw:Arrowlet<A,B>):Channel<A,B,E>{

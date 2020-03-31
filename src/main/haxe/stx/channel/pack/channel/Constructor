@@ -1,0 +1,5 @@
+package stx.channel.pack.channel;
+
+class Constructor extends Clazz{
+  
+}

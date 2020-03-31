@@ -11,7 +11,7 @@ class Base<Ii,O,Iii> extends RecallBase<Either<Iii,Ii>,Either<Iii,O>,Automation>
 	override public function applyII(i:Either<Iii,Ii>,cont:Sink<Either<Iii,O>>):Automation{
     return switch (i) {
       case Right(v) 	:
-        Arrowlet._().Apply().then(Right).prepare(__.couple(delegate,v),cont);
+        Arrowlet.Apply().then(Right).prepare(__.couple(delegate,v),cont);
       case Left(v) 		:
         cont(Left(v));
         return Automation.unit();

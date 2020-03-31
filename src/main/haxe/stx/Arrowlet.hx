@@ -1,9 +1,7 @@
-package stx.arrowlet;
+package stx;
 
 //Channel -> Cascade
-class Pack{
-  
-}
+
 typedef ArrowletDef<I,O>                      = Recall<I,O,Automation>;
 typedef Arrowlet<I,O>                         = stx.arrowlet.core.pack.Arrowlet<I,O>;
 
@@ -23,7 +21,6 @@ typedef RepeatDef<I,O>                        = ArrowletDef<I,Either<I,O>>;
 
 //typedef Repeat<I,O>                           = stx.arrowlet.core.pack.Repeat<I,O>;
 
-typedef Lift                                  = stx.arrowlet.core.pack.Lift;
 
 typedef LiftChoiceToArrowlet                  = stx.arrowlet.core.lift.LiftChoiceToArrowlet;
 typedef LiftReplyFutureToArrowlet             = stx.arrowlet.core.lift.LiftReplyFutureToArrowlet;
@@ -36,7 +33,7 @@ typedef LiftThunkToArrowlet                   = stx.arrowlet.core.lift.LiftThunk
 typedef LiftToLeftChoice                      = stx.arrowlet.core.lift.LiftToLeftChoice;
 typedef LiftToRightChoice                     = stx.arrowlet.core.lift.LiftToRightChoice;
 
-typedef LiftArrowletImplementation            = stx.arrowlet.core.pack.arrowlet.Implementation;
+typedef ArrowletLift                          = stx.arrowlet.core.pack.Arrowlet.ArrowletLift;
 
 
 #if (test=="stx_arrowlet")
