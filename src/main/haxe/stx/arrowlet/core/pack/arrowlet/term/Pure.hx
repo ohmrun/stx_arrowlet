@@ -1,15 +1,13 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
-
-class Pure<I,O> extends Base<I,O,Automation>{
+class Pure<I,O,E> extends ArrowletApi<I,O,E>{
   private var secreted : O;
   public function new(secreted){
     super();
     this.secreted = secreted;
   }
-  override public function applyII(i:I,cont:Sink<O>):Automation{
-    cont(secreted);
-    return Automation.unit();
+  override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+    cont.value(secreted);
+    return cont.serve();
   }
 }

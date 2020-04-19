@@ -1,17 +1,17 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
-
 import tink.core.Future in TinkFuture;
 
-class Future<O> extends Base<Noise,O,Automation>{
+class Future<O,E> extends ArrowletApi<Noise,O,E>{
   var delegate : TinkFuture<O>;
   public function new(delegate:TinkFuture<O>){
     super();
     this.delegate = delegate;
   }
-  override public function applyII(i:Noise,cont:O->Void):Automation{
-    var rcv = Receiver.fromFuture(delegate);
-    return rcv.applyII(i,cont);
+  override private function doApplyII(i:Noise,cont:Terminal<O,E>):Response{
+    delegate.handle(
+      cont.value
+    );
+    return cont.serve();
   }
 }

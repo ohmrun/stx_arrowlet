@@ -1,15 +1,13 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
-
-class Sync<I,O> extends Base<I,O,Automation>{
+class Sync<I,O,E> extends ArrowletApi<I,O,E>{
   private var delegate : I->O;
   public function new(delegate){
     super();
     this.delegate = delegate;
   }
-  override public function applyII(i:I,cont:Sink<O>):Automation{
-    cont(delegate(i));
-    return Automation.unit();
+  override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+    cont.value(delegate(i));
+    return cont.serve();
   }
 }

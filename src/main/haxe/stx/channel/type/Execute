@@ -1,3 +1,0 @@
-package stx.channel.type;
-
-typedef Execute<E> = Arrowlet<Noise,Err<E>>;

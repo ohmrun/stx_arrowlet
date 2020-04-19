@@ -5,13 +5,14 @@
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
     "version": "0.10.3",
-    "releasenote": "Channel.unit()",
+    "releasenote": "Cascade.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
         "tink_core": "",
 
         "stx_fn": "",
-        "stx_core": "",
+        "stx_pico": "",
+        "stx_nano": "",
         
         "stx_assert": "",
         "stx_run": ""

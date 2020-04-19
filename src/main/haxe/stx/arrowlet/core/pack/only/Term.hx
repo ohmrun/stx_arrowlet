@@ -8,7 +8,7 @@ class Term<I,O> extends Base<Option<I>,Option<O>,Automation>{
     super();
     this.delegate = delegate;
   }
-  override public function applyII(i:Option<I>,cont:Sink<Option<O>>):Automation{
+  override private function doApplyII(i:Option<I>,cont:Sink<Option<O>>):Automation{
     return i.fold(
       (i) -> delegate.prepare(i,
         (o) -> cont(Some(o))

@@ -4,7 +4,7 @@ package stx.arrowlet.test;
   import haxe.PosInfos;
 	import utest.UTest;
 
-	using utest.Assert;
+	import utest.Assert in Rig;
 	import utest.Async;
 
   import stx.arrowlet.test.head.Data;

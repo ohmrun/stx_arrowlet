@@ -1,0 +1,12 @@
+package stx.arrowlet.core.pack.arrowlet.term;
+
+class InputReceiver<I,O> extends ArrowletApi<I,O,Noise>{
+  private var delegate : I->Receiver<O>;
+  public function new(delegate){
+    super();
+    this.delegate = delegate;
+  }
+  override private function doApplyII(i:I,cont:Terminal<O,Noise>):Response<Noise>{
+    return delegate(i).applyII(Noise,cont);
+  }
+}

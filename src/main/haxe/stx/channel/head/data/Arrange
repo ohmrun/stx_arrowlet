@@ -1,3 +1,0 @@
-package stx.channel.head.data;
-
-typedef Arrange<S,A,R,E> = Attempt<Couple<A,S>,R,E>;

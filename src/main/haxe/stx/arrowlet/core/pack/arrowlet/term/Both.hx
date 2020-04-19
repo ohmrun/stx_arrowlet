@@ -1,30 +1,55 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
+class Both<Ii,Oi,Iii,Oii,E> extends ArrowletApi<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
 
-class Both<Ii,Oi,Iii,Oii> extends Base<Couple<Ii,Iii>,Couple<Oi,Oii>,Automation>{
-
-	private var lhs : Arrowlet<Ii,Oi>;
-	private var rhs : Arrowlet<Iii,Oii>;
+	private var lhs : Arrowlet<Ii,Oi,E>;
+	private var rhs : Arrowlet<Iii,Oii,E>;
 
 	public function new(lhs,rhs){
 		super();
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override public function applyII(i:Couple<Ii,Iii>,cont:Sink<Couple<Oi,Oii>>):Automation{
+	override private function doApplyII(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Response{
 		var l_val			= None;
 		var r_val			= None;
+		var l_cancel	= () -> {};
+		var r_cancel	= () -> {};
 
 		var guard 		= () -> {
-			l_val.zip(r_val).fold(cont,()->{});
-		}
-		var l_set 		= (oi:Oi)		-> { l_val = Some(oi); 	guard(); }
-		var r_set 		= (oii:Oii)	-> { r_val = Some(oii);	guard(); }
+			switch([l_val,r_val]){
+				case [Some(Failure(x)),None]  						: 
+					r_cancel();
+					cont.error(x);
+				case [None,Some(Failure(x))]  						: 
+					l_cancel();
+					cont.error(x);
+				case [Some(Success(l)),Some(Success(r))] 	:
+					cont.value(__.couple(l,r));
+				default : 
+			}
+		};
+		var l_set 		= cont.inner();
+				l_set.later(
+					(oi:Outcome<Oi,E>)		-> { 
+						l_val = Some(oi); 	
+						guard(); 	
+					}
+				);
+		var r_set 		= cont.inner();
+				r_set.later(
+					(oii:Outcome<Oii,E>)	-> { 
+						r_val = Some(oii);	
+						guard(); 
+					}
+				);
 
 		var l_task 		= lhs.prepare(i.fst(),l_set);
+		var l_cancel	= l_task.toTask().escape;
 		var r_task 		= rhs.prepare(i.snd(),r_set);
-
-		return Task.All([l_task,r_task].iterator());
+		var r_cancel	= r_task.toTask().escape;
+		cont.after(l_task);
+		cont.after(r_task);
+		return cont.serve();
 	}
 }

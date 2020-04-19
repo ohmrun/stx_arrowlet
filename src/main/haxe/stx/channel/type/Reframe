@@ -1,3 +1,0 @@
-package stx.channel.type;
-
-typedef Reframe<S,A,E> = ChannelDef<S,Couple<A,S>,E>;

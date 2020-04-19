@@ -1,7 +1,7 @@
 package stx.arrowlet.core.lift;
 
 class LiftFun1RToArrowlet{
-  inline static public function toArrowlet<A,B,C>(fn:A->B):Arrowlet<A,B>{
+  inline static public function toArrowlet<P,R>(fn:P->R):Arrowlet<P,R,Dynamic>{
     return Arrowlet.fromFun1R(fn);
   }
 }

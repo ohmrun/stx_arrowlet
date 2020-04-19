@@ -1,17 +1,21 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
 
-class Delay<I> extends Base<I,I,Automation>{
+class Delay<I,E> extends ArrowletApi<I,I,E>{
   private var milliseconds : Int;
   public function new(milliseconds){
     super();
     this.milliseconds = milliseconds;
   }
-  override public function applyII(i:I,cont:Sink<I>):Automation{
-    Act.Delay(milliseconds).upply(
-      () -> cont(i)
+  override private function doApplyII(i:I,cont:Terminal<I,E>):Response{
+    var ft = TinkFuture.trigger();
+    Act.Delay(milliseconds)
+    .reply()
+    .handle(
+      (_) -> {
+        cont.value(i);
+      }
     );
-    return Automation.unit();
+    return cont.serve();
   }
 }

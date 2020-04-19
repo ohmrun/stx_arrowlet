@@ -1,20 +1,18 @@
 package stx.arrowlet.core.pack.right_choice.term;
 
-import stx.run.pack.recall.term.Base in RecallBase;
-
-class Base<Ii,O,Iii> extends RecallBase<Either<Iii,Ii>,Either<Iii,O>,Automation>{
-  private var delegate : Arrowlet<Ii,O>;
+class Base<Ii,O,Iii,E> extends ArrowletApi<Either<Iii,Ii>,Either<Iii,O>,E>{
+  private var delegate : Arrowlet<Ii,O,E>;
   public function new(delegate){
     super();
     this.delegate = delegate;
   }
-	override public function applyII(i:Either<Iii,Ii>,cont:Sink<Either<Iii,O>>):Automation{
+	override private function doApplyII(i:Either<Iii,Ii>,cont:Terminal<Either<Iii,O>,E>):Response{
     return switch (i) {
       case Right(v) 	:
         Arrowlet.Apply().then(Right).prepare(__.couple(delegate,v),cont);
       case Left(v) 		:
-        cont(Left(v));
-        return Automation.unit();
+        cont.value(Left(v));
+        return cont.serve();
     }
   }
 }

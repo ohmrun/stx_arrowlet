@@ -3,7 +3,7 @@ package stx.arrowlet.core.lift;
 import stx.arrowlet.core.pack.right_choice.term.Base;
 
 class LiftToRightChoice{
-  static public function toRightChoice<Ii,Iii,O>(arw:Arrowlet<Ii,O>):Arrowlet<Either<Iii,Ii>,Either<Iii,O>>{
-    return Arrowlet.unto(new Base(arw));
+  static public function toRightChoice<Ii,Iii,O,E>(arw:Arrowlet<Ii,O,E>):Arrowlet<Either<Iii,Ii>,Either<Iii,O>,E>{
+    return Arrowlet.lift(new Base(arw));
   }
 }

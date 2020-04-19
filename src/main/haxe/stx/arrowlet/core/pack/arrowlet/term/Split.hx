@@ -1,15 +1,13 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-import stx.run.pack.recall.term.Base;
-
-class Split<I,Oi,Oii> extends Base<I,Couple<Oi,Oii>,Automation>{
-  var delegate : Arrowlet<Couple<I,I>,Couple<Oi,Oii>>;
+class Split<I,Oi,Oii,E> extends ArrowletApi<I,Couple<Oi,Oii>,E>{
+  var delegate : Arrowlet<Couple<I,I>,Couple<Oi,Oii>,E>;
   
   public function new(lhs,rhs){
     super();
-    this.delegate = Arrowlet.lift(new Both(lhs,rhs).asRecallDef());
+    this.delegate = Arrowlet.lift(new Both(lhs,rhs).asArrowletDef());
   }
-  override public function applyII(i:I,cont:Sink<Couple<Oi,Oii>>):Automation{
+  override private function doApplyII(i:I,cont:Terminal<Couple<Oi,Oii>,E>):Response{
     return delegate.applyII(
       __.couple(i,i),
       cont

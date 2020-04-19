@@ -1,3 +1,0 @@
-package stx.channel.head.data;
-
-typedef Recover<I,E> = Arrowlet<Err<E>,I>;
