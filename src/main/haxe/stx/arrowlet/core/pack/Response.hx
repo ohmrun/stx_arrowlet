@@ -3,6 +3,7 @@ package stx.arrowlet.core.pack;
 import stx.run.pack.task.term.Base;
 import stx.run.pack.task.term.Both;
 import stx.run.pack.task.term.Deferred;
+import stx.run.pack.task.term.Wrap;
 
 @:forward(complete) @:allow(stx) abstract Response(ResponseApi) from ResponseApi{
 	private function new(deferred){
@@ -23,22 +24,6 @@ import stx.run.pack.task.term.Deferred;
 		return this;
 	}
 }
-class ResponseApi extends Deferred{
-	private var complete_trigger : FutureTrigger<Noise>;
-	public var complete(default,null):Future<Noise>;
+class ResponseApi extends Wrap{
 
-	public function new(deferred){
-		super(deferred);
-		this.complete_trigger = Future.trigger();
-		this.complete 				= complete_trigger.asFuture();
-	}
-	override private function do_pursue():Bool{
-		var recall = super.do_pursue();
-		switch(this.progress.data){
-			case Escaped | Secured : 
-				complete_trigger.trigger(Noise);
-			default:
-		}
-		return recall;
-	}
 }

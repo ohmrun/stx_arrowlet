@@ -1,7 +1,7 @@
 package stx;
 
 typedef Terminal<R,E>                         = stx.arrowlet.core.pack.Terminal<R,E>;
-typedef Response                              = stx.arrowlet.core.pack.Response;
+typedef Response                              = stx.run.pack.Agenda<Dynamic>;
 
 typedef ArrowletDef<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletDef<I,O,E>;
 typedef ArrowletApi<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletApi<I,O,E>;
@@ -39,52 +39,52 @@ typedef LiftToRightChoice                     = stx.arrowlet.core.lift.LiftToRig
 
 typedef ArrowletLift                          = stx.arrowlet.core.pack.Arrowlet.ArrowletLift;
 
-typedef CascadeDef<I,O,E>                     = stx.arrowlet.pack.Cascade.CascadeDef<I,O,E>;
-typedef Cascade<I,O,E>                        = stx.arrowlet.pack.Cascade<I,O,E>;
+//typedef CascadeDef<I,O,E>                     = stx.arrowlet.pack.Cascade.CascadeDef<I,O,E>;
+//typedef Cascade<I,O,E>                        = stx.arrowlet.pack.Cascade<I,O,E>;
 
-typedef ProceedDef<O,E>                       = stx.arrowlet.pack.Proceed.ProceedDef<O,E>;
-typedef Proceed<O,E>                          = stx.arrowlet.pack.Proceed<O,E>;
+// typedef ProceedDef<O,E>                       = stx.arrowlet.pack.Proceed.ProceedDef<O,E>;
+// typedef Proceed<O,E>                          = stx.arrowlet.pack.Proceed<O,E>;
 
-typedef CommandDef<I,E>                       = stx.arrowlet.pack.Command.CommandDef<I,E>;
-typedef Command<I,E>                          = stx.arrowlet.pack.Command<I,E>;
+// typedef CommandDef<I,E>                       = stx.arrowlet.pack.Command.CommandDef<I,E>;
+// typedef Command<I,E>                          = stx.arrowlet.pack.Command<I,E>;
 
-typedef ResolveDef<I,O,E>                     = stx.arrowlet.pack.Resolve.ResolveDef<I,O,E>;
-typedef Resolve<I,O,E>                        = stx.arrowlet.pack.Resolve<I,O,E>;
+// typedef ResolveDef<I,O,E>                     = stx.arrowlet.pack.Resolve.ResolveDef<I,O,E>;
+// typedef Resolve<I,O,E>                        = stx.arrowlet.pack.Resolve<I,O,E>;
 
-typedef RecoverDef<I,E>                       = stx.arrowlet.pack.Recover.RecoverDef<I,E>;
-typedef Recover<I,E>                          = stx.arrowlet.pack.Recover<I,E>;
+// typedef RecoverDef<I,E>                       = stx.arrowlet.pack.Recover.RecoverDef<I,E>;
+// typedef Recover<I,E>                          = stx.arrowlet.pack.Recover<I,E>;
 
-typedef ProcessDef<I,E>                       = stx.arrowlet.pack.Process.ProcessDef<I,E>;
-typedef Process<I,E>                          = stx.arrowlet.pack.Process<I,E>;
+// typedef ProcessDef<I,E>                       = stx.arrowlet.pack.Process.ProcessDef<I,E>;
+// typedef Process<I,E>                          = stx.arrowlet.pack.Process<I,E>;
 
-typedef ExecuteDef<E>                         = stx.arrowlet.pack.Execute.ExecuteDef<E>;
-typedef Execute<E>                            = stx.arrowlet.pack.Execute<E>;
+// typedef ExecuteDef<E>                         = stx.arrowlet.pack.Execute.ExecuteDef<E>;
+// typedef Execute<E>                            = stx.arrowlet.pack.Execute<E>;
 
-typedef ProvideDef<O>                         = stx.arrowlet.pack.Provide.ProvideDef<O>;
-typedef Provide<O>                            = stx.arrowlet.pack.Provide<O>;
+// typedef ProvideDef<O>                         = stx.arrowlet.pack.Provide.ProvideDef<O>;
+// typedef Provide<O>                            = stx.arrowlet.pack.Provide<O>;
 
-typedef AttemptDef<I,O,E>                     = stx.arrowlet.pack.Attempt.AttemptDef<I,O,E>;
-typedef Attempt<I,O,E>                        = stx.arrowlet.pack.Attempt<I,O,E>;
+// typedef AttemptDef<I,O,E>                     = stx.arrowlet.pack.Attempt.AttemptDef<I,O,E>;
+// typedef Attempt<I,O,E>                        = stx.arrowlet.pack.Attempt<I,O,E>;
 
-typedef ReframeDef<I,O,E>                     = stx.arrowlet.pack.Reframe.ReframeDef<I,O,E>;
-typedef Reframe<I,O,E>                        = stx.arrowlet.pack.Reframe<I,O,E>;
+// typedef ReframeDef<I,O,E>                     = stx.arrowlet.pack.Reframe.ReframeDef<I,O,E>;
+// typedef Reframe<I,O,E>                        = stx.arrowlet.pack.Reframe<I,O,E>;
 
-typedef ArrangeDef<I,S,O,E>                   = stx.arrowlet.pack.Arrange.ArrangeDef<I,S,O,E>;
-typedef Arrange<I,S,O,E>                      = stx.arrowlet.pack.Arrange<I,S,O,E>;
+// typedef ArrangeDef<I,S,O,E>                   = stx.arrowlet.pack.Arrange.ArrangeDef<I,S,O,E>;
+// typedef Arrange<I,S,O,E>                      = stx.arrowlet.pack.Arrange<I,S,O,E>;
 
 
 #if (test=="stx_arrowlet")
   typedef Test                                = stx.arrowlet.core.pack.Test;
 #end
 class LiftArrowletToCascade{
-  static public function toCascade<A,B,E>(arw:Arrowlet<A,B,E>):Cascade<A,B,E>{
-    return Cascade.fromArrowlet(arw);
-  }
+//  static public function toCascade<A,B,E>(arw:Arrowlet<A,B,E>):Cascade<A,B,E>{
+ //   return Cascade.fromArrowlet(arw);
+ // }
 }
 class LiftResolveToCascade{
-  static public function toCascade<A,B,E>(arw:Arrowlet<Res<A,E>,B,Noise>):Cascade<A,B,E>{
-    return Resolve.lift(arw).toCascade();
-  }
+  //static public function toCascade<A,B,E>(arw:Arrowlet<Res<A,E>,B,Noise>):Cascade<A,B,E>{
+  //  return Resolve.lift(arw).toCascade();
+  //}
 }
 class LiftAttemptToCascade{
   //static public function toCascade<A,B,E>(arw:Arrowlet<A,Res<B,E>>):Cascade<A,B,E>{
@@ -106,4 +106,4 @@ class LiftAttemptFunctionToAttempt{
     //return Attempt.fromFun1Res(fn);
   //}
 }
-typedef LiftThunkToProceed = stx.arrowlet.lift.LiftThunkToProceed;
+//typedef LiftThunkToProceed = stx.arrowlet.lift.LiftThunkToProceed;

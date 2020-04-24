@@ -93,8 +93,7 @@ class AttemptLift{
             return self.prepare(v,cont);
           },
           (e) -> {
-            cont.value(__.failure(e));
-            return cont.serve();
+            return cont.value(__.failure(e));
           }
         );
       }
@@ -105,4 +104,5 @@ class AttemptLift{
       Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
    );
   }  
+
 }

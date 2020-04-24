@@ -29,24 +29,23 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
       (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> i.fold(
         (i:I) -> 
         { 
-          var inner = cont.inner();
-              inner.later(
-                (res:Outcome<O,E>) -> {
-                  var outer_res = Success(
-                    res.fold(
-                      __.success,
-                      (e:E) -> __.failure(__.fault().of(e))
-                    )
-                  );
-                  cont.issue(outer_res);
-                }
+          var defer = Future.trigger();
+          cont = cont.defer(defer);
+          var inner = cont.inner().later(
+            (res:Outcome<O,E>) -> {
+              var outer_res = Success(
+                res.fold(
+                  __.success,
+                  (e:E) -> __.failure(__.fault().of(e))
+                )
               );
-          cont.after(arw.prepare(i,inner));
-          return cont.serve();
+              defer.trigger(outer_res);
+            }
+          );
+          return cont.after(arw.prepare(i,inner));
         },
         (e:Err<E>) -> {
-          cont.value(__.failure(e));
-          return cont.serve();
+          return cont.value(__.failure(e));
         }
       )
     ));
@@ -55,16 +54,16 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
     return lift(Arrowlet.Anon(
       (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> i.fold(
         (i) -> {
-          var inner = cont.inner();
-              inner.later(
+          var defer = Future.trigger();
+          cont = cont.defer(defer);
+          var inner = cont.inner().later(
                 (res:Outcome<O,E>) -> {
-                  cont.value(
+                  defer.trigger(
                     res.fold(__.success,(e) -> __.failure(__.fault().of(e)))
                   );
                 }
               );
-          cont.after(arw.prepare(i,inner));
-          return cont.serve();
+          return cont.after(arw.prepare(i,inner));
         },
         typical_fail_handler(cont)
       )

@@ -25,8 +25,7 @@ class ArrowletApi<P,O,E>{
 		return output;
 	}
 	private function doApplyII(p:P,t:Terminal<O,E>):Response{
-		throw __.fault().err(E_AbstractMethod);
-    return t.serve();
+    return t.error(__.fault().err(E_AbstractMethod)).serve();
   }
   public function asArrowletDef():ArrowletDef<P,O,E>{
     return this;
@@ -80,13 +79,13 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
     return lift(
       Arrowlet.Anon(
         (i:I,term:Terminal<O,E>) -> {
-          var trigger = TinkFuture.trigger();
+          var future   = TinkFuture.trigger();
           fn(i,
             (o) -> {
-              term.value(o);
+              future.trigger(__.success(o));
             }
           );
-          return term.serve();
+          return term.defer(future).serve();
         }
       )
     );
@@ -191,14 +190,18 @@ class ArrowletLift{
   static public function deliver<I,O,E>(self:Arrowlet<I,O,E>,cb:O->Void):Arrowlet<I,Noise,E>{
     return unto(Arrowlet.Anon(
       (i:I,cont:Terminal<Noise,E>) -> {
-        var inner = cont.inner();
-            inner.later(
-              (res) -> switch(res){
-                case Success(o) : cb(o);
-                case Failure(e) : cont.error(e);
-              }
-            );
-        return self.prepare(i,inner);
+        var defer     = cont.future();
+        var receiver  = cont.defer(defer);
+        var inner     = cont.inner(
+          (res) -> switch(res){
+            case Success(o) : 
+              cb(o);
+              defer.trigger(__.success(Noise));
+            case Failure(e) : 
+              defer.trigger(__.failure(e));
+          }
+        );  
+        return receiver.after(self.prepare(i,inner));
       }
     ));
   }
@@ -209,18 +212,20 @@ class ArrowletLift{
   static public function context<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
-        var inner = cont.inner();
-            inner.later(
+        var defer = Future.trigger();
+        var inner = cont.inner().later(
               (outcome:Outcome<O,E>) -> {
-                cont.value(Noise);
+                trace("OC");
                 outcome.fold(
                   success,
                   failure
                 );
+                defer.trigger(__.success(Noise));
               }
             );
-        cont.after(self.prepare(i,inner));
-        return cont.serve();
+        return 
+          cont.defer(defer)
+              .after(self.prepare(i,inner));
       }
     );
   }

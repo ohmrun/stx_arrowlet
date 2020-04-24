@@ -13,8 +13,6 @@ using stx.Assert;
 using stx.Run;
 using stx.Log;
 
-import stx.arrowlet.core.pack.arrowlet.term.Thread;
-
 using stx.Arrowlet;
 
 

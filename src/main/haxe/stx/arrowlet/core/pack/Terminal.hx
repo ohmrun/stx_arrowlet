@@ -1,137 +1,84 @@
 package stx.arrowlet.core.pack;
 
-import haxe.Timer;
+typedef TerminalDef<R,E> = JobDef<R,E>;
 
-import stx.run.pack.task.term.All;
-import stx.run.pack.task.term.Seq;
-import stx.run.pack.task.term.Both;
-import stx.run.pack.task.term.Count;
-import stx.run.pack.task.term.Base;
-import stx.run.pack.task.term.On;
-import stx.run.pack.task.term.When;
-
-// enum TerminalInputSum<O,E>{
-//   Issue(o:O);
-//   Wrong(err:Err<AutomationFailure<E>>);
+interface TerminalApi<R,E>{
+  public function future():FutureTrigger<Res<R,E>>;
   
-//   Serve(sink:Sink<O>);
-//   Split<U>(sink:Sink<O>,await:TerminalInputSum<U,E>);
-//   Until(task:Task);
-// }
-// typedef TerminalDef = Continuation<Response,TerminalInputSum>;
+  public function issue(res:Res<R,E>):Receiver<R,E>;
+  public function value(r:R):Receiver<R,E>;
+  public function error(err:Err<E>):Receiver<R,E>;
 
-@:allow(stx) class TerminalApiBase<O,E> extends Both{
-  var handlers        : Array<Void->Void>;
-  var stored          : Outcome<O,E>;
-  var future          : Future<Outcome<O,E>>;
-  var trigger         : FutureTrigger<Outcome<O,E>>;
-  var canceller       : CallbackLink;
-  var depends         : Array<Response>;
+  public function defer(ft:Future<Res<R,E>>):Receiver<R,E>;
 
-  private function new(?parent){
-    this.handlers  = [];
-    this.trigger   = Future.trigger();
-    this.depends   = [];
-    this.future    = trigger.asFuture();
+  public function inner<RR,EE>(join:Res<RR,EE> -> Void):Terminal<RR,EE>;
 
-    super(
-      new TerminalDepend(cast this.depends),
-      new TerminalWait(trigger)
-    );
-    
+  public function toTerminalApi():TerminalApi<R,E>;
+}
+@:forward abstract Terminal<R,E>(TerminalApi<R,E>) from TerminalApi<R,E> to TerminalApi<R,E>{
+  public function new(){
+    this = new TerminalBase();
+  }
+}
+class TerminalBase<R,E> implements TerminalApi<R,E>{
+  public function new(){}
+  public function future():FutureTrigger<Res<R,E>>{
+    return Future.trigger();
+  }
+
+  public function issue(res:Res<R,E>):Receiver<R,E>{
+    return Receiver.lift(Job.issue(res));
+  }
+  public function value(r:R):Receiver<R,E>{
+    return issue(__.success(r));
+  }
+  public function error(err:Err<E>):Receiver<R,E>{
+    return issue(__.failure(err));
+  }
+
+
+  public function defer(ft:Future<Res<R,E>>):Receiver<R,E>{
+    return Receiver.lift(Job.defer(ft));
+  }
   
-    if(parent!=null){
-      parent.after(this.serve());
-    }
+  
+  public function inner<RR,EE>(join:Res<RR,EE> -> Void):Terminal<RR,EE>{
+    return new SubTerminal(join).toTerminalApi();
   }
-  override private function do_escape(){
-    //canceller.invoke();  
+
+  public function toTerminalApi():TerminalApi<R,E>{
+    return this;
   }
-  override private function do_pursue(){
-    if(stored == null){
-      if(canceller == null) {
-        canceller = trigger.handle(
-          (s) -> stored = s
-        );
-      }else{
-        canceller = canceller & trigger.handle(
-          (s) -> stored = s
-        );
-      }
-    }else{
-      internal();
-      trigger.trigger(stored);
-    }
-    return if(super.do_pursue()){
-      true;
-    }else{
-      var trigger0 = Future.trigger();
-      future.handle(
-        (_) -> trigger0.trigger(Noise)
-      );
-      progression(Waiting(trigger0.asFuture()));
-      true;
-    }
+}
+class SubTerminal<R,E> extends Terminal<R,E>{
+  private var join : Res<R,E> -> Void;
+  public function new(join:Res<R,E>->Void){
+    this.join = join;
+  }
+  override public function issue(res:Res<R,E>):Receiver<R,E>{
+    return Receiver.lift(Job.issue(res).later(join));
+  }
+
+  override public function defer(ft:Future<Res<R,E>>):Receiver<R,E>{
+    return Receiver.lift(Job.defer(ft).later(join));
+  }
+  
+}
+abstract Receiver<R,E>(JobDef<R,E>){
+  public function new(self) this = self;
+  static public function lift<R,E>(self:JobDef<R,E>):Receiver<R,E>{
+    return new Receiver(self);
+  }
+  public function after(res:Response):Response{
+    return res.seq(Job._.serve(this));
+  }
+  public function later(handler:Res<R,E>->Void):Receiver<R,E>{
+    return lift(Job._.later(this,handler));
   }
   public function serve():Response{
-    return Response.until(this);
+    return Job._.serve(this);
   }
-  public function issue(res:Outcome<O,E>):Void{
-    stored = res;
-	}
-	public function after(response:Response):Void{
-    this.depends.push(response);
+  @:from static public function fromFutureResponse<E>(ft:Future<Response>):Response{
+    return Agenda.fromFutureAgenda(ft);
   }
-  public function later(cb:Outcome<O,E> -> Void):Void{
-    var handle = null;
-        handle = () -> {
-          cb(this.stored);
-          this.handlers.remove(handle);
-        };
-    this.handlers.push(handle);
-  }
-  public function inner<T,EE>():Terminal<T,EE>{
-    var inner = new TerminalApiBase(this);
-    return inner.asTerminalDef();
-  }
-	public function asTerminalDef():TerminalDef<O,E>{
-		return this;
-  }
-  private function internal(){
-    for(handler in handlers){
-      handler();
-    }
-  }
-}
-class TerminalWait<O,E> extends When<Outcome<O,E>>{
-
-}
-class TerminalDepend extends All{
-
-}
-typedef TerminalDef<O,E> = {
-
-  public function serve():Response;
-
-  public function issue(res:Outcome<O,E>):Void;
-
-  public function after(response:Response):Void;
-  public function later(cb:Outcome<O,E>->Void):Void;
-
-  public function inner<T,EE>():Terminal<T,EE>;
-
-	public function asTerminalDef():TerminalDef<O,E>;
-}
-@:forward abstract Terminal<O,E>(TerminalDef<O,E>) from TerminalDef<O,E> to TerminalDef<O,E>{
-  static public var ZERO : Terminal<Noise,Noise> = new TerminalApiBase().asTerminalDef();
-	static public function unit<O,E>():Terminal<O,E>{
-		return new TerminalApiBase().asTerminalDef();
-  }
-  public function value(o:O){
-    this.issue(Success(o));
-  }
-  public function error(e:E){
-    this.issue(Failure(e));
-  }
-}
- 
+} 

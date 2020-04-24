@@ -13,9 +13,9 @@ class Delay<I,E> extends ArrowletApi<I,I,E>{
     .reply()
     .handle(
       (_) -> {
-        cont.value(i);
+        ft.trigger(__.success(i));
       }
     );
-    return cont.serve();
+    return cont.defer(ft).serve();
   }
 }

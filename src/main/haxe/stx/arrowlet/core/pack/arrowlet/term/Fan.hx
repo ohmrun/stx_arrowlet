@@ -7,10 +7,10 @@ class Fan<I,O,E> extends ArrowletApi<I,Couple<O,O>,E>{
     this.delegate = delegate;
   }
   override private function doApplyII(i:I,cont:Terminal<Couple<O,O>,E>):Response{
-    var inner = cont.inner();
-        inner.later(
-          (o:Outcome<O,E>) -> cont.issue(o.map(v -> __.couple(v,v)))
-        );
-    return delegate.prepare(i,inner);
+    var future = TinkFuture.trigger();
+    var inner = cont.inner(
+      (o:Res<O,E>) -> future.trigger(o.map(v -> __.couple(v,v)))
+    );
+    return cont.defer(future).after(delegate.prepare(i,inner));
   }
 }

@@ -7,11 +7,12 @@ package stx.arrowlet.test;
 	import utest.Assert in Rig;
 	import utest.Async;
 
-  import stx.arrowlet.test.head.Data;
-  import stx.log.Package;
 
-  using stx.core.Lift;
-  using stx.arrowlet.Lift;
+  using stx.Log;
+
+  using stx.Pico;
+  using stx.Nano;
+  //using stx.Arrowlet;
 #end
 
 

@@ -1,6 +1,7 @@
 package stx.arrowlet.core.test;
 
 class AfterRewriteTest extends utest.Test{
+  @Ignored
   public function testSync(async:utest.Async){
     Arrowlet.Sync(
       (i) -> i + 1
@@ -13,6 +14,7 @@ class AfterRewriteTest extends utest.Test{
       (e) -> {}
     ).submit();
   }
+  @Ignored
   public function testAsync(async:utest.Async){
     Arrowlet.fromFunSink(
       (i,cb) -> {
@@ -27,6 +29,8 @@ class AfterRewriteTest extends utest.Test{
       (_)->{}
     ).submit();
   }
+  //@:timeout(2000)
+  @:timeout(70)
   public function test_after_tick(async:utest.Async){
     Arrowlet.fromFunSink(
       (i,cb) -> {
@@ -40,9 +44,12 @@ class AfterRewriteTest extends utest.Test{
         Rig.equals(2,v);
         async.done();
       },
-      (_) -> {}
+      (e) -> {
+        throw(e);
+      }
     ).submit();
   }
+  @Ignored
   public function test_arrowlet_to_channnel(async:utest.Async){
     Cascade.fromArrowlet(
       Arrowlet.Sync((i) -> i+1)
@@ -57,6 +64,7 @@ class AfterRewriteTest extends utest.Test{
       }
     ).submit();
   }
+  @Ignored
   public function test_arrowlet_error(async:utest.Async){
     Arrowlet.Anon(
       (i,cont) -> {
