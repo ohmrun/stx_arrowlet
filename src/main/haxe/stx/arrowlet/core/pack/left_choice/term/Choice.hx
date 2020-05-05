@@ -10,8 +10,7 @@ class Choice<I,O,E> extends ArrowletApi<Either<I,I>,Either<O,I>,E>{
     return switch(either){
       case Left(i)      : Arrowlet.Apply().prepare(__.couple(delegate,i),cont);
       case Right(oii)   : 
-        cont.value(Right(oii));
-        cont.serve();
+        cont.value(Right(oii)).serve();
     }
   }
 }

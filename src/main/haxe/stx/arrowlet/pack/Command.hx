@@ -19,18 +19,17 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   static public function fromArrowlet<I,E>(self:Arrowlet<I,Noise,E>):Command<I,E>{
     return lift(Arrowlet.Anon(
       (i:I,cont:Terminal<Report<E>,Noise>) -> {
-        var inner = cont.inner();
-            inner.later(
-              (res:Outcome<Noise,E>) -> {
-                var value = Report.lift(res.fold(
-                  (_) -> None,
-                  (e) -> Some(__.fault().of(e))
-                ));
-                cont.value(value);
-              }
-            );
-        cont.after(self.prepare(i,inner));
-        return cont.serve();
+        var defer = Future.trigger();
+        var inner = cont.inner(
+          (res:Outcome<Noise,E>) -> {
+            var value = Report.lift(res.fold(
+              (_) -> None,
+              (e) -> Some(__.fault().of(e))
+            ));
+            defer.trigger(Success(value));
+          }
+        );
+        return cont.defer(defer).after(self.prepare(i,inner));
       })
     );
   }
@@ -47,22 +46,20 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
         (i:Res<I,E>,cont:Terminal<Res<I,E>,Noise>) -> {
           i.fold(
             (i:I) -> {
-              var inner = cont.inner();
-              inner.later(
+              var defer = Future.trigger();
+              var inner = cont.inner(
                 (res:Outcome<Report<E>,Noise>) -> {
                   var value : Res<I,E> = switch(res){
                     case Success(Some(v)) : __.failure(v);
                     default               : __.success(i);
                   }
-                  cont.value(value);
+                  defer.trigger(Success(value));
                 }
               );
-              cont.after(this.prepare(i,inner));
-              return cont.serve();
+              return cont.defer(defer).after(this.prepare(i,inner));
             },
             (e:Err<E>) -> {
-              cont.value(__.failure(e));
-              cont.serve();
+              return cont.value(__.failure(e)).serve();
             }
           );
         }

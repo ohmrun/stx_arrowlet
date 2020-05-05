@@ -22,22 +22,22 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletApi<Couple<Ii,Iii>,Couple<Oi,Oii>,E>
 		var guard 		= () -> {
 			switch([l_val,r_val]){
 				case [Some(Failure(x)),None]  						: 
-					future.trigger(__.failure(x));//TODO does it get here?
+					future.trigger(Failure(x));//TODO does it get here?
 				case [None,Some(Failure(x))]  						: 
-					future.trigger(__.failure(x));
+					future.trigger(Failure(x));
 				case [Some(Success(l)),Some(Success(r))] 	:
-					future.trigger(__.success(__.couple(l,r)));
+					future.trigger(Success(__.couple(l,r)));
 				default : 
 			}
 		};
 		var l_set 		= cont.inner(
-					(oi:Res<Oi,E>)		-> { 
+					(oi:Outcome<Oi,E>)		-> { 
 						l_val = Some(oi); 	
 						guard(); 	
 					}
 				);
 		var r_set 		= cont.inner(
-					(oii:Res<Oii,E>)	-> { 
+					(oii:Outcome<Oii,E>)	-> { 
 						r_val = Some(oii);	
 						guard(); 
 					}

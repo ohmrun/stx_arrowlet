@@ -30,23 +30,19 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
   @:noUsing static public function fromArrowlet<O,E>(arw:Arrowlet<Noise,O,E>):Proceed<O,E>{
     return lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) ->  {
-        var inner = cont.inner();
-            inner.later(
+        var defer = Future.trigger();
+        var inner = cont.inner(
               (outcome:Outcome<O,E>) -> {
                 //trace("INNER");
-                cont.value(
+                defer.trigger(Success(
                   outcome.fold(
                     __.success,
                     (e) -> __.failure(__.fault().of(e))
                   )
-                );
+                ));
               }
             );
-            cont.later(
-              (c) -> trace(c)
-            );
-        cont.after(arw.prepare(Noise,inner)); 
-        return cont.serve();
+        return cont.defer(defer).after(arw.prepare(Noise,inner)); 
       })
     );
   }
@@ -88,27 +84,32 @@ class ProceedLift{
     return Execute.lift(
       Arrowlet.Anon(
         (_:Noise,cont:Terminal<Report<E>,Noise>) -> {
-          var inner = cont.inner();
-              inner.later(
-                (outcome:Outcome<Res<O,E>,Noise>) -> {
-                  switch(outcome){
-                    case Success(Success(o)) : 
-                      success(o).prepare(cont);
-                    case Success(Failure(e)) : 
-                      cont.value(Report.pure(e));
-                    default :
-                      cont.error(Noise);
-                  }
-                }
-              );
-          cont.after(self.prepare(inner));
-          return cont.serve();
+          var defer   = Future.trigger();
+          var inner   = cont.inner(
+            (outcome:Outcome<Res<O,E>,Noise>) -> {
+              switch(outcome){
+                case Success(Success(o)) : 
+                  defer.trigger(success(o).prepare(cont));
+                case Success(Failure(e)) : 
+                  defer.trigger(cont.value(Report.pure(e)).serve());
+                default :
+                  defer.trigger(cont.error(Noise).serve());
+              }
+              null;
+            }
+          );
+          return self.prepare(inner).seq(cont.waits(defer));
         } 
       )
     );
   }
+  static public function process<O,Oi,E>(self:Proceed<O,E>,then:Process<O,Oi>):Proceed<Oi,E>{
+    return lift(Arrowlet.Then(self,then.toCascade()));
+  }
   static public function prepare<O,E>(self:Proceed<O,E>,cont:Terminal<Res<O,E>,Noise>):Response{
     return self.toArrowlet().prepare(Noise,cont);
   }
-  
+  static public function control<O,E>(self:Proceed<O,E>,rec:Recover<O,E>):Forward<O>{
+    return Forward.lift(self.then(rec.toResolve()));
+  }
 }

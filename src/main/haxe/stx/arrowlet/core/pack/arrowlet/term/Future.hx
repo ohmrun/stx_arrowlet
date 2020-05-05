@@ -9,9 +9,7 @@ class Future<O,E> extends ArrowletApi<Noise,O,E>{
     this.delegate = delegate;
   }
   override private function doApplyII(i:Noise,cont:Terminal<O,E>):Response{
-    delegate.handle(
-      cont.value
-    );
-    return cont.serve();
+    var outcome = delegate.map(Success);
+    return cont.defer(outcome).serve();
   }
 }

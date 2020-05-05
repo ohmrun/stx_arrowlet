@@ -11,8 +11,7 @@ class Base<Ii,O,Iii,E> extends ArrowletApi<Either<Iii,Ii>,Either<Iii,O>,E>{
       case Right(v) 	:
         Arrowlet.Apply().then(Right).prepare(__.couple(delegate,v),cont);
       case Left(v) 		:
-        cont.value(Left(v));
-        return cont.serve();
+        cont.value(Left(v)).serve();
     }
   }
 }

@@ -6,7 +6,6 @@ package stx.arrowlet.core.pack.arrowlet;
 // import stx.arrowlet.core.pack.arrowlet.term.Fan;
 // import stx.arrowlet.core.pack.arrowlet.term.Fun1Future;
 // import stx.arrowlet.core.pack.arrowlet.term.Future;
-// import stx.arrowlet.core.pack.arrowlet.term.Handler;
 // import stx.arrowlet.core.pack.arrowlet.term.Or;
 // import stx.arrowlet.core.pack.arrowlet.term.ReplyFuture;
 // import stx.arrowlet.core.pack.arrowlet.term.Split;

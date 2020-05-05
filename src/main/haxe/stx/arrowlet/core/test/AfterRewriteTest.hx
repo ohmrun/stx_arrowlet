@@ -1,7 +1,7 @@
 package stx.arrowlet.core.test;
 
 class AfterRewriteTest extends utest.Test{
-  @Ignored
+  //@Ignored
   public function testSync(async:utest.Async){
     Arrowlet.Sync(
       (i) -> i + 1
@@ -14,7 +14,7 @@ class AfterRewriteTest extends utest.Test{
       (e) -> {}
     ).submit();
   }
-  @Ignored
+  //@Ignored
   public function testAsync(async:utest.Async){
     Arrowlet.fromFunSink(
       (i,cb) -> {
@@ -31,6 +31,7 @@ class AfterRewriteTest extends utest.Test{
   }
   //@:timeout(2000)
   @:timeout(70)
+  //@Ignored
   public function test_after_tick(async:utest.Async){
     Arrowlet.fromFunSink(
       (i,cb) -> {
@@ -50,28 +51,12 @@ class AfterRewriteTest extends utest.Test{
     ).submit();
   }
   @Ignored
-  public function test_arrowlet_to_channnel(async:utest.Async){
-    Cascade.fromArrowlet(
-      Arrowlet.Sync((i) -> i+1)
-    ).context(
-      Success(1),
-      (v) -> {
-        Rig.same(Success(2),v);
-        async.done();
-      },
-      (_) -> {
-
-      }
-    ).submit();
-  }
-  @Ignored
   public function test_arrowlet_error(async:utest.Async){
     Arrowlet.Anon(
       (i,cont) -> {
-        cont.issue(
+        return cont.issue(
           Failure(__.fault().err(E_UnexpectedNullValueEncountered))
-        );
-        return cont.serve();
+        ).serve();
       }
     ).context(
       1,

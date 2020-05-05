@@ -9,12 +9,13 @@ class Fun1Future<I,O,E> extends ArrowletApi<I,O,E>{
     this.delegate = delegate;
   }
   override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+    var defer = Future.trigger();
     var handler   = (o:O) ->{
-      cont.value(o);
+      defer.trigger(Success(o));
     }
     var canceller = delegate(i).handle(
       handler
     );//TODO
-    return cont.serve();
+    return cont.defer(defer).serve();
   }
 }

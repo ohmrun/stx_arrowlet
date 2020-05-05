@@ -20,21 +20,19 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
         (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) ->
           i.fold(
             (i) -> {
-              var inner = cont.inner();
-                  inner.later(
-                    (outcome:Outcome<O,Noise>) -> {
-                      cont.value(outcome.fold(
-                        __.success,
-                        (_) -> __.failure(__.fault().err(FailCode.E_ResourceNotFound))
-                      ));
-                    }
-                  );
-              cont.after(this.prepare(i,inner));
-              return cont.serve();
+              var defer = Future.trigger();
+              var inner = cont.inner(
+                (outcome:Outcome<O,Noise>) -> {
+                  defer.trigger(Success(outcome.fold(
+                    __.success,
+                    (_) -> __.failure(__.fault().err(FailCode.E_ResourceNotFound))
+                  )));
+                }
+              );
+              return cont.defer(defer).after(this.prepare(i,inner));
             },
             (err) -> {
-              cont.value(__.failure(err));
-              return cont.serve();
+              return cont.value(__.failure(err)).serve();
             }
           )
       )
@@ -44,8 +42,7 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
     return lift(
       Arrowlet.Anon(
         (i:I,cont:Terminal<O,Noise>) -> {
-          cont.value(fn(i));
-          return cont.serve();
+          return cont.value(fn(i)).serve();
         }
       )
     );

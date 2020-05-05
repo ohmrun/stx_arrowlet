@@ -11,16 +11,18 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
 	}
   override private function doApplyII(i:I,cont:Terminal<Oii,E>):Response{
 		var defer 									= Future.trigger();
-		var receiver 								= cont.defer(defer);
 		var future_response_trigger = Future.trigger();
 
-		var innerI 		= cont.inner(
-			(res:Res<Oi,E>) -> {
-				var response = res.fold(
-					(oI) -> 
+		var inner 		= cont.inner(
+			(res:Outcome<Oi,E>) -> {
+				future_response_trigger.trigger(
+					res.fold(
+						(oI) -> func(oI).prepare(i,cont),
+						(e)	 -> cont.error(e).serve()
+					)
 				);
 			}
 		);
-		return receiver.after(self.prepare(i,inner).seq(future_respose));
+		return self.prepare(i,inner).seq(cont.waits(future_response_trigger));
   }
 }

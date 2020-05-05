@@ -10,8 +10,7 @@ class Base<Ii,Iii,O,E> extends ArrowletApi<Either<Ii,Iii>,Either<O,Iii>,E>{
 		return switch (either) {
 			case Left(v) 	: Arrowlet.Apply().then(Left).prepare(__.couple(delegate,v),cont);
 			case Right(v) : 
-				cont.value(Right(v)); 
-				return cont.serve();
+				cont.value(Right(v)).serve();
 		}
 	}
 }

@@ -12,8 +12,7 @@ typedef ArrangeDef<I,S,O,E>             = AttemptDef<Couple<I,S>,O,E>;
   static public function pure<I,S,O,E>(o:O):Arrange<I,S,O,E>{
     return lift(Arrowlet.Anon(
       (i:Couple<I,S>,cont:Terminal<Res<O,E>,Noise>) ->  {
-        cont.value(__.success(o));
-        return cont.serve();
+        return cont.value(__.success(o)).serve();
       }
     ));
   }
@@ -51,8 +50,7 @@ class ArrangeLift{
         return i.fold(
           (tp)  -> self.prepare(tp,cont),
           (err) -> {
-            cont.value(__.failure(err));
-            cont.serve();
+            return cont.value(__.failure(err)).serve();
           }
         );
       }

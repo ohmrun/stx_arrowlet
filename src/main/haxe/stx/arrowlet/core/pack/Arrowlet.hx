@@ -25,7 +25,7 @@ class ArrowletApi<P,O,E>{
 		return output;
 	}
 	private function doApplyII(p:P,t:Terminal<O,E>):Response{
-    return t.error(__.fault().err(E_AbstractMethod)).serve();
+    return throw __.fault().err(E_AbstractMethod);
   }
   public function asArrowletDef():ArrowletDef<P,O,E>{
     return this;
@@ -66,6 +66,9 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
   @:noUsing static public function FlatMap<I,Oi,Oii,E>(self : Arrowlet<I,Oi,E>,func : Oi -> Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
     return lift(new FlatMap(self,func));
   }
+  @:noUsing static public function Future<O,E>(ft:TinkFuture<O>):Arrowlet<Noise,O,E>{
+    return lift(new Future(ft));
+  }
   @:from @:noUsing static public function fromFunXR<O>(f:Void->O):Arrowlet<Noise,O,Dynamic>{
     return lift(new Sync((_:Noise)->f()));
   }
@@ -82,10 +85,10 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
           var future   = TinkFuture.trigger();
           fn(i,
             (o) -> {
-              future.trigger(__.success(o));
+              future.trigger(Success(o));
             }
           );
-          return term.defer(future).serve();
+          return term.defer(future.asFuture()).serve();
         }
       )
     );
@@ -192,13 +195,13 @@ class ArrowletLift{
       (i:I,cont:Terminal<Noise,E>) -> {
         var defer     = cont.future();
         var receiver  = cont.defer(defer);
-        var inner     = cont.inner(
-          (res) -> switch(res){
+        var inner  : Terminal<O,E>    = cont.inner(
+          (res:Outcome<O,E>) -> switch(res){
             case Success(o) : 
               cb(o);
-              defer.trigger(__.success(Noise));
+              defer.trigger(Success(Noise));null;
             case Failure(e) : 
-              defer.trigger(__.failure(e));
+              defer.trigger(Failure(e));null;
           }
         );  
         return receiver.after(self.prepare(i,inner));
@@ -212,15 +215,14 @@ class ArrowletLift{
   static public function context<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
-        var defer = Future.trigger();
-        var inner = cont.inner().later(
+        var defer = TinkFuture.trigger();
+        var inner = cont.inner(
               (outcome:Outcome<O,E>) -> {
-                trace("OC");
                 outcome.fold(
                   success,
                   failure
                 );
-                defer.trigger(__.success(Noise));
+                defer.trigger(Success(Noise));
               }
             );
         return 

@@ -9,7 +9,7 @@ class Fan<I,O,E> extends ArrowletApi<I,Couple<O,O>,E>{
   override private function doApplyII(i:I,cont:Terminal<Couple<O,O>,E>):Response{
     var future = TinkFuture.trigger();
     var inner = cont.inner(
-      (o:Res<O,E>) -> future.trigger(o.map(v -> __.couple(v,v)))
+      (o:Outcome<O,E>) -> future.trigger(o.map(v -> __.couple(v,v)))
     );
     return cont.defer(future).after(delegate.prepare(i,inner));
   }

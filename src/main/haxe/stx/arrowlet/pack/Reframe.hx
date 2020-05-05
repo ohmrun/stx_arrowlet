@@ -65,47 +65,46 @@ class ReframeLift{
 
   static public function rearrange<I,Ii,O,Oi,E>(self:Reframe<I,O,E>,that:O->Arrange<Ii,I,Oi,E>):Attempt<Couple<Ii,I>,Oi,E>{
     return Attempt.lift(Arrowlet.Anon(
-      (ipt:Couple<Ii,I>,contN:Terminal<Res<Oi,E>,Noise>) -> {
-        var inner = contN.inner();
-            inner.later(
-              (chk:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(chk){
-                case Success(Success(tp)) : 
-                  inner.after(
-                    that(tp.fst()).prepare(__.couple(ipt.fst(),tp.snd()),contN)
-                  );
-                case Failure(_) :
-                      contN.error(Noise);
-                case Success(Failure(e)) : 
-                      contN.value(__.failure(e));
-              }
-            );
-        contN.after(self.prepare(__.success(ipt.snd()),inner));
-        return contN.serve();
+      (ipt:Couple<Ii,I>,cont:Terminal<Res<Oi,E>,Noise>) -> {
+        var defer = Future.trigger();
+        var inner = cont.inner(
+          (chk:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(chk){
+            case Success(Success(tp)) : 
+              defer.trigger(
+                that(tp.fst()).prepare(__.couple(ipt.fst(),tp.snd()),cont)
+              );null;
+            case Failure(_) :
+              defer.trigger(cont.error(Noise).serve());null;
+            case Success(Failure(e)) : 
+              defer.trigger(cont.value(__.failure(e)).serve());null;
+          }
+          
+        );
+        return self.prepare(__.success(ipt.snd()),inner).seq(defer);
       }
     ));
   }
 
-  static public function commander<I,O,E>(self:Reframe<I,O,E>,fN:O->Command<I,E>):Reframe<I,O,E>{
+  static public function commander<I,O,E>(self:Reframe<I,O,E>,fn:O->Command<I,E>):Reframe<I,O,E>{
     return lift(Arrowlet.Anon(
-      (ipt:Res<I,E>,contN:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
-        var inner = contN.inner();
-            inner.later(
-              (out:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(out){
-                case Success(Success(tp)) : 
-                  contN.after(fN(tp.fst()).postfix(
-                    (opt) -> opt.fold(
-                      (err) -> __.failure(err),
-                      ()    -> __.success(tp)
-                    )
-                  ).prepare(tp.snd(),contN));
-                case Success(Failure(e))  : 
-                  contN.value(__.failure(e));
-                default : 
-                  contN.error(Noise);
-              }
-            );
-        contN.after(self.prepare(ipt,inner));
-        return contN.serve();
+      (ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
+        var defer = Future.trigger();
+        var inner = cont.inner(
+          (out:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(out){
+            case Success(Success(tp)) : 
+              defer.trigger(fn(tp.fst()).postfix(
+                (opt) -> opt.fold(
+                  (err) -> __.failure(err),
+                  ()    -> __.success(tp)
+                )
+              ).prepare(tp.snd(),cont));null;
+            case Success(Failure(e))  : 
+              defer.trigger(cont.value(__.failure(e)).serve());null;
+            default : 
+              defer.trigger(cont.error(Noise).serve());null;
+          }
+        );
+        return self.prepare(ipt,inner).seq(cont.waits(defer));
       }
     ));
   }

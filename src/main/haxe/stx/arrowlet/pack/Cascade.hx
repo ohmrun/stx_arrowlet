@@ -27,12 +27,10 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
   static public function fromArrowlet<I,O,E>(arw:Arrowlet<I,O,E>):Cascade<I,O,E>{
     return lift(Arrowlet.Anon(
       (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> i.fold(
-        (i:I) -> 
-        { 
-          var defer = Future.trigger();
-          cont = cont.defer(defer);
-          var inner = cont.inner().later(
-            (res:Outcome<O,E>) -> {
+        (i:I) -> { 
+          var defer     = Future.trigger();
+          var inner     = cont.inner(
+             (res:Outcome<O,E>) -> {
               var outer_res = Success(
                 res.fold(
                   __.success,
@@ -42,10 +40,10 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
               defer.trigger(outer_res);
             }
           );
-          return cont.after(arw.prepare(i,inner));
+          return cont.defer(defer).after(arw.prepare(i,inner));
         },
         (e:Err<E>) -> {
-          return cont.value(__.failure(e));
+          return cont.value(__.failure(e)).serve();
         }
       )
     ));
@@ -55,15 +53,14 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
       (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> i.fold(
         (i) -> {
           var defer = Future.trigger();
-          cont = cont.defer(defer);
-          var inner = cont.inner().later(
-                (res:Outcome<O,E>) -> {
-                  defer.trigger(
-                    res.fold(__.success,(e) -> __.failure(__.fault().of(e)))
-                  );
-                }
+          var inner = cont.inner(
+            (res:Outcome<O,E>) -> {
+              defer.trigger(
+                Success(res.fold(__.success,(e) -> __.failure(__.fault().of(e))))
               );
-          return cont.after(arw.prepare(i,inner));
+            }
+          );
+          return cont.defer(defer).after(arw.prepare(i,inner));
         },
         typical_fail_handler(cont)
       )
@@ -79,8 +76,7 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
   }
   static private function typical_fail_handler<O,E>(cont:Terminal<Res<O,E>,Noise>){
     return (e:Err<E>) -> {
-      cont.value(__.failure(e));
-      return cont.serve();
+      cont.value(__.failure(e)).serve();
     }
   }
   @:to public function toArrowlet():Arrowlet<Res<I,E>,Res<O,E>,Noise>{
@@ -106,7 +102,6 @@ class CascadeLift{
       )
     );
   }
-  
   static public function errata<I,O,E,EE>(self:Cascade<I,O,E>,fn:Err<E>->Err<EE>):Cascade<I,O,EE>{
     return lift(
       Arrowlet.Anon(
@@ -117,20 +112,20 @@ class CascadeLift{
       )
     );
   }
-  
   static public function reframe<I,O,E>(self:Cascade<I,O,E>):Reframe<I,O,E>{ 
     return lift(
       Arrowlet.Anon((ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
-        var inner = cont.inner();
-            inner.later(
+        var defer = Future.trigger();
+        var inner = cont.inner(
               (opt:Outcome<Res<O,E>,Noise>) -> {
-                cont.issue(
-                 opt.map(res -> res.zip(ipt))
+                defer.trigger(
+                  opt.map(res -> res.zip(ipt))
                 );
               }    
             );
-        cont.after(self.prepare(ipt,inner));
-        return cont.serve();
+        return cont.defer(defer).after(
+          self.prepare(ipt,inner)
+        );
       })
     );
   }
@@ -149,33 +144,30 @@ class CascadeLift{
   static public function prefix<I,Ii,O,E>(self:Cascade<I,O,E>,fn:Ii->I){
     return Cascade.fromArrowlet(Arrowlet.fromFun1R(fn)).then(self);
   }
-
   static function typical_fail_handler<O,E>(cont:Terminal<Res<O,E>,Noise>):Err<E> -> Response{
     return (e:Err<E>) -> {
-      cont.value(__.failure(e));
-      return cont.serve();
+      return cont.value(__.failure(e)).serve();
     }
   }
   static public function context<I,O,E>(self:Cascade<I,O,E>,i:I,success:O->Void,failure:Err<E>->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
-        var inner = cont.inner();
-            inner.later(
+        var defer = Future.trigger();
+        var inner = cont.inner(
               (outcome:Outcome<Res<O,E>,Noise>) -> {
-                
-                outcome.fold(
-                  (res) -> {
-                    res.fold(success,failure);
-                    cont.value(Noise);
+                  outcome.fold(
+                    (res) -> {
+                      res.fold(success,failure);
+                      defer.trigger(Success(Noise));
                   },
                   (_)   -> {
-                    cont.error(Noise);
+                    defer.trigger(Failure(Noise));
                   }
                 );
               }
             );
-        cont.after(self.prepare(__.success(i),inner));
-        return cont.serve();
+        var inner_response = self.prepare(__.success(i),inner);
+        return cont.defer(defer).after(inner_response);
       }
     );
   }

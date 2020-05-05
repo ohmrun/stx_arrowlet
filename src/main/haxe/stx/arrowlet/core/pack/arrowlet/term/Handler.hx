@@ -7,7 +7,10 @@ class Handler<O,E> extends ArrowletApi<Noise,O,E>{
     this.delegate = delegate;
   }
   override private function doApplyII(i:Noise,cont:Terminal<O,E>):Response{
-    delegate(cont.value);
-    return cont.serve();
+    var defer = Future.trigger();
+    delegate(
+      (o) -> defer.trigger(Success(o))
+    );
+    return cont.defer(defer).serve();
   }
 }

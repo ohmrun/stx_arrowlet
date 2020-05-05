@@ -13,7 +13,7 @@ class Delay<I,E> extends ArrowletApi<I,I,E>{
     .reply()
     .handle(
       (_) -> {
-        ft.trigger(__.success(i));
+        ft.trigger(Success(i));
       }
     );
     return cont.defer(ft).serve();

@@ -13,8 +13,7 @@ class Choice<I,O,E> extends ArrowletApi<Either<I,I>,Either<I,O>,E>{
           (either:Either<O,I>) -> either.flip()
         ).prepare(__.couple(delegate,v),cont);
       case Left(v) 		:
-        cont.value(Left(v));
-        return cont.serve();
+        cont.value(Left(v)).serve();
     }
   }
 }

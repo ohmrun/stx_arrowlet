@@ -3,30 +3,47 @@ package stx.arrowlet.pack;
 typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
 
 @:forward abstract Recover<I,E>(RecoverDef<I,E>) from RecoverDef<I,E> to RecoverDef<I,E>{
-  public function new(self){
-    this = self;
+  public function new(self) this = self;
+  @:noUsing static public function lift<I,E>(self:RecoverDef<I,E>) return new Recover(self);
+
+  @:from static public function fromFunErrR<I,E>(fn:Err<E>->I):Recover<I,E>{
+    return lift(Arrowlet.Sync(fn));
   }
   public function toCascade():Cascade<I,I,E>{    
     return Cascade.lift(Arrowlet.Anon(
       (i:Res<I,E>,cont:Terminal<Res<I,E>,Noise>) -> i.fold(
         (i) -> {
-          cont.value(__.success(i));
-          return cont.serve();
+          return cont.value(__.success(i)).serve();
         },
         (e:Err<E>) -> {
-          var inner = cont.inner();
-              inner.later(
-                (res:Outcome<I,Noise>) -> {
-                  cont.value(
-                    res.fold(
-                      (i) -> __.success(i),
-                      (_) -> __.failure(__.fault().err(FailCode.E_ResourceNotFound))
-                    )
-                  );
-                }
-              );
-          cont.after(this.prepare(e,inner));
-          return cont.serve();
+          var defer = Future.trigger();
+          var inner = cont.inner(
+            (res:Outcome<I,Noise>) -> {
+              defer.trigger(Success(
+                res.fold(
+                  (i) -> __.success(i),
+                  (_) -> __.failure(__.fault().err(FailCode.E_ResourceNotFound))
+                )
+              ));
+            }
+          );
+          return cont.defer(defer).after(this.prepare(e,inner));
+        }
+      )
+    ));
+  }
+  public function toResolve():Resolve<I,I,E>{
+    return Resolve.lift(Arrowlet.Anon(
+      (i:Res<I,E>,cont:Terminal<I,Noise>) -> i.fold(
+        (i) -> cont.value(i).serve(),
+        (e) -> {
+          var defer = Future.trigger();
+          var inner = cont.inner(
+            (res:Outcome<I,Noise>) -> {
+              defer.trigger(res);
+            }
+          );
+          return cont.defer(defer).after(this.prepare(e,inner));
         }
       )
     ));

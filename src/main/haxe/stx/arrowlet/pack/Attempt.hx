@@ -15,8 +15,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
     return lift(
       Arrowlet.Anon(
         (i:I,cont:Terminal<Res<I,E>,Noise>) -> {
-          cont.value(__.success(i));
-          return cont.serve();
+          return cont.value(__.success(i)).serve();
         }
       )
     );
@@ -25,8 +24,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
     return lift(
       Arrowlet.Anon(
         (_:I,cont:Terminal<Res<O,E>,Noise>) -> {
-          cont.value(res);
-          return cont.serve();
+          return cont.value(res).serve();
         }
       )
     );
@@ -35,8 +33,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
   @:from static public function fromFun1Res<Pi,O,E>(fn:Pi->Res<O,E>):Attempt<Pi,O,E>{
     return lift(Arrowlet.Anon(
       (pI:Pi,cont:Terminal<Res<O,E>,Noise>) -> {
-        cont.value(fn(pI));
-        return cont.serve();
+        return cont.value(fn(pI)).serve();
       }
     ));
   }
@@ -44,8 +41,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
     return lift(
       Arrowlet.Anon(
         (i,cont) -> {
-          cont.value(__.success(fn(i)));
-          return cont.serve();
+          return cont.value(__.success(fn(i))).serve();
         }
       )
     );
@@ -93,7 +89,7 @@ class AttemptLift{
             return self.prepare(v,cont);
           },
           (e) -> {
-            return cont.value(__.failure(e));
+            return cont.value(__.failure(e)).serve();
           }
         );
       }
