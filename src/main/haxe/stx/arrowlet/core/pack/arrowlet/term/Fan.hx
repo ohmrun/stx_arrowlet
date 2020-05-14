@@ -6,7 +6,7 @@ class Fan<I,O,E> extends ArrowletApi<I,Couple<O,O>,E>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:I,cont:Terminal<Couple<O,O>,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<Couple<O,O>,E>):Work{
     var future = TinkFuture.trigger();
     var inner = cont.inner(
       (o:Outcome<O,E>) -> future.trigger(o.map(v -> __.couple(v,v)))

@@ -6,10 +6,10 @@ typedef ArrangeDef<I,S,O,E>             = AttemptDef<Couple<I,S>,O,E>;
   static public var _(default,never) = ArrangeLift;
 
   public function new(self) this = self;
-  static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         
+  @:noUsing static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         
     return new Arrange(self);
 
-  static public function pure<I,S,O,E>(o:O):Arrange<I,S,O,E>{
+  @:noUsing static public function pure<I,S,O,E>(o:O):Arrange<I,S,O,E>{
     return lift(Arrowlet.Anon(
       (i:Couple<I,S>,cont:Terminal<Res<O,E>,Noise>) ->  {
         return cont.value(__.success(o)).serve();

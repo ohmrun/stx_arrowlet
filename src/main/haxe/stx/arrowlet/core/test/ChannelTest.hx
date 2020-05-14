@@ -5,7 +5,7 @@ class ChannelTest{
   public function test_arrowlet_to_channnel(async:utest.Async){
     Cascade.fromArrowlet(
       Arrowlet.Sync((i) -> i+1)
-    ).context(
+    ).environment(
       Success(1),
       (v) -> {
         Rig.same(Success(2),v);

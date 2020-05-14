@@ -10,7 +10,7 @@ interface TerminalApi<R,E>{
   public function error(err:E):Receiver<R,E>;
 
   public function defer(ft:Future<Outcome<R,E>>):Receiver<R,E>;
-  public function waits(res:Response):Response;
+  public function waits(res:Work):Work;
 
   public function inner<RR,EE>(join:Outcome<RR,EE> -> Void):Terminal<RR,EE>;
 
@@ -37,7 +37,7 @@ class TerminalBase<R,E> implements TerminalApi<R,E>{
   public function error(err:E):Receiver<R,E>{
     return issue(Failure(err));
   }
-  public function waits(res:Response):Response{
+  public function waits(res:Work):Work{
     return res;
   }
   public function defer(ft:Future<Outcome<R,E>>):Receiver<R,E>{
@@ -70,16 +70,16 @@ abstract Receiver<R,E>(JobDef<R,E>){
   static public function lift<R,E>(self:JobDef<R,E>):Receiver<R,E>{
     return new Receiver(self);
   }
-  public function after(res:Response):Response{
+  public function after(res:Work):Work{
     return res.seq(Job._.serve(this));
   }
   public function later(handler:Outcome<R,E>->Void):Receiver<R,E>{
     return lift(Job._.later(this,handler));
   }
-  public function serve():Response{
+  public function serve():Work{
     return Job._.serve(this);
   }
-  //@:from static public function fromFutureResponse<E>(ft:Future<Response>):Response{
+  //@:from static public function fromFutureResponse<E>(ft:Future<Work>):Work{
     //return Agenda.fromFutureAgenda(ft);
   //}
 } 

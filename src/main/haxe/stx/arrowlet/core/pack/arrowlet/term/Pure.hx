@@ -6,7 +6,7 @@ class Pure<I,O,E> extends ArrowletApi<I,O,E>{
     super();
     this.secreted = secreted;
   }
-  override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<O,E>):Work{
     return cont.value(secreted).serve();
   }
 }

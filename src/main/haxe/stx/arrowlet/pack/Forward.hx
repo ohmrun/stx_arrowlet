@@ -2,7 +2,9 @@ package stx.arrowlet.pack;
 
 typedef ForwardDef<O> = ProcessDef<Noise,O>;
 
+@:using(stx.arrowlet.pack.Forward.ForwardLift)
 abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
+  static public var _(default,never) = ForwardLift;
   public function new(self) this = self;
   static public function lift<O>(self:ForwardDef<O>):Forward<O> return new Forward(self);
   
@@ -32,4 +34,23 @@ abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
   public function prj():ForwardDef<O> return this;
   private var self(get,never):Forward<O>;
   private function get_self():Forward<O> return lift(this);
+}
+class ForwardLift{
+  static public function flat_map<O,Oi>(self:Forward<O>,fn:O->ForwardDef<Oi>):Forward<Oi>{
+    return Forward.lift(Arrowlet.FlatMap(self.toArrowlet(),fn));
+  }
+  static public function and<Oi,Oii>(lhs:ForwardDef<Oi>,rhs:ForwardDef<Oii>):Forward<Couple<Oi,Oii>>{
+    return Forward.lift(Arrowlet._.pinch(
+      Arrowlet._.both(
+        lhs,
+        rhs
+      )
+    ));
+  }
+  static public function process<O,Oi>(self:ForwardDef<O>,that:Process<O,Oi>):Forward<Oi>{
+    return Forward.lift(Process._.then(
+      self,
+      that
+    ));
+  }
 }

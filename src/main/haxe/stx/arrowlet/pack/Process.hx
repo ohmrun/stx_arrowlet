@@ -2,7 +2,9 @@ package stx.arrowlet.pack;
 
 typedef ProcessDef<I,O> = ArrowletDef<I,O,Noise>;
 
+@:using(stx.arrowlet.pack.Process.ProcessLift)
 abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
+  static public var _(default,never) = ProcessLift;
   public function new(self) this = self;
   static public function lift<I,O>(self:ProcessDef<I,O>):Process<I,O> return new Process(self);
   
@@ -46,5 +48,16 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
         }
       )
     );
+  }
+  @:from static public function fromArrowlet<I,O>(arw:Arrowlet<I,O,Noise>){
+    return lift(arw);
+  }
+}
+class ProcessLift{
+  static public function then<I,O,Oi>(self:ProcessDef<I,O>,that:Process<O,Oi>):Process<I,Oi>{
+    return Process.lift(Arrowlet.Then(
+      self,
+      that
+    ));
   }
 }

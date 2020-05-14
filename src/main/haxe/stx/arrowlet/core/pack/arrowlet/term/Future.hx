@@ -8,7 +8,7 @@ class Future<O,E> extends ArrowletApi<Noise,O,E>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:Noise,cont:Terminal<O,E>):Response{
+  override private function doApplyII(i:Noise,cont:Terminal<O,E>):Work{
     var outcome = delegate.map(Success);
     return cont.defer(outcome).serve();
   }

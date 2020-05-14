@@ -56,6 +56,20 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       )
     );
   }
+  public function toCascade():Cascade<I,O,E>{
+    return Cascade.lift(Arrowlet.Anon(
+      (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> {
+        return i.fold(
+          (v) -> {
+            return Arrowlet._.prepare(this,v,cont);
+          },
+          (e) -> {
+            return cont.value(__.failure(e)).serve();
+          }
+        );
+      }
+    ));  
+  }
 }
 class AttemptLift{
   static private function lift<I,O,E>(self:AttemptDef<I,O,E>)          return new Attempt(self);
@@ -76,29 +90,14 @@ class AttemptLift{
     return lift(self.postfix((oc) -> oc.errata(fn)));
   }
   static public function attempt<I,O,Oi,E>(self:Attempt<I,O,E>,next:Attempt<O,Oi,E>):Attempt<I,Oi,E>{
-    return then(self,toCascade(next));
+    return then(self,next.toCascade());
   }
   static public function reframe<I,O,E>(self:Attempt<I,O,E>):Reframe<I,O,E>{ 
-    return toCascade(self).reframe();
-  }
-  static public function toCascade<I,O,E>(self:Attempt<I,O,E>):Cascade<I,O,E>{
-    return Cascade.lift(Arrowlet.Anon(
-      (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> {
-        return i.fold(
-          (v) -> {
-            return self.prepare(v,cont);
-          },
-          (e) -> {
-            return cont.value(__.failure(e)).serve();
-          }
-        );
-      }
-    ));  
+    return self.toCascade().reframe();
   }
   static public function forward<I,O,E>(self:Attempt<I,O,E>,i:I):Proceed<O,E>{
     return Proceed.lift(
       Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
    );
   }  
-
 }

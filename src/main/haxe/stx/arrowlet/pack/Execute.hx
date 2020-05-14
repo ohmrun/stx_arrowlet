@@ -5,20 +5,20 @@ typedef ExecuteDef<E>                   = ArrowletDef<Noise,Report<E>,Noise>;
 @:using(stx.arrowlet.pack.Execute.ExecuteLift)
 abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   public function new(self) this = self;
-  static public function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
-  static public function pure<E>(e:Err<E>) return lift(Arrowlet.pure(Report.pure(e)));
-  static public function unit<E>() return lift(Arrowlet.pure(Report.unit()));
+  @:noUsing static public function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
+  @:noUsing static public function pure<E>(e:Err<E>):Execute<E> return lift(Arrowlet.pure(Report.pure(e)));
+  @:noUsing static public function unit<E>():Execute<E> return lift(Arrowlet.pure(Report.unit()));
 
   @:noUsing static public function bind_fold<T,E>(fn:T->Report<E>->Execute<E>,arr:Array<T>):Execute<E>{
     return arr.lfold(
-      (next:T,memo:Execute<E>) -> Execute.lift(Provide._.flat_map(
+      (next:T,memo:Execute<E>) -> Execute.lift(Forward._.flat_map(
         memo,
         (report) -> lift(fn(next,report))
       )),
       unit()
     );
   }  
-  @:to public function toProvide():Provide<Report<E>>{
+  @:to public function toForward():Forward<Report<E>>{
     return this;
   }
   public function toArrowlet():Arrowlet<Noise,Report<E>,Noise>{
@@ -30,6 +30,13 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   public function prj():ExecuteDef<E> return this;
   private var self(get,never):Execute<E>;
   private function get_self():Execute<E> return lift(this);
+
+  @:noUsing static public function fromOption<E>(err:Option<Err<E>>):Execute<E>{
+    return fromFunXR(() -> new Report(err));
+  }
+  @:noUsing static public function fromErr<E>(err:Err<E>):Execute<E>{
+    return fromFunXR(() -> Report.pure(err));
+  }
 }
 class ExecuteLift{
   static public function errata<E,EE>(self:Execute<E>,fn:Err<E>->Err<EE>):Execute<EE>{
@@ -37,7 +44,38 @@ class ExecuteLift{
       Arrowlet.Sync((report:Report<E>) -> report.errata(fn))
     ));
   }
-  static public function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Response{
+  static public function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,term);
+  }
+  static public function deliver<E>(self:Execute<E>,fn:Report<E>->Void):Thread{
+    return Arrowlet.Then(
+      self,
+      Arrowlet.Sync(
+        (report) -> {
+          fn(report);
+          return Noise;
+        }
+      )
+    );
+  }
+  static public function report<E>(self:Execute<E>):Thread{
+    return deliver(self,__.report);
+  }
+  static public function then<E,O>(self:Execute<E>,that:Arrowlet<Report<E>,O,Noise>):Forward<O>{
+    return Forward.lift(Arrowlet.Then(
+      self,
+      that
+    ));
+  }
+  static public function environment<E>(self:ExecuteDef<E>,success:Void->Void,failure:Err<E>->Void){
+    return Arrowlet._.environment(
+      self,
+      Noise,
+      (report) -> report.fold(
+        failure,
+        success
+      ),
+      __.raise
+    );
   }
 }

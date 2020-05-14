@@ -9,8 +9,8 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
   public function new(self) this = self;
 
-  static public function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
-  static public function pure<I,O,E>(o:O):Reframe<I,O,E>{
+  @:noUsing static public function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
+  @:noUsing static public function pure<I,O,E>(o:O):Reframe<I,O,E>{
     return lift(Cascade.unit().postfix(
       (oc:Res<I,E>
         ) -> (oc.map(__.couple.bind(o)):Res<Couple<O,I>,E>)

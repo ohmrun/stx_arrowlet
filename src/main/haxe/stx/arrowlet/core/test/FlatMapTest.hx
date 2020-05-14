@@ -5,7 +5,7 @@ class FlatMapTest extends utest.Test{
     var a = Arrowlet.Sync(x -> x + 1);
     var b = Arrowlet.Sync(x -> x + 1);
     var c = a.then(b);
-        c.context(
+        c.environment(
           1,
           (x) -> {
             Rig.equals(3,x);

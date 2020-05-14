@@ -22,7 +22,7 @@ private class Constructor extends Clazz{
   }
 }
 private class ApplyImplementation<I,O,E> extends ArrowletApi<Couple<Arrowlet<I,O,E>,I>,O,E>{
-  override private function doApplyII(i:Couple<Arrowlet<I,O,E>,I>,cont:Terminal<O,E>):Response{
+  override private function doApplyII(i:Couple<Arrowlet<I,O,E>,I>,cont:Terminal<O,E>):Work{
     return i.decouple(
       (arw:Arrowlet<I,O,E>,i:I) -> arw.prepare(i,cont)
     );

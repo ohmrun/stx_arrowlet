@@ -7,7 +7,7 @@ class Split<I,Oi,Oii,E> extends ArrowletApi<I,Couple<Oi,Oii>,E>{
     super();
     this.delegate = Arrowlet.lift(new Both(lhs,rhs).asArrowletDef());
   }
-  override private function doApplyII(i:I,cont:Terminal<Couple<Oi,Oii>,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<Couple<Oi,Oii>,E>):Work{
     return delegate.applyII(
       __.couple(i,i),
       cont

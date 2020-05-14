@@ -6,7 +6,7 @@ class InputReactor<I,O> extends ArrowletApi<I,O,Noise>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:I,cont:Terminal<O,Noise>):Response<Noise>{
+  override private function doApplyII(i:I,cont:Terminal<O,Noise>):Work<Noise>{
     return cont.until(Task.Anon(delegate.bind(i,cont)));
   }
 }

@@ -5,7 +5,7 @@ class AfterRewriteTest extends utest.Test{
   public function testSync(async:utest.Async){
     Arrowlet.Sync(
       (i) -> i + 1
-    ).context(
+    ).environment(
       1,
       (v) -> {
         Rig.equals(2,v);
@@ -20,7 +20,7 @@ class AfterRewriteTest extends utest.Test{
       (i,cb) -> {
         cb(++i);
       } 
-    ).context(
+    ).environment(
       1,
       (v) -> {
         Rig.equals(2,v);
@@ -39,7 +39,7 @@ class AfterRewriteTest extends utest.Test{
           () -> cb(++i)
         );
       }
-    ).context(
+    ).environment(
       1,
       (v) -> {
         Rig.equals(2,v);
@@ -58,7 +58,7 @@ class AfterRewriteTest extends utest.Test{
           Failure(__.fault().err(E_UnexpectedNullValueEncountered))
         ).serve();
       }
-    ).context(
+    ).environment(
       1,
       (_) -> {},
       (e:Err<String>) -> {

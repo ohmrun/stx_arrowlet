@@ -2,7 +2,6 @@ package stx.arrowlet.pack;
 
 typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
 
-@:using(stx.arrowlet.core.pack.Arrowlet.ArrowletLift)
 @:using(stx.arrowlet.pack.Cascade.CascadeLift)
 @:forward abstract Cascade<I,O,E>(CascadeDef<I,O,E>) from CascadeDef<I,O,E> to CascadeDef<I,O,E>{
   static public var _(default,never) = CascadeLift;
@@ -82,6 +81,9 @@ typedef CascadeDef<I,O,E>               = ArrowletDef<Res<I,E>,Res<O,E>,Noise>;
   @:to public function toArrowlet():Arrowlet<Res<I,E>,Res<O,E>,Noise>{
     return this;
   }
+  public function environment(i:I,success:O->Void,failure:Err<E>->Void):Thread{
+    return _.environment(this,i,success,failure);
+  }
 }
 class CascadeLift{
   static public function prepare<I,O,E>(self:Cascade<I,O,E>,i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>){
@@ -113,7 +115,7 @@ class CascadeLift{
     );
   }
   static public function reframe<I,O,E>(self:Cascade<I,O,E>):Reframe<I,O,E>{ 
-    return lift(
+    return Reframe.lift(
       Arrowlet.Anon((ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
         var defer = Future.trigger();
         var inner = cont.inner(
@@ -133,7 +135,7 @@ class CascadeLift{
     return lift(Arrowlet.Then(self,that));
   }
   static public function attempt<I,O,Oi,E>(self:Cascade<I,O,E>,that:Attempt<O,Oi,E>):Cascade<I,Oi,E>{
-    return then(self,Attempt._.toCascade(that));  
+    return then(self,that.toCascade());  
   }
   static public function process<I,O,Oi,E>(self:Cascade<I,O,E>,that:Process<O,Oi>):Cascade<I,Oi,E>{
     return then(self,that.toCascade());
@@ -144,12 +146,12 @@ class CascadeLift{
   static public function prefix<I,Ii,O,E>(self:Cascade<I,O,E>,fn:Ii->I){
     return Cascade.fromArrowlet(Arrowlet.fromFun1R(fn)).then(self);
   }
-  static function typical_fail_handler<O,E>(cont:Terminal<Res<O,E>,Noise>):Err<E> -> Response{
+  static function typical_fail_handler<O,E>(cont:Terminal<Res<O,E>,Noise>):Err<E> -> Work{
     return (e:Err<E>) -> {
       return cont.value(__.failure(e)).serve();
     }
   }
-  static public function context<I,O,E>(self:Cascade<I,O,E>,i:I,success:O->Void,failure:Err<E>->Void):Thread{
+  static public function environment<I,O,E>(self:Cascade<I,O,E>,i:I,success:O->Void,failure:Err<E>->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
         var defer = Future.trigger();

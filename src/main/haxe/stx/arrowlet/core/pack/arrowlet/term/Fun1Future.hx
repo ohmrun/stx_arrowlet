@@ -8,7 +8,7 @@ class Fun1Future<I,O,E> extends ArrowletApi<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<O,E>):Work{
     var defer = Future.trigger();
     var handler   = (o:O) ->{
       defer.trigger(Success(o));

@@ -1,7 +1,7 @@
 package stx;
 
 typedef Terminal<R,E>                         = stx.arrowlet.core.pack.Terminal<R,E>;
-typedef Response                              = stx.arrowlet.core.pack.Response;
+typedef Work                                  = stx.arrowlet.core.pack.Work;
 
 typedef ArrowletDef<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletDef<I,O,E>;
 typedef ArrowletApi<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletApi<I,O,E>;
@@ -43,6 +43,13 @@ typedef Thread                                = stx.arrowlet.core.pack.arrowlet.
 typedef CascadeDef<I,O,E>                     = stx.arrowlet.pack.Cascade.CascadeDef<I,O,E>;
 typedef Cascade<I,O,E>                        = stx.arrowlet.pack.Cascade<I,O,E>;
 
+
+/**
+         ________O_______
+        /
+  Noise<
+        \_____ Err<E>____
+**/
 typedef ProceedDef<O,E>                       = stx.arrowlet.pack.Proceed.ProceedDef<O,E>;
 typedef Proceed<O,E>                          = stx.arrowlet.pack.Proceed<O,E>;
 
@@ -64,8 +71,8 @@ typedef Forward<O>                            = stx.arrowlet.pack.Forward<O>;
 typedef ExecuteDef<E>                         = stx.arrowlet.pack.Execute.ExecuteDef<E>;
 typedef Execute<E>                            = stx.arrowlet.pack.Execute<E>;
 
-typedef ProvideDef<O>                         = stx.arrowlet.pack.Provide.ProvideDef<O>;
-typedef Provide<O>                            = stx.arrowlet.pack.Provide<O>;
+typedef ProvideDef<O,E>                       = stx.arrowlet.pack.Provide.ProvideDef<O,E>;
+typedef Provide<O,E>                          = stx.arrowlet.pack.Provide<O,E>;
 
 typedef AttemptDef<I,O,E>                     = stx.arrowlet.pack.Attempt.AttemptDef<I,O,E>;
 typedef Attempt<I,O,E>                        = stx.arrowlet.pack.Attempt<I,O,E>;

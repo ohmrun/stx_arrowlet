@@ -9,7 +9,7 @@ class Then<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override private function doApplyII(i:I,cont:Terminal<Oii,E>):Response{
+	override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
 		return new FlatMap(
 			lhs,
 			(oI) -> {

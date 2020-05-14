@@ -6,7 +6,7 @@ class Sync<I,O,E> extends ArrowletApi<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:I,cont:Terminal<O,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<O,E>):Work{
     return cont.value(delegate(i)).serve();
   }
 }

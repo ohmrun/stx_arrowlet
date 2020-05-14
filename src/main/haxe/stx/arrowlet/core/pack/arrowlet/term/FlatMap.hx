@@ -9,7 +9,7 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
 		this.self = self;
 		this.func = func;
 	}
-  override private function doApplyII(i:I,cont:Terminal<Oii,E>):Response{
+  override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
 		var defer 									= Future.trigger();
 		var future_response_trigger = Future.trigger();
 

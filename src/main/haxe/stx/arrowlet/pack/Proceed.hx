@@ -70,8 +70,8 @@ class ProceedLift{
       )
     ));
   }
-  static public function context<O,E>(self:Proceed<O,E>,success:O->Void,failure:Err<E>->Void):Thread{
-    return Arrowlet._.context(
+  static public function environment<O,E>(self:Proceed<O,E>,success:O->Void,failure:Err<E>->Void):Thread{
+    return Arrowlet._.environment(
       self,
       Noise,
       (res:Res<O,E>) -> {
@@ -106,7 +106,7 @@ class ProceedLift{
   static public function process<O,Oi,E>(self:Proceed<O,E>,then:Process<O,Oi>):Proceed<Oi,E>{
     return lift(Arrowlet.Then(self,then.toCascade()));
   }
-  static public function prepare<O,E>(self:Proceed<O,E>,cont:Terminal<Res<O,E>,Noise>):Response{
+  static public function prepare<O,E>(self:Proceed<O,E>,cont:Terminal<Res<O,E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,cont);
   }
   static public function control<O,E>(self:Proceed<O,E>,rec:Recover<O,E>):Forward<O>{

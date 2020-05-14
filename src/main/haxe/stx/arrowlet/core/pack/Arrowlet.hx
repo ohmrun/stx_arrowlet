@@ -20,11 +20,11 @@ import stx.arrowlet.core.pack.arrowlet.term.Inform;
 
 class ArrowletApi<P,O,E>{
 	public function new(){}
-	public function applyII(p:P,t:Terminal<O,E>):Response{
+	public function applyII(p:P,t:Terminal<O,E>):Work{
 		var output = doApplyII(p,t);
 		return output;
 	}
-	private function doApplyII(p:P,t:Terminal<O,E>):Response{
+	private function doApplyII(p:P,t:Terminal<O,E>):Work{
     return throw __.fault().err(E_AbstractMethod);
   }
   public function asArrowletDef():ArrowletDef<P,O,E>{
@@ -32,7 +32,7 @@ class ArrowletApi<P,O,E>{
   }
 }
 typedef ArrowletDef<P,O,E>       = {
-  public function applyII(p:P,t:Terminal<O,E>):Response;
+  public function applyII(p:P,t:Terminal<O,E>):Work;
   public function asArrowletDef():ArrowletDef<P,O,E>;
 }
 @:using(stx.arrowlet.core.pack.Arrowlet.ArrowletLift)
@@ -51,13 +51,26 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
   @:noUsing static public function pure<I,O,E>(o:O):Arrowlet<I,O,E>{
     return lift(new Pure(o));
   }
+  #if stx_log
+  @:noUsing static public function logger<I,E>(?log,?pos:Pos):Arrowlet<I,I,E>{
+    if(log == null){
+      log = __.log();
+    }
+    return lift(new Sync(
+      function(i:I){
+        log(i,pos);
+        return i;
+      }
+    ));
+  }
+  #end
   @:noUsing static public function Sync<I,O,E>(self:I->O):Arrowlet<I,O,E>{
     return lift(new Sync(self));
   }
   @:noUsing static public function Then<I,Oi,Oii,E>(self:ArrowletDef<I,Oi,E>,that:ArrowletDef<Oi,Oii,E>):Arrowlet<I,Oii,E>{
     return new Then(self,that);
   }
-  @:noUsing static public function Anon<I,O,E>(fn:I->Terminal<O,E>->Response):Arrowlet<I,O,E>{
+  @:noUsing static public function Anon<I,O,E>(fn:I->Terminal<O,E>->Work):Arrowlet<I,O,E>{
     return lift(new stx.arrowlet.core.pack.arrowlet.term.Anon(fn));
   }
   @:noUsing static public function Apply<I,O,E>():Arrowlet<Couple<Arrowlet<I,O,E>,I>,O,E>{
@@ -209,10 +222,10 @@ class ArrowletLift{
     ));
   }
 
-  static public function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Response{
+  static public function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
     return self.applyII(i,cont); 
   }
-  static public function context<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
+  static public function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
         var defer = TinkFuture.trigger();
@@ -234,5 +247,8 @@ class ArrowletLift{
   
   static public function flat_map<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,fn:Oi->Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
     return unto(new FlatMap(self,fn));
+  }
+  static public function pinch<I,O1,O2,E>(a:Arrowlet<Couple<I,I>,Couple<O1,O2>,E>):Arrowlet<I,Couple<O1,O2>,E>{
+    return then(fan(Arrowlet.unit()),a);
   }
 }

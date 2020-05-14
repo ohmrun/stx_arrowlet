@@ -25,13 +25,13 @@ class TestCascade extends utest.Test{
         (x) -> x + 1
       )
     );
-    a.context(
-      __.success(1),
+    a.environment(
+      1,
       (x) -> {
         Rig.pass();
         async.done();
       },
-      (e) -> trace(e)
+      __.raise
     ).submit();
   }
 }
