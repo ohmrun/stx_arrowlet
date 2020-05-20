@@ -11,10 +11,15 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
   @:noUsing static public function lift<O,E>(self:ProceedDef<O,E>):Proceed<O,E> return new Proceed(self);
 
+  @:from @:noUsing static public function fromFunXProceed<O,E>(self:Void->Proceed<O,E>):Proceed<O,E>{
+    return lift(Arrowlet.Anon(
+      (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self().prepare(cont)
+    ));
+  }
   @:noUsing static public function pure<O,E>(v:O):Proceed<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> __.success(v)));
   }
-  @:noUsing static public function fromRes<O,E>(res:Res<O,E>):Proceed<O,E>{
+  @:from @:noUsing static public function fromRes<O,E>(res:Res<O,E>):Proceed<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> res));
   }
   @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Proceed<O,E>{
@@ -111,5 +116,8 @@ class ProceedLift{
   }
   static public function control<O,E>(self:Proceed<O,E>,rec:Recover<O,E>):Forward<O>{
     return Forward.lift(self.then(rec.toResolve()));
+  }
+  static public function attempt<O,Oi,E>(self:Proceed<O,E>,that:Attempt<O,Oi,E>):Proceed<Oi,E>{
+    return lift(self.then(that.toCascade()));
   }
 }

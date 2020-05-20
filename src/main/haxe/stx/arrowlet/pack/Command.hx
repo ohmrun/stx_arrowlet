@@ -22,10 +22,14 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
         var defer = Future.trigger();
         var inner = cont.inner(
           (res:Outcome<Noise,E>) -> {
-            var value = Report.lift(res.fold(
-              (_) -> None,
-              (e) -> Some(__.fault().of(e))
-            ));
+            var value = Report.lift(
+              (
+                res.fold(
+                  (_) -> None,
+                  (e) -> Some(__.fault().of(e))
+                ):stx.Option<Err<E>>
+              )
+            );
             defer.trigger(Success(value));
           }
         );

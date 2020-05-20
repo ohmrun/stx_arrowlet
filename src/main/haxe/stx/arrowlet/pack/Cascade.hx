@@ -173,4 +173,9 @@ class CascadeLift{
       }
     );
   }
+  static public function forward<I,O,E>(self:Cascade<I,O,E>,i:I):Proceed<O,E>{
+    return Proceed.lift(
+      Arrowlet.Anon((_:Noise,cont) -> self.prepare(__.success(i),cont))
+   );
+  }  
 }
