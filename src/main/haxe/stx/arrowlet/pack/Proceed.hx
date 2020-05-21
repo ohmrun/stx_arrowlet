@@ -120,4 +120,17 @@ class ProceedLift{
   static public function attempt<O,Oi,E>(self:Proceed<O,E>,that:Attempt<O,Oi,E>):Proceed<Oi,E>{
     return lift(self.then(that.toCascade()));
   }
+  static public function deliver<O,E>(self:Proceed<O,E>,fn:O->Void):Execute<E>{
+    return Execute.lift(self.then(
+      Arrowlet.Sync(
+        (res:Res<O,E>) -> res.fold(
+          (s) -> {
+            fn(s);
+            return Report.unit();
+          },
+          (e) -> Report.pure(e)
+        )
+      )
+    ));
+  }
 }
