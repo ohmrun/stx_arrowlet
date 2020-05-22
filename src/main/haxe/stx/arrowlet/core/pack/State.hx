@@ -85,7 +85,7 @@ class StateLift{
     );
   }
   
-  static public function resolve<S,A>(self:StateT<S,A>){
+  static public function rectify<S,A>(self:StateT<S,A>){
     return self.then(
       function(t:Couple<A,S>){
         return t.snd();

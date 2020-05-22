@@ -1,5 +1,5 @@
 package stx.arrowlet.pack;
-
+        
 typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
 
 @:using(stx.arrowlet.pack.Attempt.AttemptLift)
@@ -70,6 +70,9 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       }
     ));  
   }
+  public function environment(i:I,success:O->Void,failure:Err<E>->Void):Thread{
+    return Cascade._.environment(this.toCascade(),i,success,failure);
+  }
 }
 class AttemptLift{
   static private function lift<I,O,E>(self:AttemptDef<I,O,E>)          return new Attempt(self);
@@ -80,8 +83,14 @@ class AttemptLift{
   static public function then<I,O,Oi,E>(self:Attempt<I,O,E>,that:Cascade<O,Oi,E>):Attempt<I,Oi,E>{
     return lift(Arrowlet.Then(self,that));
   }
-  static public function resolve<I,O,Oi,E>(self:Attempt<I,O,E>,next:Resolve<O,Oi,E>):Arrowlet<I,Oi,Noise>{
+  static public function rectify<I,O,Oi,E>(self:Attempt<I,O,E>,next:Rectify<O,Oi,E>):Arrowlet<I,Oi,Noise>{
     return Arrowlet.lift(Arrowlet.Then(self.toArrowlet(),next.toArrowlet()));
+  }
+  static public function resolve<I,O,E>(self:Attempt<I,O,E>,next:Resolve<O,E>):Attempt<I,O,E>{
+    return lift(self.then(next.toCascade()));
+  }
+  static public function recover<I,O,E>(self:Attempt<I,O,E>,next:Recover<O,E>):Attempt<I,O,E>{
+    return lift(self.then(next.toCascade()));
   }
   static public function process<I,O,Oi,E>(self:Attempt<I,O,E>,next:Process<O,Oi>):Attempt<I,Oi,E>{
     return then(self,next.toCascade());

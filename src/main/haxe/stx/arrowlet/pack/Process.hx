@@ -2,6 +2,9 @@ package stx.arrowlet.pack;
 
 typedef ProcessDef<I,O> = ArrowletDef<I,O,Noise>;
 
+/**
+  An Arrowlet with no fail case
+**/
 @:using(stx.arrowlet.pack.Process.ProcessLift)
 abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
   static public var _(default,never) = ProcessLift;

@@ -32,8 +32,8 @@ typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
       )
     ));
   }
-  public function toResolve():Resolve<I,I,E>{
-    return Resolve.lift(Arrowlet.Anon(
+  public function toRectify():Rectify<I,I,E>{
+    return Rectify.lift(Arrowlet.Anon(
       (i:Res<I,E>,cont:Terminal<I,Noise>) -> i.fold(
         (i) -> cont.value(i).serve(),
         (e) -> {

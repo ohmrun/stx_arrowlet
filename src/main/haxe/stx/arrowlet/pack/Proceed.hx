@@ -115,7 +115,7 @@ class ProceedLift{
     return self.toArrowlet().prepare(Noise,cont);
   }
   static public function control<O,E>(self:Proceed<O,E>,rec:Recover<O,E>):Forward<O>{
-    return Forward.lift(self.then(rec.toResolve()));
+    return Forward.lift(self.then(rec.toRectify()));
   }
   static public function attempt<O,Oi,E>(self:Proceed<O,E>,that:Attempt<O,Oi,E>):Proceed<Oi,E>{
     return lift(self.then(that.toCascade()));

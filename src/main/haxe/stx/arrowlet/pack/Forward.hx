@@ -53,4 +53,20 @@ class ForwardLift{
       that
     ));
   }
+  static public function environment<O>(self:Forward<O>,handler:O->Void):Thread{
+    return Thread.lift(Arrowlet.Anon(
+      (_:Noise,cont:Terminal<Noise,Noise>) -> {
+        var defer = Future.trigger();
+        var inner = cont.inner(
+          (res) -> defer.trigger(res.map(
+            (s) -> {
+              handler(s);
+              return Noise;
+            }
+          ))
+        );
+        return cont.defer(defer).after(Arrowlet._.prepare(self,Noise,inner));
+      }
+    ));
+  }
 }

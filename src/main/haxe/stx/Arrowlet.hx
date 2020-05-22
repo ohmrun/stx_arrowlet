@@ -36,6 +36,7 @@ typedef LiftHandlerToArrowlet                 = stx.arrowlet.core.lift.LiftHandl
 typedef LiftThunkToArrowlet                   = stx.arrowlet.core.lift.LiftThunkToArrowlet;
 typedef LiftToLeftChoice                      = stx.arrowlet.core.lift.LiftToLeftChoice;
 typedef LiftToRightChoice                     = stx.arrowlet.core.lift.LiftToRightChoice;
+typedef LiftFutureToForward                   = stx.arrowlet.core.lift.LiftFutureToForward;
 
 typedef ArrowletLift                          = stx.arrowlet.core.pack.Arrowlet.ArrowletLift;
 
@@ -56,8 +57,11 @@ typedef Proceed<O,E>                          = stx.arrowlet.pack.Proceed<O,E>;
 typedef CommandDef<I,E>                       = stx.arrowlet.pack.Command.CommandDef<I,E>;
 typedef Command<I,E>                          = stx.arrowlet.pack.Command<I,E>;
 
-typedef ResolveDef<I,O,E>                     = stx.arrowlet.pack.Resolve.ResolveDef<I,O,E>;
-typedef Resolve<I,O,E>                        = stx.arrowlet.pack.Resolve<I,O,E>;
+typedef RectifyDef<I,O,E>                     = stx.arrowlet.pack.Rectify.RectifyDef<I,O,E>;
+typedef Rectify<I,O,E>                        = stx.arrowlet.pack.Rectify<I,O,E>;
+
+typedef ResolveDef<I,E>                     = stx.arrowlet.pack.Resolve.ResolveDef<I,E>;
+typedef Resolve<I,E>                        = stx.arrowlet.pack.Resolve<I,E>;
 
 typedef RecoverDef<I,E>                       = stx.arrowlet.pack.Recover.RecoverDef<I,E>;
 typedef Recover<I,E>                          = stx.arrowlet.pack.Recover<I,E>;
@@ -92,9 +96,9 @@ class LiftArrowletToCascade{
     return Cascade.fromArrowlet(arw);
   }
 }
-class LiftResolveToCascade{
+class LiftRectifyToCascade{
   static public function toCascade<A,B,E>(arw:Arrowlet<Res<A,E>,B,Noise>):Cascade<A,B,E>{
-   return Resolve.lift(arw).toCascade();
+   return Rectify.lift(arw).toCascade();
   }
 }
 class LiftAttemptToCascade{
