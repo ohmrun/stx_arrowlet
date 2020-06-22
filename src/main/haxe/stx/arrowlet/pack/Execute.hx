@@ -37,6 +37,17 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   @:noUsing static public function fromErr<E>(err:Err<E>):Execute<E>{
     return fromFunXR(() -> Report.pure(err));
   }
+  public function environment(success:Void->Void,failure:Err<E>->Void){
+    return Arrowlet._.environment(
+      this,
+      Noise,
+      (report) -> report.fold(
+        failure,
+        success
+      ),
+      __.raise
+    );
+  }
 }
 class ExecuteLift{
   static public function errata<E,EE>(self:Execute<E>,fn:Err<E>->Err<EE>):Execute<EE>{
@@ -66,16 +77,5 @@ class ExecuteLift{
       self,
       that
     ));
-  }
-  static public function environment<E>(self:ExecuteDef<E>,success:Void->Void,failure:Err<E>->Void){
-    return Arrowlet._.environment(
-      self,
-      Noise,
-      (report) -> report.fold(
-        failure,
-        success
-      ),
-      __.raise
-    );
   }
 }

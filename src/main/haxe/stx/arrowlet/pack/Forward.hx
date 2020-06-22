@@ -28,6 +28,16 @@ abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
       )
     );
   }
+  public function environment(handler:O->Void):Thread{
+    return Arrowlet._.environment(
+      this,
+      Noise,
+      (o) -> {
+        handler(o);
+      },
+      (e) -> throw(e)
+    );
+  }
   @:to public function toArrowlet():Arrowlet<Noise,O,Noise>{
     return this;
   }
@@ -51,22 +61,6 @@ class ForwardLift{
     return Forward.lift(Process._.then(
       self,
       that
-    ));
-  }
-  static public function environment<O>(self:Forward<O>,handler:O->Void):Thread{
-    return Thread.lift(Arrowlet.Anon(
-      (_:Noise,cont:Terminal<Noise,Noise>) -> {
-        var defer = Future.trigger();
-        var inner = cont.inner(
-          (res) -> defer.trigger(res.map(
-            (s) -> {
-              handler(s);
-              return Noise;
-            }
-          ))
-        );
-        return cont.defer(defer).after(Arrowlet._.prepare(self,Noise,inner));
-      }
     ));
   }
 }

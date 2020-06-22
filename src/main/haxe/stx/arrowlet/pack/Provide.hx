@@ -11,6 +11,9 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   @:noUsing static public function fromChunk<O,E>(chunk:Chunk<O,E>):Provide<O,E>{
     return lift(Arrowlet.pure(chunk));
   }
+  @:noUsing static public function unit<O,E>():Provide<O,E>{
+    return lift(Arrowlet.pure(Tap));
+  }
   @:from @:noUsing static public function fromChunkThunk<O,E>(thunk:Thunk<Chunk<O,E>>):Provide<O,E>{
     return lift(
       Arrowlet.Sync(

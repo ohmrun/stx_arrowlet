@@ -20,7 +20,10 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       )
     );
   }
-  static public function pure<I,O,E>(res:Res<O,E>):Attempt<I,O,E>{
+  @:noUsing static public function pure<I,O,E>(o:O):Attempt<I,O,E>{
+    return fromRes(__.success(o));
+  }
+  @:noUsing static public function fromRes<I,O,E>(res:Res<O,E>):Attempt<I,O,E>{
     return lift(
       Arrowlet.Anon(
         (_:I,cont:Terminal<Res<O,E>,Noise>) -> {
@@ -37,42 +40,41 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       }
     ));
   }
-  static public function fromFun1R<I,O,E>(fn:I->O):Attempt<I,O,E>{
+  @:from static public function fromFun1Proceed<Pi,O,E>(fn:Pi->Proceed<O,E>):Attempt<Pi,O,E>{
+    return lift(Arrowlet.Anon(
+      (pI:Pi,cont:Terminal<Res<O,E>,Noise>) -> {
+        return fn(pI).prepare(cont);
+      }
+    ));
+  }
+  @:noUsing static public function fromFun1R<I,O,E>(fn:I->O):Attempt<I,O,E>{
     return lift(
-      Arrowlet.Anon(
-        (i,cont) -> {
-          return cont.value(__.success(fn(i))).serve();
-        }
-      )
+      Arrowlet.Anon((i,cont) -> cont.value(__.success(fn(i))).serve())
     );
   }
   @:to public function toArrowlet():ArrowletDef<I,Res<O,E>,Noise>{
     return this;
   }
-  @:from static public function fromFun1Proceed<I,O,E>(fn:I->Proceed<O,E>):Attempt<I,O,E>{
-    return lift(
-      Arrowlet.Anon(
-        (i:I,cont) -> fn(i).prepare(cont)
-      )
-    );
-  }
   public function toCascade():Cascade<I,O,E>{
     return Cascade.lift(Arrowlet.Anon(
-      (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> {
-        return i.fold(
-          (v) -> {
-            return Arrowlet._.prepare(this,v,cont);
-          },
-          (e) -> {
-            return cont.value(__.failure(e)).serve();
-          }
-        );
-      }
+      (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) -> 
+        i.fold(
+          (v) -> Arrowlet._.prepare(this,v,cont),
+          (e) -> cont.value(__.failure(e)).serve()
+        )
     ));  
   }
   public function environment(i:I,success:O->Void,failure:Err<E>->Void):Thread{
     return Cascade._.environment(this.toCascade(),i,success,failure);
   }
+  public function prefix<Ii>(that:Ii->I):Attempt<Ii,O,E>{
+    return Attempt._.prefix(this,that);
+  }
+  // static public function bind_fold<T,I,O,E>(arr:Array<T>,fn:T -> Attempt<I,O,E>):Attempt<T,O,E>{
+  //   return arr.lfold(
+  //     (next,memo) -> 
+  //   )
+  // }
 }
 class AttemptLift{
   static private function lift<I,O,E>(self:AttemptDef<I,O,E>)          return new Attempt(self);
@@ -89,6 +91,19 @@ class AttemptLift{
   static public function resolve<I,O,E>(self:Attempt<I,O,E>,next:Resolve<O,E>):Attempt<I,O,E>{
     return lift(self.then(next.toCascade()));
   }
+  static public function reclaim<I,O,Oi,E>(self:Attempt<I,O,E>,next:Process<O,Proceed<Oi,E>>):Attempt<I,Oi,E>{
+    return lift(
+      then(
+        self,
+        next.toCascade()
+      ).attempt(
+        lift(Arrowlet.Anon(
+          (prd:Proceed<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
+            prd.prepare(cont)
+        ))
+      )
+    );
+  }
   static public function recover<I,O,E>(self:Attempt<I,O,E>,next:Recover<O,E>):Attempt<I,O,E>{
     return lift(self.then(next.toCascade()));
   }
@@ -97,6 +112,9 @@ class AttemptLift{
   }
   static public function errata<I,O,E,EE>(self:Attempt<I,O,E>,fn:Err<E>->Err<EE>):Attempt<I,O,EE>{
     return lift(self.postfix((oc) -> oc.errata(fn)));
+  }
+  static public function errate<I,O,E,EE>(self:Attempt<I,O,E>,fn:E->EE):Attempt<I,O,EE>{
+    return lift(self.postfix((oc) -> oc.errate(fn)));
   }
   static public function attempt<I,O,Oi,E>(self:Attempt<I,O,E>,next:Attempt<O,Oi,E>):Attempt<I,Oi,E>{
     return then(self,next.toCascade());
@@ -109,4 +127,36 @@ class AttemptLift{
       Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
    );
   }  
+  static public function arrange<I,O,Oi,E>(self:Attempt<I,O,E>,then:Arrange<O,I,Oi,E>):Attempt<I,Oi,E>{
+    return lift(
+      Arrowlet.Anon(
+        (i:I,cont:Terminal<Res<Oi,E>,Noise>) -> {
+          var bound = Future.trigger();
+          var inner = cont.inner(
+            (outcome:Outcome<Res<O,E>,Noise>) -> {
+              var input = outcome.fold(
+                (res) -> res.fold(
+                  (lhs) -> then.prepare(__.couple(lhs,i),cont),
+                  (e)   -> cont.value(__.failure(e)).serve()
+                ),
+                (_)   -> cont.error(Noise).serve()
+              );
+              bound.trigger(input);
+            }
+          );
+          var lhs = self.prepare(i,inner);
+          return lhs.seq(bound);
+        }
+      )
+    );
+  }
+  static public function prefix<I,Ii,O,E>(self:Attempt<I,O,E>,that:Ii->I):Attempt<Ii,O,E>{
+    return lift(Arrowlet._.prefix(
+      self,
+      that
+    ));
+  }
+  static public function cascade<I,O,Oi,E>(self:Attempt<I,O,E>,that:Cascade<O,Oi,E>):Attempt<I,Oi,E>{
+    return lift(self.then(that));
+  }
 }

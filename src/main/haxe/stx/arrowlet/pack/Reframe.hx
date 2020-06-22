@@ -26,6 +26,9 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
   @:to public function toCascade():Cascade<I,Couple<O,I>,E>{
     return Cascade.lift(this);
   }
+  @:to public function toArrowlet():Arrowlet<Res<I,E>,Res<Couple<O,I>,E>,Noise>{
+    return Arrowlet.lift(this);
+  }
   @:from static public function fromCascade<I,O,E>(self:Cascade<I,Couple<O,I>,E>):Reframe<I,O,E>{
     return lift(self);
   }
@@ -51,19 +54,73 @@ class ReframeLift{
     return arw;
   }
   
+  static public function rearrange<I,O,Oi,E>(self:Reframe<I,O,E>,that:Arrange<Res<O,E>,I,Oi,E>):Reframe<I,Oi,E>{
+    return Reframe.lift(
+      Arrowlet.Anon(
+        (ipt:Res<I,E>,cont:Terminal<Res<Couple<Oi,I>,E>,Noise>) -> {
+          //trace(ipt);
+          var waits : FutureTrigger<Work> = Future.trigger();
+          var waitsII                     = Future.trigger();
+          var inner = cont.inner(
+            (outcome:Outcome<Res<Couple<O,I>,E>,Noise>) -> {
+              //trace(outcome);
+              var innerI = cont.inner(
+                (outcome:Outcome<Res<Oi,E>,Noise>) -> {
+                  var val = ipt.fold((i) -> outcome.fold(
+                      (res) -> Success(res.fold(
+                          (oI)  -> __.success(__.couple(oI,i)),
+                          (e)   -> __.failure(e)
+                        )),
+                      (e) ->  Failure(e)
+                    ),
+                    (e) ->  Success(__.failure(e))
+                  );
+                  //trace(val);
+                  var job   = cont.issue(val);
+                  var work  = job.serve();
+                  waitsII.trigger(work);
+                }
+              );
+              var value = outcome.fold(
+                (res) -> {
+                  //trace(res);
+                  var val = ipt.fold(
+                    (i:I) -> {
+                      var iptI = __.couple(res.map(_ -> _.fst()),i);
+                      return Arrowlet._.prepare(that.toArrowlet(),__.success(iptI),innerI);
+                    },
+                    (e) -> cont.value(__.failure(e)).serve()
+                  );
+                  val;
+                },
+                (_) -> cont.error(Noise).serve()
+              );
+              //trace(value);
+              waits.trigger(value);
+            }
+          );
+          var workI = self.prepare(ipt,inner);
+          return workI.seq(waits).seq(waitsII);
+        }
+      )
+    );
+  }
+  //static public function process<I,O,Oi,E>(self:Reframe<I,O,E>,that:Process<O,Oi>):Reframe<I,O,E>{
+    //return self.
+ // }
   static public function arrange<I,O,Oi,E>(self:Reframe<I,O,E>,that:Arrange<O,I,Oi,E>):Reframe<I,Oi,E>{
     var arw = 
-      then(self,Arrange._.toCascade(that))
+      then(self,that)
         .broach()
         .postfix(
-          (tp:Couple<Res<I,E>,Res<Oi,E>>) -> {
-            return tp.swap().decouple(Res._.zip);
+          (res:Res<Couple<I,Oi>,E>) -> {
+            return res.map(tp -> tp.swap());
           }
         );
     return Reframe.lift(arw);
   }
 
-  static public function rearrange<I,Ii,O,Oi,E>(self:Reframe<I,O,E>,that:O->Arrange<Ii,I,Oi,E>):Attempt<Couple<Ii,I>,Oi,E>{
+  static public function arrangement<I,Ii,O,Oi,E>(self:Reframe<I,O,E>,that:O->Arrange<Ii,I,Oi,E>):Attempt<Couple<Ii,I>,Oi,E>{
     return Attempt.lift(Arrowlet.Anon(
       (ipt:Couple<Ii,I>,cont:Terminal<Res<Oi,E>,Noise>) -> {
         var defer = Future.trigger();
@@ -85,7 +142,7 @@ class ReframeLift{
     ));
   }
 
-  static public function commander<I,O,E>(self:Reframe<I,O,E>,fn:O->Command<I,E>):Reframe<I,O,E>{
+  static public function commandment<I,O,E>(self:Reframe<I,O,E>,fn:O->Command<I,E>):Reframe<I,O,E>{
     return lift(Arrowlet.Anon(
       (ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
         var defer = Future.trigger();
@@ -104,7 +161,7 @@ class ReframeLift{
               defer.trigger(cont.error(Noise).serve());null;
           }
         );
-        return self.prepare(ipt,inner).seq(cont.waits(defer));
+        return self.prepare(ipt,inner).seq(defer);
       }
     ));
   }
@@ -115,4 +172,24 @@ class ReframeLift{
   static public function execution<I,O,E>(self:Reframe<I,O,E>):Cascade<I,I,E>{
     return Cascade.lift(self.postfix(o -> o.map(tp -> tp.snd())));
   }
+  static public function errate<I,O,E,EE>(self:Reframe<I,O,E>,fn:E->EE):Reframe<I,O,EE>{
+    return lift(
+      Arrowlet.Anon(
+        (i:Res<I,EE>,cont:Terminal<Res<Couple<O,I>,EE>,Noise>) -> i.fold(
+          (i) -> self.postfix(o -> o.errata((e) -> e.map(fn))).prepare(__.success(i),cont),
+          (e) -> cont.value(__.failure(e)).serve()
+        )
+      )
+    );
+  }
+  static public function environment<I,O,E>(self:Reframe<I,O,E>,i:I,success:Couple<O,I>->Void,failure:Err<E>->Void):Thread{
+    return Cascade._.environment(
+      self,
+      i,
+      success,
+      failure
+    );
+  }
+  //static public function modify<I,Oi,Oii,E>(self:Reframe<I,Oi,E>,fn:Oi->)
+  //static public function process<I,O,E>(self:Reframe<I,O,E>,fn:Process)
 }

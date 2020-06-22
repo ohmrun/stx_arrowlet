@@ -23,6 +23,6 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
 				);
 			}
 		);
-		return self.prepare(i,inner).seq(cont.waits(future_response_trigger));
+		return self.prepare(i,inner).seq(future_response_trigger);
   }
 }

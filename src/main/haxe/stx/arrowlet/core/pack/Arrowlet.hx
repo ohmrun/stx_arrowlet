@@ -106,6 +106,9 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
       )
     );
   }
+ public function environment<I,O,E>(i:I,success:O->Void,failure:E->Void):Thread{
+  return _.environment(this,i,success,failure);
+ }
   //@:from static public function fromFunXX
   //@:from static public function fromFun1X
 }
@@ -131,7 +134,7 @@ class ArrowletLift{
   static public function second<Ii,O,Iii,E>(self:Arrowlet<Ii,O,E>):Arrowlet<Couple<Iii,Ii>,Couple<Iii,O>,E>{
     return both(Arrowlet.unit(),self);
   }
-  @doc("Takes two Arrowlets with thstatic static public function pure<I,O>(o:O):Arrowlet<I,O,E>                                             return _().pure(o);e same input type, and produces one which applies each Arrowlet with the same input.")
+  @doc("Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with the same input.")
   static public function split<I, Oi, Oii,E>(lhs:Arrowlet<I, Oi,E>,rhs:Arrowlet<I, Oii,E>):Arrowlet<I, Couple<Oi,Oii>,E> {
     return unto(new Split(lhs,rhs));
   }
@@ -223,9 +226,10 @@ class ArrowletLift{
   }
 
   static public function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
+    __.assert().exists(self);
     return self.applyII(i,cont); 
   }
-  static public function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
+  @:noUsing static public function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:E->Void):Thread{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
         var defer = TinkFuture.trigger();
@@ -244,11 +248,22 @@ class ArrowletLift{
       }
     );
   }
-  
+  static public function fudge<I,O,E>(self:Arrowlet<I,O,E>,i:I):O{
+    var v = null;
+    function fn(x){
+      v = x;
+    }
+    environment(self,i,
+      fn,
+      __.raise  
+    ).crunch();
+
+    return v;
+  }
   static public function flat_map<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,fn:Oi->Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
     return unto(new FlatMap(self,fn));
   }
   static public function pinch<I,O1,O2,E>(a:Arrowlet<Couple<I,I>,Couple<O1,O2>,E>):Arrowlet<I,Couple<O1,O2>,E>{
     return then(fan(Arrowlet.unit()),a);
   }
-}
+} 

@@ -10,7 +10,7 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
   static public var _(default,never) = ProcessLift;
   public function new(self) this = self;
   static public function lift<I,O>(self:ProcessDef<I,O>):Process<I,O> return new Process(self);
-  
+  static public function unit<I>():Process<I,I> return lift(Arrowlet.Sync((i:I)->i));
 
 
   public function toArrowlet():ArrowletDef<I,O,Noise>{
@@ -25,13 +25,13 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
         (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) ->
           i.fold(
             (i) -> {
-              var defer = Future.trigger();
+              var defer : FutureTrigger<Outcome<Res<O,E>,Noise>> = Future.trigger();
               var inner = cont.inner(
                 (outcome:Outcome<O,Noise>) -> {
-                  defer.trigger(Success(outcome.fold(
-                    __.success,
-                    (_) -> __.failure(__.fault().err(FailCode.E_ResourceNotFound))
-                  )));
+                  defer.trigger(outcome.fold(
+                    (s) -> Success(__.success(s)),
+                    (_) -> Failure(Noise)
+                  ));
                 }
               );
               return cont.defer(defer).after(this.prepare(i,inner));
@@ -54,6 +54,14 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
   }
   @:from static public function fromArrowlet<I,O>(arw:Arrowlet<I,O,Noise>){
     return lift(arw);
+  }
+  public function environment(i:I,success:O->Void):Thread{
+    return Arrowlet._.environment(
+      this,
+      i,
+      success,
+      __.raise
+    );
   }
 }
 class ProcessLift{

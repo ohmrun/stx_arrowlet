@@ -37,12 +37,13 @@ typedef LiftThunkToArrowlet                   = stx.arrowlet.core.lift.LiftThunk
 typedef LiftToLeftChoice                      = stx.arrowlet.core.lift.LiftToLeftChoice;
 typedef LiftToRightChoice                     = stx.arrowlet.core.lift.LiftToRightChoice;
 typedef LiftFutureToForward                   = stx.arrowlet.core.lift.LiftFutureToForward;
-
+typedef LiftFun1RToProcess                    = stx.arrowlet.core.lift.LiftFun1RToProcess;
 typedef ArrowletLift                          = stx.arrowlet.core.pack.Arrowlet.ArrowletLift;
 
 typedef Thread                                = stx.arrowlet.core.pack.arrowlet.term.Thread;
 typedef CascadeDef<I,O,E>                     = stx.arrowlet.pack.Cascade.CascadeDef<I,O,E>;
 typedef Cascade<I,O,E>                        = stx.arrowlet.pack.Cascade<I,O,E>;
+//typedef CascadeLift                           = stx.arrowlet.pack.Cascade.CascadeLift;
 
 
 /**
@@ -60,8 +61,8 @@ typedef Command<I,E>                          = stx.arrowlet.pack.Command<I,E>;
 typedef RectifyDef<I,O,E>                     = stx.arrowlet.pack.Rectify.RectifyDef<I,O,E>;
 typedef Rectify<I,O,E>                        = stx.arrowlet.pack.Rectify<I,O,E>;
 
-typedef ResolveDef<I,E>                     = stx.arrowlet.pack.Resolve.ResolveDef<I,E>;
-typedef Resolve<I,E>                        = stx.arrowlet.pack.Resolve<I,E>;
+typedef ResolveDef<I,E>                       = stx.arrowlet.pack.Resolve.ResolveDef<I,E>;
+typedef Resolve<I,E>                          = stx.arrowlet.pack.Resolve<I,E>;
 
 typedef RecoverDef<I,E>                       = stx.arrowlet.pack.Recover.RecoverDef<I,E>;
 typedef Recover<I,E>                          = stx.arrowlet.pack.Recover<I,E>;
@@ -121,4 +122,6 @@ class LiftAttemptFunctionToAttempt{
     return Attempt.fromFun1Res(fn);
   }
 }
-typedef LiftThunkToProceed = stx.arrowlet.lift.LiftThunkToProceed;
+typedef LiftThunkToProceed        = stx.arrowlet.lift.LiftThunkToProceed;
+typedef LiftFun1ProceedToAttempt  = stx.arrowlet.core.lift.LiftFun1ProceedToAttempt;
+typedef LiftFun1ResToCascade      = stx.arrowlet.core.lift.LiftFun1ResToCascade;

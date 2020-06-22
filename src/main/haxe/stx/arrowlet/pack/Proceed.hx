@@ -25,6 +25,17 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
   @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Proceed<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> fn()));
   }
+  #if stx_std
+  @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Proceed<O,E>{
+    return lift(
+      Arrowlet.Anon(
+        (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
+          return cont.defer(pl.map(Success)).serve();
+        }
+      )
+    );
+  }
+  #end
   @:noUsing static public function fromFunXR<O,E>(fn:Void->O):Proceed<O,E>{
     return lift(
       Arrowlet.fromFun1R(
@@ -51,8 +62,21 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       })
     );
   }
+  public function environment(success:O->Void,failure:Err<E>->Void):Thread{
+    return Arrowlet._.environment(
+      this,
+      Noise,
+      (res:Res<O,E>) -> {
+        res.fold(success,failure);
+      },
+      __.raise
+    );
+  }
   @:to public function toArrowlet():Arrowlet<Noise,Res<O,E>,Noise>{
     return this;
+  }
+  @:to public function toProvide():Provide<O,E>{
+    return Provide.lift(this.then((res:Res<O,E>) -> res.fold(Val,End)));
   }
   private var self(get,never):Proceed<O,E>;
   private function get_self():Proceed<O,E> return this;
@@ -68,22 +92,15 @@ class ProceedLift{
       )
     ));
   }
-  static public function errata<O,E,EE>(self:Proceed<O,E>,fn):Proceed<O,EE>{
+  static public function errata<O,E,EE>(self:Proceed<O,E>,fn:Err<E>->Err<EE>):Proceed<O,EE>{
     return lift(self.then(
       Arrowlet.fromFun1R(
         (oc:Res<O,E>) -> oc.errata(fn)
       )
     ));
   }
-  static public function environment<O,E>(self:Proceed<O,E>,success:O->Void,failure:Err<E>->Void):Thread{
-    return Arrowlet._.environment(
-      self,
-      Noise,
-      (res:Res<O,E>) -> {
-        res.fold(success,failure);
-      },
-      (_) -> {}
-    );
+  static public function errate<O,E,EE>(self:Proceed<O,E>,fn:E->EE):Proceed<O,EE>{
+    return errata(self,(er) -> er.map(fn));
   }
   static public function point<O,E>(self:Proceed<O,E>,success:O->Execute<E>):Execute<E>{
     return Execute.lift(
@@ -92,18 +109,18 @@ class ProceedLift{
           var defer   = Future.trigger();
           var inner   = cont.inner(
             (outcome:Outcome<Res<O,E>,Noise>) -> {
-              switch(outcome){
-                case Success(Success(o)) : 
-                  defer.trigger(success(o).prepare(cont));
-                case Success(Failure(e)) : 
-                  defer.trigger(cont.value(Report.pure(e)).serve());
-                default :
-                  defer.trigger(cont.error(Noise).serve());
-              }
-              null;
+              defer.trigger(
+                outcome.fold(
+                  (s) -> s.fold(
+                    (o) -> success(o).prepare(cont),
+                    (e) -> cont.value(Report.pure(e)).serve()
+                  ),
+                  (_) -> cont.error(Noise).serve()
+                )
+              );
             }
           );
-          return self.prepare(inner).seq(cont.waits(defer));
+          return self.prepare(inner).seq(defer);
         } 
       )
     );
@@ -132,5 +149,59 @@ class ProceedLift{
         )
       )
     ));
+  }
+  static public function reclaim<O,Oi,E>(self:Proceed<O,E>,next:Process<O,Proceed<Oi,E>>):Proceed<Oi,E>{
+    return lift(
+      self.then(
+        next.toCascade()
+      )).attempt(
+        Attempt.lift(Arrowlet.Anon(
+          (prd:Proceed<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
+            prd.prepare(cont)
+        ))
+      );
+  }
+  static public function arrange<S,O,Oi,E>(self:Proceed<O,E>,next:Arrange<O,S,Oi,E>):Attempt<S,Oi,E>{
+    return Attempt.lift(Arrowlet.Anon(
+      (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
+        var bound : FutureTrigger<Work> = Future.trigger();
+        var inner = cont.inner(
+          (outcome:Outcome<Res<O,E>,Noise>) -> {
+            var input = outcome.fold(
+              (res) -> next.toCascade().prepare(res.map(lhs -> __.couple(lhs,i)),cont),
+              (_)   -> cont.error(Noise).serve()
+            );
+            bound.trigger(input);
+          }
+        );
+        var lhs = self.prepare(inner);
+        return lhs.seq(bound);
+      })
+    );
+  }
+  static public function rearrange<S,O,Oi,E>(self:Proceed<O,E>,next:Arrange<Res<O,E>,S,Oi,E>):Attempt<S,Oi,E>{
+    return Attempt.lift(
+      Arrowlet.Anon(
+        (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
+          var bound = Future.trigger();
+          var inner = cont.inner(
+            (outcome:Outcome<Res<O,E>,Noise>) -> {
+              var value = outcome.fold(
+                res -> next.prepare(__.couple(res,i),cont),
+                _   -> cont.error(Noise).serve()
+              );
+              bound.trigger(value);
+            }
+          );
+          return self.prepare(inner).seq(bound);
+        }
+      )
+    );
+  }
+  static public function cascade<O,Oi,E>(self:Proceed<O,E>,that:Cascade<O,Oi,E>):Proceed<Oi,E>{
+    return lift(self.then(that));
+  }
+  static public function fudge<O,E>(self:Proceed<O,E>):O{
+    return Arrowlet._.fudge(self,Noise).fudge();
   }
 }

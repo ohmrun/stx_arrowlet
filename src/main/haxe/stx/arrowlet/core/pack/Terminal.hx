@@ -10,7 +10,7 @@ interface TerminalApi<R,E>{
   public function error(err:E):Receiver<R,E>;
 
   public function defer(ft:Future<Outcome<R,E>>):Receiver<R,E>;
-  public function waits(res:Work):Work;
+
 
   public function inner<RR,EE>(join:Outcome<RR,EE> -> Void):Terminal<RR,EE>;
 
@@ -36,9 +36,6 @@ class TerminalBase<R,E> implements TerminalApi<R,E>{
   }
   public function error(err:E):Receiver<R,E>{
     return issue(Failure(err));
-  }
-  public function waits(res:Work):Work{
-    return res;
   }
   public function defer(ft:Future<Outcome<R,E>>):Receiver<R,E>{
     return Receiver.lift(Job.defer(ft));
