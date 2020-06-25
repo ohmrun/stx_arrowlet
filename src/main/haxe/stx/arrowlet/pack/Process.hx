@@ -52,6 +52,7 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
       )
     );
   }
+  
   @:from static public function fromArrowlet<I,O>(arw:Arrowlet<I,O,Noise>){
     return lift(arw);
   }
@@ -70,5 +71,16 @@ class ProcessLift{
       self,
       that
     ));
+  }
+  static public function forward<I,O,Oi>(self:ProcessDef<I,O>,i:I):Forward<O>{
+    return Forward.lift(Arrowlet._.fulfill(self,i));
+  }
+  static public function process<I,O,Oi>(self:ProcessDef<I,O>,that:ProcessDef<O,Oi>):Process<I,Oi>{
+    return Process.lift(
+      Arrowlet.Then(
+        self,
+        that
+      )
+    );
   }
 }

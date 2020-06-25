@@ -7,7 +7,17 @@ abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
   static public var _(default,never) = ForwardLift;
   public function new(self) this = self;
   static public function lift<O>(self:ForwardDef<O>):Forward<O> return new Forward(self);
-  
+
+  @:from static public function fromFunTerminalWork<O>(fn:Terminal<O,Noise>->Work):Forward<O>{
+    return lift(
+      Arrowlet.Anon(
+        (i:Noise,cont:Terminal<O,Noise>) -> fn(cont)
+      )
+    );
+  }
+  @:noUsing static public function pure<O>(v:O):Forward<O>{
+    return lift(Arrowlet.pure(v));
+  }
   @:from static public function fromFunXR<O>(fn:Void->O):Forward<O>{
     return lift(
       Arrowlet.Anon(
@@ -62,5 +72,15 @@ class ForwardLift{
       self,
       that
     ));
+  }
+  static public function prepare<O>(self:ForwardDef<O>,cont:Terminal<O,Noise>):Work{
+    return Arrowlet._.prepare(self,Noise,cont);
+  }
+  static public function fudge<O>(self:Forward<O>):O{
+    var v = null;
+    self.environment(
+      (o) -> v = o
+    ).crunch();
+    return v;
   }
 }
