@@ -1,109 +1,80 @@
+## What Is It For?
+
+This library is designed to abstract over Thread and Event programming, provide a natural, unobtrusive
+and consistent interface, amd is based on a theoretically sound scheduler framework.
+
+## How does it work
+
+An Arrowlet is an Asynchronous Function.
 
 
-### Then
+The input `I`
+A handler function `O->Void` to put the output `O` into.
 
 ```haxe
-/*
-_____________________________________________
-              then(f,g):: g(f(x))
-_____________________________________________
-*/
-Arrowlet<A,B> -> Arrowlet<B,C> -> Arrowlet<A,C>;
+I -> (O -> Void) -> Void
 ```
 
-### First
+Under the hood, and with the use of combinators, you can obtain remote resources and apply methods
+to them in a way that is not much different from regular functions.
+
+These particular `Arrowlets` use the return value to return something to send to a scheduler
+
+```haxe
+I -> (O->Void) -> Work
 ```
-/*
-_____________________________________________
+ 
+with `Work`, you can either `submit` to the scheduler or `crunch` to *try* to get the result inline.
 
-                    / - f - \
-    first(f)::(l,r)<         >(f(l),r))
-                    \ - - - /
-_____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Couple<A,C>,Couple<B,C>>
+To run an `Arrowlet` at the head, use `environment`, which generally requires:
 
-Second
+```
+function environment(i:I,success:O->Void,failure:Res<E>->Void):Work
+```
 
-    _____________________________________________
-
-                      / - - - \          
-    second(g):: (l,r)<         >(l,g(r))
-                      \ - g - /
-
-    _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Couple<C,A>,Couple<C,B>>
-
-Pair
-
-    _____________________________________________
-
-                      / - f - \
-    pair(f,g):: (l,r)<         >(f(l),g(r)))
-                      \ - g - /
-
-    _____________________________________________
-        f         ->      g        -> ((l,r) -> (f(l),g(r))
-    Arrowlet<A,B> -> Arrowlet<C,D> -> Arrowlet<Couple<A,C>, Couple<B,D>>
-
-Split
-    _____________________________________________
-
-                       / - f - \
-    split(f,g):: (x,x)<         >(f(x),g(x)))
-                       \ - g - /
-
-    _____________________________________________
-    Arrowlet<A, B> -> Arrowlet<A, C> -> Arrowlet<A, Couple<B,C>>
-
-Joint
-
-    _____________________________________________
-
-    joint(f,g):: x - f - g - \   
-                     \ - - - - > (f(x),g(f(x)))
-
-    _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<B,C> -> Arrowlet<A,Couple<B,C>>
-
-Bound
-
-    _____________________________________________
-
-                  / - - - \   -\
-    bound(f,g):: x <           g  > g(x,f(x))
-                  \ - f - /   -/
-
-    _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<Couple<A,B>,C> -> Arrowlet<A,C>
-
-Repeat / Animate
-
-    _____________________________________________
-
-                    <-<-  [left]
-                    \ /
-    repeat(f):: x -> f     
-                       \_ [right] f(x)
-
-    _____________________________________________
-    Arrowlet<I,tink.Either<I,O> -> Arrowlet<I,O>
-
-Either
-
-    _____________________________________________
+so:
+```haxe
+arrow.environment(
+ 1,
+ __.logger(),
+ __.raise,
+).submit();
+```
 
 
-                    / - f - \
-    split(f,g):: x <         > f(x) || g(x)
-                    \ - g - /
+They also have a special type called `Terminal` to help aggregate `Work`. It *must* be the source of
+the returned `Work` or the 
 
-    _____________________________________________
-    Arrowlet<A,B> -> Arrowlet<A,B> -> Arrowlet<A,B>
+```haxe
+public function applyII(i:I,cont:Terminal<O,E>):Work{
+ ...
+}
+```
 
-    
-Only
+Terminal is a constructor of two types: `Job` and `Work`.
 
-    _____________________________________________
+Job is a `Coroutine` that produces a value `Halt(Production(o))` or
+`Halt(Terminated(Early(err)))`. Producing the second of these bypasses any later function in the chain and is reported in `environment`
 
+Work is like `Job` except the `O` type has been given a handler.
 
-    only(f):: x
+In order to return a value immediately, use `value` to produce a `Job`, and then `serve` to transform that to `Work`
+
+```haxe
+ public function applyII(i:I,cont:Terminal<O,E>):Work{
+  return cont.value(f(i)).serve();
+ }
+```
+
+The Constructor for this is found in `Arrowlet.Sync` 
+
+In order to defer a value, use `defer`
+
+```haxe
+//Constructor in `Arrowlet.Future` 
+ public function applyII(i:I,cont:Terminal<I,E>):Work{
+  return cont.defer(ft).serve();
+ }
+```
+
+It gets a little more complicated using multiple `Arrowlets`
