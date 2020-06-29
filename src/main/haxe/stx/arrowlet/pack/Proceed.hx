@@ -28,7 +28,7 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
   #if stx_std
   @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Proceed<O,E>{
     return lift(
-      Arrowlet.Anon(
+      Arrowlet.Anon(      
         (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
           return cont.defer(pl.map(Success)).serve();
         }
@@ -61,6 +61,11 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
         return cont.defer(defer).after(arw.prepare(Noise,inner)); 
       })
     );
+  }
+  static public function fromForward<O,E>(self:Forward<Res<O,E>>):Proceed<O,E>{
+    return Proceed.lift(Arrowlet.Anon(
+      (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self.prepare(cont)
+    ));
   }
   public function environment(success:O->Void,failure:Err<E>->Void):Thread{
     return Arrowlet._.environment(

@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class InputReactor<I,O> extends ArrowletApi<I,O,Noise>{
+class InputReactor<I,O> extends ArrowletBase<I,O,Noise>{
   private var delegate : RecallFun<I,O,Void>;
   public function new(delegate){
     super();

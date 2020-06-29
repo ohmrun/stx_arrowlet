@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.right_choice.term;
 
-class Choice<I,O,E> extends ArrowletApi<Either<I,I>,Either<I,O>,E>{
+class Choice<I,O,E> extends ArrowletBase<Either<I,I>,Either<I,O>,E>{
   private var delegate : Arrowlet<I,Either<O,I>,E>;
   public function new(delegate){
     super();

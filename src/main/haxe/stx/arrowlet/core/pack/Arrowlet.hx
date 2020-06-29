@@ -18,7 +18,12 @@ import stx.arrowlet.core.pack.arrowlet.term.Pure;
 import stx.arrowlet.core.pack.arrowlet.term.FlatMap;
 import stx.arrowlet.core.pack.arrowlet.term.Inform;
 
-class ArrowletApi<P,O,E>{
+interface ArrowletApi<P,O,E>{
+	public function applyII(p:P,t:Terminal<O,E>):Work;
+	private function doApplyII(p:P,t:Terminal<O,E>):Work;
+  public function asArrowletDef():ArrowletDef<P,O,E>;
+}
+class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E>{
 	public function new(){}
 	public function applyII(p:P,t:Terminal<O,E>):Work{
 		var output = doApplyII(p,t);

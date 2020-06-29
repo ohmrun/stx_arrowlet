@@ -2,7 +2,7 @@ package stx.arrowlet.core.pack.arrowlet.term;
 
 import tink.core.Future in TinkFuture;
 
-class Fun1Future<I,O,E> extends ArrowletApi<I,O,E>{
+class Fun1Future<I,O,E> extends ArrowletBase<I,O,E>{
   var delegate : I->TinkFuture<O>;
   public function new(delegate:I -> TinkFuture<O>){
     super();

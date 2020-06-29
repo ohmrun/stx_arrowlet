@@ -3,7 +3,7 @@ package stx.arrowlet.core.pack.arrowlet.term;
 /**
 	* Runs the `lhs` and `rhs` concurrently.
 **/
-class Both<Ii,Oi,Iii,Oii,E> extends ArrowletApi<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
+class Both<Ii,Oi,Iii,Oii,E> extends ArrowletBase<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
 
 	private var lhs : Arrowlet<Ii,Oi,E>;
 	private var rhs : Arrowlet<Iii,Oii,E>;

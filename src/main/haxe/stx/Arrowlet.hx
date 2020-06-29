@@ -5,6 +5,7 @@ typedef Work                                  = stx.arrowlet.core.pack.Work;
 
 typedef ArrowletDef<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletDef<I,O,E>;
 typedef ArrowletApi<I,O,E>                    = stx.arrowlet.core.pack.Arrowlet.ArrowletApi<I,O,E>;
+typedef ArrowletBase<I,O,E>                   = stx.arrowlet.core.pack.Arrowlet.ArrowletBase<I,O,E>;
 typedef Arrowlet<I,O,E>                       = stx.arrowlet.core.pack.Arrowlet<I,O,E>;
 
 typedef ApplyDef<I,O,E>                       = stx.arrowlet.core.pack.arrowlet.term.Apply.ApplyDef<I,O,E>;

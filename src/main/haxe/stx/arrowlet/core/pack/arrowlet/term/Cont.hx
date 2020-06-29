@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Cont<I,O,E> extends ArrowletApi<I,O,E>{
+class Cont<I,O,E> extends ArrowletBase<I,O,E>{
   private var delegate : I->(Work->Void)->(Outcome<O,E>->Void)->Void;
 
   public function new(delegate){

@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Bound<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
+class Bound<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
   var lhs : Arrowlet<I,Oi,E>;
   var rhs : Arrowlet<Couple<I,Oi>,Oii,E>;
   public function new(lhs:Arrowlet<I,Oi,E>,rhs:Arrowlet<Couple<I,Oi>,Oii,E>){

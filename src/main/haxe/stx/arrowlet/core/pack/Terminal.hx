@@ -68,13 +68,13 @@ abstract Receiver<R,E>(JobDef<R,E>){
     return new Receiver(self);
   }
   public function after(res:Work):Work{
-    return res.seq(Job._.serve(this));
+    return res.seq(Job._.serve(this).errata(e -> e.elide()));
   }
   public function later(handler:Outcome<R,E>->Void):Receiver<R,E>{
     return lift(Job._.later(this,handler));
   }
   public function serve():Work{
-    return Job._.serve(this);
+    return Job._.serve(Job.lift(Coroutine._.errata(this,e -> e.elide())));
   }
   //@:from static public function fromFutureResponse<E>(ft:Future<Work>):Work{
     //return Agenda.fromFutureAgenda(ft);

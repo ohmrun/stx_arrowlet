@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Fan<I,O,E> extends ArrowletApi<I,Couple<O,O>,E>{
+class Fan<I,O,E> extends ArrowletBase<I,Couple<O,O>,E>{
   private var delegate : Arrowlet<I,O,E>;
   public function new(delegate){
     super();

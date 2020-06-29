@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Pure<I,O,E> extends ArrowletApi<I,O,E>{
+class Pure<I,O,E> extends ArrowletBase<I,O,E>{
   private var secreted : O;
   public function new(secreted){
     super();

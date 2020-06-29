@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Handler<O,E> extends ArrowletApi<Noise,O,E>{
+class Handler<O,E> extends ArrowletBase<Noise,O,E>{
   var delegate : (O->Void)->Void;
   public function new(delegate:(O->Void)->Void){
     super();

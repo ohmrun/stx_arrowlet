@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Anon<I,O,E> extends ArrowletApi<I,O,E>{
+class Anon<I,O,E> extends ArrowletBase<I,O,E>{
   private var delegate : I->Terminal<O,E>->Work;
 
   public function new(delegate){

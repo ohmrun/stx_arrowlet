@@ -1,7 +1,7 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
 
-class Delay<I,E> extends ArrowletApi<I,I,E>{
+class Delay<I,E> extends ArrowletBase<I,I,E>{
   private var milliseconds : Int;
   public function new(milliseconds){
     super();

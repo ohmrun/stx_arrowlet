@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class FlatMap<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
+class FlatMap<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
   var self : Arrowlet<I,Oi,E>;
   var func : Oi -> Arrowlet<I,Oii,E>;
 
@@ -17,8 +17,12 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
 			(res:Outcome<Oi,E>) -> {
 				future_response_trigger.trigger(
 					res.fold(
-						(oI) -> func(oI).prepare(i,cont),
-						(e)	 -> cont.error(e).serve()
+						(oI:Oi) 			-> {
+							return func(oI).prepare(i,cont);
+						},
+						(e:E)	  			-> {
+							return cont.error(e).serve();
+						}
 					)
 				);
 			}

@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Then<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
+class Then<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
 	private var lhs : ArrowletDef<I,Oi,E>;
 	private var rhs : ArrowletDef<Oi,Oii,E>;
 

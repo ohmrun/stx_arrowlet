@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class InputReceiver<I,O> extends ArrowletApi<I,O,Noise>{
+class InputReceiver<I,O> extends ArrowletBase<I,O,Noise>{
   private var delegate : I->Receiver<O>;
   public function new(delegate){
     super();

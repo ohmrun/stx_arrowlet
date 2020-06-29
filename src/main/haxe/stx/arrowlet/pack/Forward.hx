@@ -76,11 +76,14 @@ class ForwardLift{
   static public function prepare<O>(self:ForwardDef<O>,cont:Terminal<O,Noise>):Work{
     return Arrowlet._.prepare(self,Noise,cont);
   }
-  static public function fudge<O>(self:Forward<O>):O{
+  static public inline function fudge<O>(self:Forward<O>):O{
     var v = null;
     self.environment(
       (o) -> v = o
     ).crunch();
     return v;
+  }
+  static public function toProceed<O,E>(self:ForwardDef<O>):Proceed<O,E>{
+    return Proceed.lift(Arrowlet.Then(self,Arrowlet.Sync(__.success)));
   }
 }

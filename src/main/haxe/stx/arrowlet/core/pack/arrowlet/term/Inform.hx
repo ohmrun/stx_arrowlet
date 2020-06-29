@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Inform<I,Oi,Oii,E> extends ArrowletApi<I,Oii,E>{
+class Inform<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
   var lhs : Arrowlet<I,Oi,E>;
   var rhs : Arrowlet<Oi,Arrowlet<Oi,Oii,E>,E>;
   public function new(lhs,rhs){

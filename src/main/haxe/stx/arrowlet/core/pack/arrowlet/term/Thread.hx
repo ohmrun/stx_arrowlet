@@ -14,7 +14,7 @@ package stx.arrowlet.core.pack.arrowlet.term;
       scheduler
     );
   }
-  public function crunch(?scheduler):Void{
+  public inline function crunch(?scheduler):Void{
     this.prepare(
       Noise,
       Terminal.ZERO

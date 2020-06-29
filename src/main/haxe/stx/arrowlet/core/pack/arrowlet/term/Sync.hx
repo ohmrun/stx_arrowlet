@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Sync<I,O,E> extends ArrowletApi<I,O,E>{
+class Sync<I,O,E> extends ArrowletBase<I,O,E>{
   private var delegate : I->O;
   public function new(delegate){
     super();

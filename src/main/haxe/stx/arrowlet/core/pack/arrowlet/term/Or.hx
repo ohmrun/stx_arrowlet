@@ -1,6 +1,6 @@
 package stx.arrowlet.core.pack.arrowlet.term;
 
-class Or<Ii,Iii,O,E> extends ArrowletApi<Either<Ii,Iii>,O,E>{
+class Or<Ii,Iii,O,E> extends ArrowletBase<Either<Ii,Iii>,O,E>{
   private var lhs:Arrowlet<Ii,O,E>;
   private var rhs:Arrowlet<Iii,O,E>;
 
