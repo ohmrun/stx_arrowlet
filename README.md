@@ -1,7 +1,7 @@
 ## What Is It For?
 
 This library is designed to abstract over Thread and Event programming, provide a natural, unobtrusive
-and consistent interface, amd is based on a theoretically sound scheduler framework.
+and consistent interface, and is based on a theoretically sound scheduler framework.
 
 ## How does it work
 
