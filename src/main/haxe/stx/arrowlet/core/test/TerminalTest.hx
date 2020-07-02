@@ -98,7 +98,7 @@ package stx.arrowlet.core.test;
     function handler(v){
       trace(v);
       switch(v){
-        case Hold(f)  : f().handle(handler);
+        case Hold(f)  : f.handle(handler);
         case Halt(_)  : 
           Rig.pass();
           async.done();
@@ -127,7 +127,7 @@ package stx.arrowlet.core.test;
     function handler(v){
       trace(v);
       switch(v){
-        case Hold(f)  : f().handle(handler);
+        case Hold(f)  : f.handle(handler);
         case Halt(_)  : 
           Rig.pass();
           async.done();

@@ -9,10 +9,34 @@ typedef ProcessDef<I,O> = ArrowletDef<I,O,Noise>;
 abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
   static public var _(default,never) = ProcessLift;
   public function new(self) this = self;
-  static public function lift<I,O>(self:ProcessDef<I,O>):Process<I,O> return new Process(self);
-  static public function unit<I>():Process<I,I> return lift(Arrowlet.Sync((i:I)->i));
+  @:noUsing static public function lift<I,O>(self:ProcessDef<I,O>):Process<I,O> return new Process(self);
+  @:noUsing static public function unit<I>():Process<I,I> return lift(Arrowlet.Sync((i:I)->i));
 
-
+  @:noUsing static public function fromFun1Forward<I,O>(self:I->Forward<O>):Process<I,O>{
+    return fromProcessForward(self);
+  }
+  @:noUsing static public function fromProcessForward<I,O>(self:Process<I,Forward<O>>):Process<I,O>{
+    return lift(
+      Arrowlet.Anon(
+        (i:I,cont:Terminal<O,Noise>) -> {
+          var defer = Future.trigger();
+          var inner = cont.inner(
+            (res:Outcome<Forward<O>,Noise>) -> {
+              defer.trigger(
+                res.fold(
+                  (ok)  -> Arrowlet._.prepare(ok,Noise,cont),
+                  (e)   -> cont.error(e).serve()
+                )
+              );
+            }
+          );
+          var value = Arrowlet._.prepare(self.toArrowlet(),i,inner); 
+          return value.seq(defer);
+        }
+      )
+    );
+  }
+  
   public function toArrowlet():ArrowletDef<I,O,Noise>{
     return this;
   }
@@ -61,7 +85,7 @@ abstract Process<I,O>(ProcessDef<I,O>) from ProcessDef<I,O> to ProcessDef<I,O>{
       this,
       i,
       success,
-      __.raise
+      __.crack
     );
   }
 }

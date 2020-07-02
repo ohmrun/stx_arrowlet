@@ -260,7 +260,7 @@ class ArrowletLift{
     }
     environment(self,i,
       fn,
-      __.raise  
+      __.crack  
     ).crunch();
 
     return v;

@@ -20,11 +20,12 @@ typedef Apply<I,O,E>                          = stx.arrowlet.core.pack.arrowlet.
 
 //TODO FOLDL?
 //typedef RepeatDef<I,O,E>                      = ArrowletDef<I,Either<I,O>,E>;
+//typedef Repeat<I,O>                           = stx.arrowlet.core.pack.Repeat<I,O>;
 
 //typedef State<S,A>                            = stx.arrowlet.core.pack.State<S,A>;
 //typedef States                                = stx.arrowlet.core.body.States;
 
-//typedef Repeat<I,O>                           = stx.arrowlet.core.pack.Repeat<I,O>;
+
 
 
 typedef LiftChoiceToArrowlet                  = stx.arrowlet.core.lift.LiftChoiceToArrowlet;

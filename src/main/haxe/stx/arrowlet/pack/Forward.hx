@@ -48,6 +48,18 @@ abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
       (e) -> throw(e)
     );
   }
+  static public function bind_fold<T,O>(fn:Process<Couple<T,O>,O>,arr:Array<T>,seed:O):Forward<O>{
+    return arr.lfold(
+      (next:T,memo:Forward<O>) -> {
+        return memo.process(
+          Process.fromProcessForward(
+            (o) -> fn.forward(__.couple(next,o))
+          )
+        );
+      },
+      Forward.pure(seed)
+    );
+  }
   @:to public function toArrowlet():Arrowlet<Noise,O,Noise>{
     return this;
   }
@@ -55,6 +67,7 @@ abstract Forward<O>(ForwardDef<O>) from ForwardDef<O> to ForwardDef<O>{
   private var self(get,never):Forward<O>;
   private function get_self():Forward<O> return lift(this);
 }
+
 class ForwardLift{
   static public function flat_map<O,Oi>(self:Forward<O>,fn:O->ForwardDef<Oi>):Forward<Oi>{
     return Forward.lift(Arrowlet.FlatMap(self.toArrowlet(),fn));
@@ -85,5 +98,8 @@ class ForwardLift{
   }
   static public function toProceed<O,E>(self:ForwardDef<O>):Proceed<O,E>{
     return Proceed.lift(Arrowlet.Then(self,Arrowlet.Sync(__.success)));
+  }
+  static public function attempt<O,Oi,E>(self:Forward<O>,that:Attempt<O,Oi,E>):Proceed<Oi,E>{
+    return toProceed(self).attempt(that);
   }
 }

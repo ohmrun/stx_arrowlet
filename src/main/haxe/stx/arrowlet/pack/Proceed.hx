@@ -74,7 +74,7 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       (res:Res<O,E>) -> {
         res.fold(success,failure);
       },
-      __.raise
+      __.crack
     );
   }
   @:to public function toArrowlet():Arrowlet<Noise,Res<O,E>,Noise>{

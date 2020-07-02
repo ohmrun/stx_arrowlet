@@ -30,7 +30,14 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromRes<I, O, E>(ocO:Res<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.fromFun1R((ocI:Res<I, E>) -> ocI.fold((i : I) -> ocO, (e:Err<E>) -> __.failure(e))));
 	}
-
+	@:noUsing static public function fromFunResRes<I,O,E,EE>(fn:Res<I,E>->Res<O,EE>):Cascade<I,O,EE>{
+		return lift(Arrowlet.Sync(
+			(res:Res<I,EE>) -> res.fold(
+				ok -> fn(__.success(ok)),
+				no -> __.failure(no)
+			)
+		));
+	}
 	@:noUsing static public function fromArrowlet<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i : I) -> {
 			var defer = Future.trigger();

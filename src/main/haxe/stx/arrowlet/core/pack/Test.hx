@@ -48,7 +48,7 @@ class TestProcess extends utest.Test{
       (s) -> {
         Rig.equals(2,s);
       },
-      __.raise  
+      __.crack  
     ).crunch();   
   }
   public function test_cascade_fail_through(){
@@ -77,7 +77,7 @@ class TestCascade extends utest.Test{
         Rig.pass();
         async.done();
       },
-      __.raise
+      __.crack
     ).submit();
   }
 }
