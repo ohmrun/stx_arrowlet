@@ -1,3 +1,0 @@
-package stx.arrowlet.core.head.data;
-
-typedef Rectify<I,O,E> = Arrowlet<Chunk<I,E>,O>;

@@ -41,17 +41,32 @@ arrow.environment(
 ).submit();
 ```
 
-
-They also have a special type called `Terminal` to help aggregate `Work`. It *must* be the source of
-the returned `Work` or the 
-
 ```haxe
 public function applyII(i:I,cont:Terminal<O,E>):Work{
  ...
 }
 ```
+Terminal is responsible for passing control flow along, and you don't normally need to expose the internals unless you're writing combinators.
 
-Terminal is a constructor of two types: `Job` and `Work`.
+As the `applyII` or `prepare` functions return `Work` to be done, if you're inside an async function, you need to pass the work forward of any arrowlets you are calling internally in the correct order.
+
+Between `Terminal` and `Work`, there is an intermediate type responsible for the handling of the arrowlet return value, called `Receiver`.
+
+```haxe
+  public function applyII(i:I,cont:Terminal<O,E>):Work{
+    var value  = cont.value(1);//Receiver<Int,E>;
+    var result = value.serve();//Work
+    return result;//OK
+  }
+
+  public function applyII(i:I,cont:Terminal<O,E>):Work{
+    var defer     = Future.sync(Success())
+    var value     = cont.value(1);//Receiver<Int,E>;
+    var result    = value.serve();//Work
+    return result;//OK
+  }
+```
+
 
 Job is a `Coroutine` that produces a value `Halt(Production(o))` or
 `Halt(Terminated(Early(err)))`. Producing the second of these bypasses any later function in the chain and is reported in `environment`
@@ -78,3 +93,4 @@ In order to defer a value, use `defer`
 ```
 
 It gets a little more complicated using multiple `Arrowlets`
+

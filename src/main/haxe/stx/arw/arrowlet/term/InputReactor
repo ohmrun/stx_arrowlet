@@ -1,0 +1,12 @@
+package stx.arw.arrowlet.term;
+
+class InputReactor<I,O> extends ArrowletBase<I,O,Noise>{
+  private var delegate : RecallFun<I,O,Void>;
+  public function new(delegate){
+    super();
+    this.delegate = delegate;
+  }
+  override private function doApplyII(i:I,cont:Terminal<O,Noise>):Work<Noise>{
+    return cont.until(Task.Anon(delegate.bind(i,cont)));
+  }
+}

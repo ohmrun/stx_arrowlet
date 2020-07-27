@@ -15,7 +15,7 @@
         "stx_nano": "",
         
         "stx_assert": "",
-        "stx_run": ""
+        "stx_async": ""
     },
     "classPath": "src/main/haxe"
 }

@@ -1,0 +1,31 @@
+package stx.arw;
+
+abstract Construction<I,O>(ConstructionSum<I,O>) from ConstructionSum<I,O>{
+  static public inline function inj() return Constructor.ZERO;
+
+  public function new(self:Construction<I,O>) this = self;
+
+  @:to public function reply():Arrowlet<I,O>{
+    return switch(this){
+      case InjInputReactor(fn)              : InputReactorArrowlet(fn);
+      case InjSync(fn)                      : SyncArrowlet(fn);
+      //case AutomationConstructor(fn):
+    }
+  }
+  // @:from static public function fromVoidInjVoidContinuation<O>(fn:Void->(O->Void)->Void):Construction<Void,O>{
+  //   return VoidContinuationConstructor(fn);
+  // }
+  @:from static public function fromSync<I,O>(fn:I->O):Construction<I,O>{
+    return Sync.inj().make(fn);
+  }
+  static function fromInjInputReactor<I,O>(fn:I->(O->Void)->Void):Arrowlet<I,O>{
+    return InputReactorArrowlet.inj().make(fn);
+  }
+}
+private class Constructor extends Clazz{
+  static public var ZERO(default,never) = new Constructor();
+  public var _(default,null)            = new Destructure();
+}
+private class Destructure extends Clazz{
+  
+} 

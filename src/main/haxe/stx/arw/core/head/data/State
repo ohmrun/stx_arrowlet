@@ -1,0 +1,5 @@
+package stx.arw.core.head.data;
+
+import stx.arw.Arrowlet in ArrowletA;
+
+typedef State<S,A> = ArrowletA<S,Couple<A,S>>;

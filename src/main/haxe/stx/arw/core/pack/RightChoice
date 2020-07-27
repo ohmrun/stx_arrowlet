@@ -1,0 +1,17 @@
+package stx.arw;
+
+import stx.arw.core.head.data.RightChoice in RightChoiceT;
+
+@:forward @:callable abstract RightChoice<I,Oi,Oii>(RightChoiceT<I,Oi,Oii>) from RightChoiceT<I,Oi,Oii> to RightChoiceT<I,Oi,Oii>{
+	public function  new(self){
+		this = __.arw().cont(method.bind(self));
+	}
+	static private function  method<I,Oi,Oii>(self:Arrowlet<I,Oi>,i:Either<Oii,I>,cont:Sink<Either<Oii,Oi>>){
+		return switch (i) {
+			case Right(v) 	:
+				new Apply().then(Right).prepare(__.couple(self,v),cont);
+			case Left(v) 		:
+				cont(Left(v),Automation.unit());
+		}
+	}
+}

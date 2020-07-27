@@ -1,0 +1,18 @@
+package stx.arw;
+
+typedef HaulageDef<I,O,Oi,E> = ArrowletDef<Res<Couple<O,I>,E>,Res<Couple<Oi,I>,E>,Noise>;
+
+abstract Haulage<I,O,Oi,E>(HaulageDef<I,O,Oi,E>) from HaulageDef<I,O,Oi,E> to HaulageDef<I,O,Oi,E>{
+  static public var _(default,never) = HaulageLift;
+  public function new(self) this = self;
+  static public function lift<I,O,Oi,E>(self:HaulageDef<I,O,Oi,E>):Haulage<I,O,Oi,E> return new Haulage(self);
+  
+
+
+  public function prj():HaulageDef<I,O,Oi,E> return this;
+  private var self(get,never):Haulage<I,O,Oi,E>;
+  private function get_self():Haulage<I,O,Oi,E> return lift(this);
+}
+class HaulageLift{  
+
+}

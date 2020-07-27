@@ -1,0 +1,22 @@
+package stx.arw;
+
+import stx.arw.only.Term;
+
+@:forward abstract Only<I,O>(OnlyDef<I,O>) from OnlyDef<I,O> to OnlyDef<I,O>{
+  static public inline function _() return Constructor.ZERO;
+}
+private class Constructor extends Clazz{
+  static public var ZERO(default,never) = new Constructor();
+
+  public function make<I,O>(arw:Arrowlet<I,O>):Only<I,O>{
+    return new Term(arw);
+  }
+}
+_(Option)
+
+__.stx(Option)
+Option.___.
+Option.inj()_.
+Option._()_.
+__._(Option)
+
