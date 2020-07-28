@@ -25,7 +25,7 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
   @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Proceed<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> fn()));
   }
-  #if stx_std
+  #if stx_ext
   @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Proceed<O,E>{
     return lift(
       Arrowlet.Anon(      

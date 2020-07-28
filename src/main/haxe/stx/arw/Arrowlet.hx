@@ -225,9 +225,6 @@ class ArrowletLift{
     return Arrowlet.Anon(
       (_:Noise,cont:Terminal<Noise,Noise>) -> {
         var defer = TinkFuture.trigger();
-            defer.handle(
-              (x)->trace(x)
-            );
         var inner = cont.inner(
               (outcome:Outcome<O,E>) -> {
                 outcome.fold(
