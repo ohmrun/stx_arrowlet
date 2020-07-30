@@ -118,7 +118,7 @@ class CascadeLift {
 
 	static public function errata<I, O, E, EE>(self:Cascade<I, O, E>, fn:Err<E>->Err<EE>):Cascade<I, O, EE> {
 		return lift(Arrowlet.Anon((i:Res<I, EE>,
-				cont:Terminal<Res<O, EE>, Noise>) -> i.fold((i) -> self.postfix(o -> o.errata(fn)).prepare(__.accept(i), cont), typical_fail_handler(cont))));
+				cont:Terminal<Res<O, EE>, Noise>) -> i.fold((i:I) -> Arrowlet._.postfix(self,o -> o.errata(fn)).prepare(__.accept(i), cont), typical_fail_handler(cont))));
 	}
 
 	static public function errate<I, O, E, EE>(self:Cascade<I, O, E>, fn:E->EE):Cascade<I, O, EE> {

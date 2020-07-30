@@ -11,9 +11,9 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
   @:noUsing static public function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
   @:noUsing static public function pure<I,O,E>(o:O):Reframe<I,O,E>{
-    return lift(Cascade.unit().postfix(
-      (oc:Res<I,E>
-        ) -> (oc.map(__.couple.bind(o)):Res<Couple<O,I>,E>)
+    return lift(Arrowlet._.postfix(
+      Cascade.unit(),
+      (oc:Res<I,E>) -> (oc.map(__.couple.bind(o)):Res<Couple<O,I>,E>)
     ));
   }
   
@@ -47,9 +47,9 @@ class ReframeLift{
       )
     ):Res<Couple<Oi,I>,E>);
     var arw =  lift(
-      self.toCascade().process(
+      Arrowlet._.postfix(self.toCascade().process(
         Process.lift(that.toArrowlet().first())
-      ).postfix(fn)
+      ),fn)
     );
     return arw;
   }
@@ -110,10 +110,9 @@ class ReframeLift{
  // }
   static public function arrange<I,O,Oi,E>(self:Reframe<I,O,E>,that:Arrange<O,I,Oi,E>):Reframe<I,Oi,E>{
     var arw = 
-      cascade(self,that)
-        .broach()
-        .postfix(
-          (res:Res<Couple<I,Oi>,E>) -> {
+      Arrowlet._.postfix(
+        cascade(self,that).broach(),
+        (res:Res<Couple<I,Oi>,E>) -> {
             return res.map(tp -> tp.swap());
           }
         );
