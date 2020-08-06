@@ -20,8 +20,14 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function pure<I, O, E>(o:O):Cascade<I, O, E> {
 		return fromRes(__.accept(o));
 	}
+	@:noUsing static inline public function Fun<I,O,E>(fn:I->O):Cascade<I,O,E>{
+		return fromFun1R(fn);
+	}
+	@:noUsing static inline public function fromFun1R<I, O, E>(fn:I -> O):Cascade<I, O, E> {
+		return fromFun1Res((i:I) -> __.accept(fn(i)));
+	}
 
-  @:noUsing static public function fromFun1Res<I, O, E>(fn:I -> Res<O, E>):Cascade<I, O, E> {
+  @:noUsing static inline public function fromFun1Res<I, O, E>(fn:I -> Res<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.fromFun1R((ocI:Res<I, E>) -> ocI.fold((i : I) -> fn(i), (e:Err<E>) -> __.reject(e))));
   }
   @:noUsing static public function fromFun1R<I, O, E>(fn:I -> O ):Cascade<I, O, E> {
@@ -30,7 +36,15 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromRes<I, O, E>(ocO:Res<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.fromFun1R((ocI:Res<I, E>) -> ocI.fold((i : I) -> ocO, (e:Err<E>) -> __.reject(e))));
 	}
-	@:noUsing static public function fromFunResRes<I,O,E,EE>(fn:Res<I,E>->Res<O,EE>):Cascade<I,O,EE>{
+	@:from @:noUsing static public function fromFunResRes0<I,O,E>(fn:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
+		return lift(Arrowlet.Sync(
+			(res:Res<I,E>) -> res.fold(
+				ok -> fn(__.accept(ok)),
+				no -> __.reject(no)
+			)
+		));
+	}
+	@:from @:noUsing static public function fromFunResRes<I,O,E,EE>(fn:Res<I,E>->Res<O,EE>):Cascade<I,O,EE>{
 		return lift(Arrowlet.Sync(
 			(res:Res<I,EE>) -> res.fold(
 				ok -> fn(__.accept(ok)),
@@ -65,7 +79,7 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 		return lift(Arrowlet.Anon((i:Res<Noise, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((_) -> arw.prepare(_, cont), typical_fail_handler(cont))));
 	}
 
-	@:from static public function fromFun1Proceed<I, O, E>(arw:I->Proceed<O, E>):Cascade<I, O, E> {
+	@:from @:noUsing static public function fromFun1Proceed<I, O, E>(arw:I->Proceed<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i) -> arw(i).prepare(cont), typical_fail_handler(cont))));
 	}
 
@@ -73,18 +87,14 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 		return (e:Err<E>) -> cont.value(__.reject(e)).serve();
 	}
 
-	@:to public function toArrowlet():Arrowlet<Res<I, E>, Res<O, E>, Noise> {
-		return this;
-	}
+	@:to public function toArrowlet():Arrowlet<Res<I, E>, Res<O, E>, Noise> return this;
 
 	public function environment(i:I, success:O->Void, failure:Err<E>->Void):Thread {
 		return _.environment(this, i, success, failure);
 	}
-
 	public function split<Oi>(that:Cascade<I, Oi, E>):Cascade<I, Couple<O, Oi>, E> {
 		return _.split(this, that);
 	}
-
 	public function prefix<Ii>(fn:Ii->I):Cascade<Ii, O, E> {
 		return _.prefix(this, fn);
   }
@@ -158,9 +168,7 @@ class CascadeLift {
 	}
 
 	static function typical_fail_handler<O, E>(cont:Terminal<Res<O, E>, Noise>):Err<E>->Work {
-		return (e:Err<E>) -> {
-			return cont.value(__.reject(e)).serve();
-		}
+		return (e:Err<E>) ->  cont.value(__.reject(e)).serve();
 	}
 
 	@:noUsing static public function environment<I, O, E>(self:Cascade<I, O, E>, i:I, success:O->Void, failure:Err<E>->Void):Thread {

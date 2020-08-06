@@ -156,13 +156,13 @@ class ArrangeLift{
   static public function split<I,S,O,Oi,E>(self:Arrange<I,S,O,E>,that:Arrange<I,S,Oi,E>):Arrange<I,S,Couple<O,Oi>,E>{
     //faffing to make sure error propagates properly
     var a = Arrowlet._.broach(self).postfix(
-      (tp:Couple<Res<Couple<I,S>,E>,Res<O,E>>) -> tp.decouple(
+      ((tp:Couple<Res<Couple<I,S>,E>,Res<O,E>>) -> tp.decouple(
         (resInput:Res<Couple<I,S>,E>,resOutput:Res<O,E>) -> resOutput.flat_map(
           (o:O) -> resInput.map(
             (couple:Couple<I,S>) -> __.triple(couple.fst(),o,couple.snd())
           )
         )
-      )
+      ))
     );
     var b = Cascade.lift(a.postfix(
       res -> res.map(tr -> tr.detriple(

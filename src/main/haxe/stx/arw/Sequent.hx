@@ -1,6 +1,6 @@
 package stx.arw;
 
-typedef SequentDef<I,O,E> = ArrowletDef<Triple<O,I,E>,Triple<O,I,E>,Noise>;
+typedef SequentDef<I,O,E> = ArrowletDef<Triple<O,I,Err<E>>,Triple<O,I,Err<E>>,Noise>;
 
 abstract Sequent<I,O,E>(SequentDef<I,O,E>) from SequentDef<I,O,E> to SequentDef<I,O,E>{
   public function new(self) this = self;

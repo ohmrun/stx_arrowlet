@@ -1,5 +1,10 @@
 package stx;
 
+class Arw{
+  static public function Fun<I,O,E>(fn:I->O):Arrowlet<I,O,E>{
+    return Arrowlet.Sync(fn);
+  }
+}
 //typedef Terminal<R,E>                         = stx.arw.Terminal<R,E>;
 //typedef Work                                  = stx.arw.Work;
 
@@ -127,3 +132,4 @@ class LiftAttemptFunctionToAttempt{
 typedef LiftThunkToProceed        = stx.arw.lift.LiftThunkToProceed;
 typedef LiftFun1ProceedToAttempt  = stx.arw.lift.LiftFun1ProceedToAttempt;
 typedef LiftFun1ResToCascade      = stx.arw.lift.LiftFun1ResToCascade;
+typedef LiftFun1AttemptToArrange  = stx.arw.lift.LiftFun1AttemptToArrange;

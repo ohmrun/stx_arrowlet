@@ -47,6 +47,9 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       }
     ));
   }
+  @:from static public function fromUnary1Proceed<Pi,O,E>(fn:Unary<Pi,Proceed<O,E>>):Attempt<Pi,O,E>{
+    return fromFun1Proceed(fn);
+  }
   @:from static public function fromFun1Forward<Pi,O,E>(fn:Pi->Forward<O>):Attempt<Pi,O,E>{
     return lift(Arrowlet.Anon(
       (pI:Pi,cont:Terminal<Res<O,E>,Noise>) -> {

@@ -1,5 +1,0 @@
-package stx.arw.core.head.data;
-
-import stx.arw.Arrowlet in ArrowletA;
-
-typedef RightChoice<B,C,D> = ArrowletA<Either<D,B>,Either<D,C>>
