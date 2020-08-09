@@ -95,6 +95,8 @@ typedef Reframe<I,O,E>                        = stx.arw.Reframe<I,O,E>;
 typedef ArrangeDef<I,S,O,E>                   = stx.arw.Arrange.ArrangeDef<I,S,O,E>;
 typedef Arrange<I,S,O,E>                      = stx.arw.Arrange<I,S,O,E>;
 
+typedef PerformDef                            = stx.arw.Perform.PerformDef;
+typedef Perform                               = stx.arw.Perform;
 
 #if (test=="stx_arrowlet")
   typedef Test                                = stx.arw.Test;

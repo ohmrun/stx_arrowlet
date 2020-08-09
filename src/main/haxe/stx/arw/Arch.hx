@@ -34,9 +34,6 @@ class ArchCls<I,O,E>{
   public function get(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
     return Cascade.lift(Arrowlet.Sync(self));
   }
-  public function of(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
-    return get(self);
-  }
   public function defer(){
     return new ArchDefer();
   }
@@ -46,14 +43,107 @@ class ArchCls<I,O,E>{
   public function error(){
     return new ArchError();
   }
+  public function leave(){
+    return new ArchLeave();
+  }
+  public function close(){
+    return new ArchClose();
+  }
+}
+class ArchClose<O,E>{
+  public function new(){}
+  public function get(self:Void->Res<O,E>){
+    return Proceed.lift(Arrowlet.Sync((_:Noise) -> self()));
+  }
+  public function value(){
+    return new ArchCloseValue();
+  }
+  public function defer(){
+    return new ArchCloseDefer();
+  }
+  public function error(){
+    return new ArchCloseError();
+  }
+}
+class ArchCloseDefer<O,E>{
+  public function new(){}
+  public function get(self:Proceed<O,E>){
+    return self;
+  }
+  public function cont(self:(Res<O,E>->Void)->Void){
+    return Proceed.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
+  }
+  public function future(self:Future<Res<O,E>>){
+    return Proceed.lift(Arrowlet.Fun1Future((_:Noise) -> self));
+  }
+}
+class ArchCloseError<E>{
+  public function new(){}
+  public function get(self:Void->Report<E>){
+    return Execute.lift(Arrowlet.Sync((_:Noise) -> self()));
+  }
+  public function cont(self:(Report<E>->Void)->Void){
+    return Execute.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
+  }
+  public function future(self:Future<Report<E>>){
+    return Executee.lift(Arrowlet.Fun1Future((_:Noise) -> self));
+  }
+}
+class ArchCloseValue<O,E>{
+  public function new(){}
+  public function get(self:Void->O){
+    return Forward.lift(Arrowlet.Sync((_:Noise) -> self));
+  }
+  public function defer(){
+    return new ArchCloseValueDefer();
+  }
+}
+class ArchCloseValueDefer<O>{
+  public function new(){}
+  public function get(self:Forward<O>){
+    return self;
+  }
+  public function cont(self:(O->Void)->Void){
+    return Forward.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
+  }
+  public function future(self:Future<O>){
+    return Forward.lift(Arrowlet.Fun1Future((_:Noise)->self));
+  }
+}
+class ArchLeave<I,O,E>{
+  public function new(){}
+  public function get(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
+    return Cascade.lift(Arrowlet.Sync(self));
+  }
+  public function value(){
+    return new ArchLeaveValue();
+  }
+}
+class ArchLeaveValue<I,O,E>{
+  public function new(){}
+  public function get(self:Res<I,E>->O){
+    return Rectify.lift(Arrowlet.Sync(self));
+  }
+}
+class ArchLeaveError<I,O,E>{
+  
+}
+class ArchLeaveValueDefer<I,O,E>{
+  public function new(){}
+  public function get(self:Rectify<I,E,O>){
+    return self;
+  }
+  public function cont(self:Res<I,E>->(O->Void)->Void){
+    return Rectify.lift(Arrowlet.fromFunSink(self));
+  }
+  public function future(self:Res<I,E>->Future<O>){
+    return Rectify.lift(Arrowlet.Fun1Future(self));
+  }
 }
 class ArchError<I,O,E>{
   public function new(){}
   public function get(self:Err<E>->Chunk<O,E>){
     return Resolve.fromErrChunk(self);
-  }
-  public function of(self:Err<E>->Chunk<O,E>){
-    return get(self).toCascade();
   }
   public function defer(){
     return new ArchErrorDefer();
@@ -67,26 +157,17 @@ class ArchErrorValue<I,O,E>{
   public function get(self:Res<I,E>->O){
     return Rectify.lift(Arrowlet.Sync(self));
   }
-  public function of(self:Res<I,E>->O){
-    return get(self).toCascade();
-  }
 }
 class ArchErrorError<I,O,E,EE>{
   public function new(){}
   public function get(self:E->EE){
     return Cascade.unit().errate(self);
   }
-  public function of(self:E->EE){
-    return Cascade.unit().errate(self).toCascade();
-  }
 }
 class ArchErrorDefer<I,O,E>{
   public function new(){}
   public function get(self:Resolve<I,E>){
     return self;
-  }
-  public function of(self:Resolve<I,E>){
-    return self.toCascade();
   }
   public function cont(self:Err<E>->(Chunk<I,E> -> Void)->Void){
     return Resolve.lift(Arrowlet.fromFunSink(self));
@@ -100,9 +181,6 @@ class ArchDefer<I,O,E>{
   public function get(self:Cascade<I,O,E>){
     return self;
   }
-  public function of(self:Cascade<I,O,E>){
-    return self;
-  }
   public function cont(self:Res<I,E>->(Res<O,E>->Void)->Void){
     return Cascade.lift(Arrowlet.fromFunSink(self));
   }
@@ -114,9 +192,6 @@ class ArchValueDefer<I,O,E>{
   public function new(){}
   public function get(self:Attempt<I,O,E>){
     return self;
-  }
-  public function of(self:Attempt<I,O,E>){
-    return self.toCascade();
   }
   public function cont(self:I->(Res<O,E>->Void)->Void){
     return Attempt.lift(Arrowlet.fromFunSink(self));
@@ -136,17 +211,35 @@ class ArchValue<I,O,E>{
   public function get(self:I->Res<O,E>){
     return Attempt.fromFun1Res(self);
   }
-  public function of(self:I->Res<O,E>){
-    return get(self).toCascade();
+  public function error(){
+    return new ArchErrorValue();
+  }
+}
+class ArchValueError<I,O,E>{
+  public function new(){}
+  public function get(self:I->Report<E>){
+    return Command.lift(Arrowlet.Sync(self));
+  }
+  public function defer(){
+    return new ArchValueErrorDefer();
+  }
+}
+class ArchValueErrorDefer<I,O,E>{
+  public function new(){}
+  public function get(self:Command<I,E>){
+    return self;
+  }
+  public function cont(self:I->(Report<E>->Void)->Void){
+    return Command.lift(Arrowlet.fromFunSink(self));
+  }
+  public function future(self:I->Future<Report<E>>){
+    return Command.lift(Arrowlet.Fun1Future(self));
   }
 }
 class ArchValueValue<I,O,E>{
   public function new(){}
   public function get(self:I->O):Process<I,O>{
     return Process.fromFun1R(self);
-  }
-  public function of(self:I->O):Cascade<I,O,E>{
-    return get(self).toCascade();
   }
   public function defer(){
     return new ArchValueValueDefer();
@@ -156,9 +249,6 @@ class ArchValueValueDefer<I,O,E>{
   public function new(){}
   public function get(self:Process<I,O>){
     return self;
-  }
-  public function of(self:Process<I,O>){
-    return self.toCascade();
   }
   public function cont(fn:I->(O->Void)->Void){
     return Process.lift(Arrowlet.fromFunSink(fn));
