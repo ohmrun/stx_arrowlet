@@ -9,9 +9,6 @@ class Arch{
   static public function get<I,O,E>(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
     return make().get(self);
   }
-  static public function of<I,O,E>(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
-    return make().get(self);
-  }
   static public function defer<I,O,E>():ArchDefer<I,O,E>{
     return make().defer();
   }
@@ -22,11 +19,28 @@ class Arch{
     return make().error();
   }
 
+
+
   static public function process(){
     return value().value();
   }
   static public function attempt(){
     return value();
+  }
+  static public function command(){
+    return value().error();
+  }
+  static public function execute(){
+    return make().close().error();
+  }
+  static public function resolve(){
+    return make().error();
+  }
+  static public function forward(){
+    return make().close().value();
+  }
+  static public function proceed(){
+    return make().close();
   }
 }
 class ArchCls<I,O,E>{
@@ -86,7 +100,7 @@ class ArchCloseError<E>{
     return Execute.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
   }
   public function future(self:Future<Report<E>>){
-    return Executee.lift(Arrowlet.Fun1Future((_:Noise) -> self));
+    return Execute.lift(Arrowlet.Fun1Future((_:Noise) -> self));
   }
 }
 class ArchCloseValue<O,E>{
@@ -267,5 +281,9 @@ class ArchTest{
       (b:String,c) -> c(__.accept(b))
     );
     $type(b);
+    var c = Arch.execute().get(
+      () -> Report.pure(__.fault().err(FailCode.E_AbstractMethod))
+    );
+    $type(c);
   }
 }
