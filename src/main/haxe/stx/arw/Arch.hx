@@ -1,11 +1,7 @@
 package stx.arw;
 
-using stx.arw.Arch;
-
 class Arch{
-  static function make<I,O,E>():ArchCls<I,O,E>{
-    return new ArchCls();
-  }
+  static function make<I,O,E>():ArchCls<I,O,E> return new ArchCls();
   static public function get<I,O,E>(self:Res<I,E>->Res<O,E>):Cascade<I,O,E>{
     return make().get(self);
   }
@@ -19,8 +15,7 @@ class Arch{
     return make().error();
   }
 
-
-
+  //shortcuts
   static public function process(){
     return value().value();
   }
@@ -138,9 +133,6 @@ class ArchLeaveValue<I,O,E>{
   public function get(self:Res<I,E>->O){
     return Rectify.lift(Arrowlet.Sync(self));
   }
-}
-class ArchLeaveError<I,O,E>{
-  
 }
 class ArchLeaveValueDefer<I,O,E>{
   public function new(){}
