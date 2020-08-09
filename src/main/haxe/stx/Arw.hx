@@ -133,3 +133,5 @@ typedef LiftThunkToProceed        = stx.arw.lift.LiftThunkToProceed;
 typedef LiftFun1ProceedToAttempt  = stx.arw.lift.LiftFun1ProceedToAttempt;
 typedef LiftFun1ResToCascade      = stx.arw.lift.LiftFun1ResToCascade;
 typedef LiftFun1AttemptToArrange  = stx.arw.lift.LiftFun1AttemptToArrange;
+
+typedef Arch                      = stx.arw.Arch;

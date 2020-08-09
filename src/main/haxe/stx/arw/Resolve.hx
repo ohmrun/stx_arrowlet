@@ -28,6 +28,9 @@ abstract Resolve<I,E>(ResolveDef<I,E>) from ResolveDef<I,E> to ResolveDef<I,E>{
       )
     );
   }
+  @:from static public function fromErrChunk<I,E>(fn:Err<E>->Chunk<I,E>):Resolve<I,E>{
+    return lift(Arrowlet.Sync(fn));
+  }
   @:noUsing static public function unit<I,E>():Resolve<I,E>{
     return lift(Arrowlet.Sync((e:Err<E>) -> Tap));
   }

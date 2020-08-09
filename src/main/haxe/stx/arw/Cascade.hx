@@ -23,10 +23,6 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static inline public function Fun<I,O,E>(fn:I->O):Cascade<I,O,E>{
 		return fromFun1R(fn);
 	}
-	@:noUsing static inline public function fromFun1R<I, O, E>(fn:I -> O):Cascade<I, O, E> {
-		return fromFun1Res((i:I) -> __.accept(fn(i)));
-	}
-
   @:noUsing static inline public function fromFun1Res<I, O, E>(fn:I -> Res<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.fromFun1R((ocI:Res<I, E>) -> ocI.fold((i : I) -> fn(i), (e:Err<E>) -> __.reject(e))));
   }
