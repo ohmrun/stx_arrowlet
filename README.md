@@ -37,7 +37,7 @@ so:
 arrow.environment(
  1,
  __.logger(),
- __.raise,
+ __.crack,
 ).submit();
 ```
 
@@ -105,7 +105,7 @@ Between `Terminal` and `Work`, there is an intermediate type responsible for the
 ```
 
 
-Job is a `Coroutine` that produces a value `Halt(Production(o))` or
+Job is functionally equivalent to a `Coroutine` that produces a value `Halt(Production(o))` or
 `Halt(Terminated(Early(err)))`. Producing the second of these bypasses any later function in the chain and is reported in `environment`
 
 Work is like `Job` except the `O` type has been given a handler.
@@ -128,6 +128,3 @@ In order to defer a value, use `defer`
   return cont.defer(ft).serve();
  }
 ```
-
-It gets a little more complicated using multiple `Arrowlets`
-
