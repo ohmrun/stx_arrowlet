@@ -11,6 +11,9 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   @:noUsing static public function fromChunk<O,E>(chunk:Chunk<O,E>):Provide<O,E>{
     return lift(Arrowlet.pure(chunk));
   }
+  @:noUsing static public function fromOption<O,E>(self:Option<O>):Provide<O,E>{
+    return lift(Arrowlet.pure(self.fold((o) -> Val(o),()->Tap)));
+  }
   @:noUsing static public function pure<O,E>(o:O):Provide<O,E>{
     return fromChunk(Val(o));
   }
@@ -35,6 +38,25 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   }
   private var self(get,never):Provide<O,E>;
   private function get_self():Provide<O,E> return lift(this);
+  @:noUsing static public function bind_fold<T,O,E>(fn:T->O->Provide<O,E>,iterable:Iter<T>,seed:O):Option<Provide<O,E>>{
+    return iterable.foldl(
+      (next:T,memo:Provide<O,E>) -> Provide.lift(
+        memo.toArrowlet().then(
+          Arrowlet.Anon(
+            (res:Chunk<O,E>,cont:Terminal<Chunk<O,E>,Noise>) -> res.fold(
+              (o) -> fn(next,o).prepare(cont),
+              (e) -> cont.value(End(e)).serve(),
+              ()  -> cont.value(Tap).serve()
+            )
+          )
+        )
+      ),
+      Provide.pure(seed)
+    );
+  }
+  public function flat_map<Oi>(fn:O->ProvideDef<Oi,E>):Provide<Oi,E>{
+    return _.flat_map(self,fn);
+  }
 }
 class ProvideLift{
   static public function flat_map<O,Oi,E>(self:Provide<O,E>,fn:O->ProvideDef<Oi,E>):Provide<Oi,E>{
@@ -70,5 +92,73 @@ class ProvideLift{
         )
       )
     ));
+  }
+  static public function exudate<O,Oi,E>(self:Provide<O,E>,next:Exudate<O,Oi,E>):Provide<Oi,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        next.toArrowlet()
+      )
+    );
+  }
+  static public function or<O,E>(self:Provide<O,E>,or:Void->Provide<O,E>):Provide<O,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Chunk<O,E>,cont:Terminal<Chunk<O,E>,Noise>) -> ipt.fold(
+            (o) -> cont.value(Val(o)).serve(),
+            (e) -> cont.value(End(e)).serve(),
+            ()  -> or().prepare(cont)
+          )
+        )
+      )
+    );
+  }
+  static public function prepare<O,E>(self:Provide<O,E>,cont:Terminal<Chunk<O,E>,Noise>):Work{
+    return Arrowlet._.prepare(
+      Arrowlet.lift(self),
+      Noise,
+      cont
+    );
+  }
+  static public function toProceed<O,E>(self:Provide<O,E>):Proceed<Option<O>,E>{
+    return Proceed.lift(
+      self.toArrowlet().then(
+        Chunk._.fold.bind(_,
+          (o) -> __.accept(Some(o)),
+          (e) -> __.reject(e),
+          ()  -> __.accept(None)
+        )
+      )
+    );
+  }
+  static public function materialise<O,E>(self:Provide<O,E>):Provide<Option<O>,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self.toArrowlet(),
+        Arrowlet.Sync(
+          (ipt:Chunk<O,E>) -> ipt.fold(
+            (o) -> Val(__.option(o)),
+            (e) -> End(e),
+            ()  -> Val(None)
+          )
+        )
+      )
+    );
+  }
+  static public function and<O,Oi,E>(self:Provide<O,E>,that:Provide<Oi,E>):Provide<Couple<O,Oi>,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Chunk<O,E>,cont:Terminal<Chunk<Couple<O,Oi>,E>,Noise>) -> ipt.fold(
+            (o) -> that.process(__.couple.bind(o)).prepare(cont),
+            (e) -> cont.value(End(e)).serve(),
+            ()  -> cont.value(Tap).serve()
+          )
+        )
+      )
+    );
   }
 }

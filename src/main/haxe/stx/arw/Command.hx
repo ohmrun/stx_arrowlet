@@ -1,5 +1,5 @@
 package stx.arw;
-
+        
 typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
 
 @:using(stx.arw.Arrowlet.ArrowletLift)

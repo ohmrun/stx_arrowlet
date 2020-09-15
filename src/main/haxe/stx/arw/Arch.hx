@@ -59,6 +59,9 @@ class ArchCls<I,O,E>{
     return new ArchClose();
   }
 }
+class ArchChunk<O,E> extends Clazz{
+  
+}
 class ArchClose<O,E>{
   public function new(){}
   public function get(self:Void->Res<O,E>){

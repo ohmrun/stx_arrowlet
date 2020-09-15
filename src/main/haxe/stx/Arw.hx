@@ -98,6 +98,9 @@ typedef Arrange<I,S,O,E>                      = stx.arw.Arrange<I,S,O,E>;
 typedef PerformDef                            = stx.arw.Perform.PerformDef;
 typedef Perform                               = stx.arw.Perform;
 
+typedef ExudateDef<I,O,E>                     = stx.arw.Exudate.ExudateDef<I,O,E>;
+typedef Exudate<I,O,E>                        = stx.arw.Exudate<I,O,E>;
+
 #if (test=="stx_arrowlet")
   typedef Test                                = stx.arw.Test;
 #end
