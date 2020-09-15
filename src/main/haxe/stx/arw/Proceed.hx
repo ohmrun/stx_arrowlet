@@ -16,6 +16,9 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self().prepare(cont)
     ));
   }
+  @:noUsing static public function fromErr<O,E>(e:Err<E>):Proceed<O,E>{
+    return lift(Arrowlet.pure(__.reject(e)));
+  }
   @:noUsing static public function pure<O,E>(v:O):Proceed<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> __.accept(v)));
   }

@@ -110,4 +110,11 @@ class ProcessLift{
   static public function first<I,Ii,O>(self:Process<I,O>):Process<Couple<I,Ii>,Couple<O,Ii>>{
     return Process.lift(Arrowlet._.first(self.toArrowlet()));
   }
+  static public function fudge<I,O>(self:Process<I,O>):Forward<O>{
+    return Forward.lift(
+      Arrowlet.Anon(
+        (_:Noise,cont:Terminal<O,Noise>) -> Arrowlet._.prepare(self.toArrowlet(),null,cont)
+      )
+    );
+  }
 }
