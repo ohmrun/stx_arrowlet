@@ -268,14 +268,14 @@ class ArchTest{
   public function new(){}
   public function test_arch(){ 
     var a = Arch.attempt().get((x:Int) -> __.accept(x));
-    $type(a);
+    //$type(a);
     var b = Arch.attempt().defer().cont(
       (b:String,c) -> c(__.accept(b))
     );
-    $type(b);
+    //$type(b);
     var c = Arch.execute().get(
       () -> Report.pure(__.fault().err(FailCode.E_AbstractMethod))
     );
-    $type(c);
+    //$type(c);
   }
 }
