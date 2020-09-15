@@ -24,8 +24,11 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   public function toArrowlet():Arrowlet<Noise,Report<E>,Noise>{
     return this;
   }
-  @:noUsing static public function fromFunXR<E>(fn:Void->Report<E>):Execute<E>{
+  @:from static public function fromFunXR<E>(fn:Void->Report<E>):Execute<E>{
     return lift(Arrowlet.fromFunXR(fn));
+  }
+  @:from static public function fromFunExecuteR<E>(fn:Void->Execute<E>):Execute<E>{
+    return fn();
   }
   public function prj():ExecuteDef<E> return this;
   private var self(get,never):Execute<E>;
@@ -77,5 +80,29 @@ class ExecuteLift{
       self,
       that
     ));
+  }
+  static public function execute<E,O>(self:Execute<E>,next:Execute<E>):Execute<E>{
+    return Execute.lift(Arrowlet.Then(
+      self,
+      Arrowlet.Anon(
+        (ipt:Report<E>,cont:Terminal<Report<E>,Noise>) -> ipt.fold(
+          (e) -> cont.value(Report.pure(e)).serve(),
+          ()  -> next.prepare(cont)
+        )
+      )
+    ));
+  }
+  static public function proceed<E,O>(self:Execute<E>,next:Proceed<O,E>):Proceed<O,E>{
+    return Proceed.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Report<E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
+            (e) -> cont.value(__.reject(e)).serve(),
+            ()  -> next.prepare(cont)
+          )
+        )
+      )
+    );
   }
 }
