@@ -11,6 +11,12 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   @:noUsing static public function fromChunk<O,E>(chunk:Chunk<O,E>):Provide<O,E>{
     return lift(Arrowlet.pure(chunk));
   }
+  @:noUsing static public function pure<O,E>(o:O):Provide<O,E>{
+    return fromChunk(Val(o));
+  }
+  @:noUsing static public function fromErr<O,E>(e:Err<E>):Provide<O,E>{
+    return fromChunk(End(e));
+  }
   @:noUsing static public function unit<O,E>():Provide<O,E>{
     return lift(Arrowlet.pure(Tap));
   }
@@ -39,6 +45,30 @@ class ProvideLift{
           (e) -> Provide.fromChunk(End(e)),
           ()  -> Provide.fromChunk(Tap)
         )
+    ));
+  }
+  static public function process<O,Oi,E>(self:Provide<O,E>,next:Process<O,Oi>):Provide<Oi,E>{
+    return Provide.lift(Arrowlet.Then(
+      self,
+      Arrowlet.Anon(
+        (ipt:Chunk<O,E>,cont:Terminal<Chunk<Oi,E>,Noise>) -> ipt.fold(
+          (o) -> next.then(Val).prepare(o,cont),
+          (e) -> cont.value(End(e)).serve(),
+          ()  -> cont.value(Tap).serve()
+        )
+      )
+    ));
+  }
+  static public function attempt<O,Oi,E>(self:Provide<O,E>,next:Attempt<O,Oi,E>):Provide<Oi,E>{
+    return Provide.lift(Arrowlet.Then(
+      self,
+      Arrowlet.Anon(
+        (ipt:Chunk<O,E>,cont:Terminal<Chunk<Oi,E>,Noise>) -> ipt.fold(
+          (o) -> next.toArrowlet().postfix((res:Res<Oi,E>) -> res.toChunk()).prepare(o,cont),
+          (e) -> cont.value(End(e)).serve(),
+          ()  -> cont.value(Tap).serve()
+        )
+      )
     ));
   }
 }

@@ -117,4 +117,7 @@ class ProcessLift{
       )
     );
   }
+  static public function prepare<I,O>(self:Process<I,O>,ipt:I,cont:Terminal<O,Noise>):Work{
+    return Arrowlet._.prepare(self.toArrowlet(),ipt,cont);
+  }
 }
