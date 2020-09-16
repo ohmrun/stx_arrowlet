@@ -187,6 +187,14 @@ class ProvideLift{
       )
     );
   }
+  static public function after<O,E>(self:Provide<O,E>,fn:Chunk<O,E>->Void):Provide<O,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Sync(__.passthrough(fn))
+      )
+    );
+  }
   static public function environment<O,E>(self:Provide<O,E>,success:Option<O>->Void,failure:Err<E>->Void){
     return Arrowlet._.environment(
       self.toArrowlet(),
