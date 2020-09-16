@@ -18,6 +18,19 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
       unit()
     );
   }  
+  @:noUsing static public function sequence<T,E>(fn:T->Execute<E>,arr:Array<T>):Execute<E>{
+    return arr.lfold(
+      (next:T,memo:Execute<E>) -> Execute.lift(
+        memo.fold_mod(
+          (report:Report<E>) -> report.fold(
+            (e)-> Execute.pure(e),
+            () -> fn(next)
+          )
+        )
+      ),
+      unit()
+    );
+  }
   @:to public function toForward():Forward<Report<E>>{
     return this;
   }
@@ -27,7 +40,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   @:from static public function fromFunXR<E>(fn:Void->Report<E>):Execute<E>{
     return lift(Arrowlet.fromFunXR(fn));
   }
-  @:from static public function fromFunExecuteR<E>(fn:Void->Execute<E>):Execute<E>{
+  @:from static public function fromFunXExecute<E>(fn:Void->Execute<E>):Execute<E>{
     return fn();
   }
   public function prj():ExecuteDef<E> return this;
@@ -102,6 +115,27 @@ class ExecuteLift{
             ()  -> next.prepare(cont)
           )
         )
+      )
+    );
+  }
+  static public function provide<E,O>(self:Execute<E>,next:Provide<O,E>):Provide<O,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Report<E>,cont:Terminal<Chunk<O,E>,Noise>) -> ipt.fold(
+            (e) -> cont.value(End(e)).serve(),
+            ()  -> next.prepare(cont)
+          )
+        )
+      )
+    );
+  }
+  static public function fold_mod<E,EE,O>(self:Execute<E>,fn:Report<E>->Execute<EE>):Execute<EE>{
+    return Execute.lift(
+      Arrowlet.FlatMap(
+        self.toArrowlet(),
+        (report:Report<E>) -> fn(report).toArrowlet()
       )
     );
   }
