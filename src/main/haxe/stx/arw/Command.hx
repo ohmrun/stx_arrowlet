@@ -10,6 +10,9 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   static public function lift<I,E>(self:CommandDef<I,E>):Command<I,E>{
     return new Command(self);
   }
+  @:from static public function fromFun1Void<I,E>(fn:I->Void):Command<I,E>{
+    return lift(Arrowlet.Sync(__.passthrough(fn).fn().then((_)->Report.unit())));
+  }
   @:from static public function fromFun1Report<I,E>(fn:I->Report<E>):Command<I,E>{
     return lift(Arrowlet.fromFun1R((i) -> fn(i)));
   }
