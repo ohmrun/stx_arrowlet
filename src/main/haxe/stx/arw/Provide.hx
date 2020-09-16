@@ -14,6 +14,9 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   @:noUsing static public function fromOption<O,E>(self:Option<O>):Provide<O,E>{
     return lift(Arrowlet.pure(self.fold((o) -> Val(o),()->Tap)));
   }
+  @:noUsing static public function make<O,E>(o:Null<O>):Provide<O,E>{
+    return fromChunk(__.chunk(o));
+  }
   @:noUsing static public function pure<O,E>(o:O):Provide<O,E>{
     return fromChunk(Val(o));
   }
@@ -38,8 +41,8 @@ abstract Provide<O,E>(ProvideDef<O,E>) from ProvideDef<O,E> to ProvideDef<O,E>{
   }
   private var self(get,never):Provide<O,E>;
   private function get_self():Provide<O,E> return lift(this);
-  @:noUsing static public function bind_fold<T,O,E>(fn:T->O->Provide<O,E>,iterable:Iter<T>,seed:O):Option<Provide<O,E>>{
-    return iterable.foldl(
+  @:noUsing static public function bind_fold<T,O,E>(fn:T->O->Provide<O,E>,iterable:Iterable<T>,seed:O):Option<Provide<O,E>>{
+    return iterable.toIter().foldl(
       (next:T,memo:Provide<O,E>) -> Provide.lift(
         memo.toArrowlet().then(
           Arrowlet.Anon(
@@ -115,6 +118,7 @@ class ProvideLift{
       )
     );
   }
+  //static public function def<O,E>(self:Provide<O,E>,or:)
   static public function prepare<O,E>(self:Provide<O,E>,cont:Terminal<Chunk<O,E>,Noise>):Work{
     return Arrowlet._.prepare(
       Arrowlet.lift(self),
@@ -158,6 +162,48 @@ class ProvideLift{
             ()  -> cont.value(Tap).serve()
           )
         )
+      )
+    );
+  }
+  static public function command<O,E>(self:Provide<O,E>,that:Command<O,E>):Execute<E>{
+    return Execute.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Chunk<O,E>,cont:Terminal<Report<E>,Noise>) -> ipt.fold(
+            o     -> that.prepare(o,cont),
+            e     -> cont.value(Report.pure(e)).serve(),
+            ()    -> cont.value(Report.unit()).serve()
+          )
+        )
+      )
+    );
+  }
+  static public function before<O,E>(self:Provide<O,E>,fn:Void->Void):Provide<O,E>{
+    return Provide.lift(
+      Arrowlet.Then(
+        Arrowlet.Sync(__.passthrough((_) -> fn())),
+        self
+      )
+    );
+  }
+  static public function environment<O,E>(self:Provide<O,E>,success:Option<O>->Void,failure:Err<E>->Void){
+    return Arrowlet._.environment(
+      self.toArrowlet(),
+      Noise,
+      (chunk) -> chunk.fold(
+        (o) -> success(Some(o)),
+        (e) -> failure(e),
+        ()  -> success(None)
+      ),
+      (e) -> throw e
+    );
+  }
+  static public function postfix<O,Oi,E>(self:Provide<O,E>,then:O->Oi){
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Sync(Chunk._.fold.bind(_,then.fn().then(Val),End,()->Tap))
       )
     );
   }
