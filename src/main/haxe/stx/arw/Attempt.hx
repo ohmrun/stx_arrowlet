@@ -132,6 +132,15 @@ class AttemptLift{
   static public function reframe<I,O,E>(self:Attempt<I,O,E>):Reframe<I,O,E>{ 
     return self.toCascade().reframe();
   }
+  static public function broach<I,O,E>(self:Attempt<I,O,E>):Attempt<I,Couple<I,O>,E>{
+    return Attempt.lift(
+      Arrowlet.Anon(
+        (ipt:I,cont:Terminal<Res<Couple<I,O>,E>,Noise>) -> self.process(
+          (o:O) -> __.couple(ipt,o)
+        ).prepare(ipt,cont)
+      )
+    );
+  }
   static public function forward<I,O,E>(self:Attempt<I,O,E>,i:I):Proceed<O,E>{
     return Proceed.lift(
       Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
@@ -165,5 +174,31 @@ class AttemptLift{
   }
   static public function cascade<I,O,Oi,E>(self:Attempt<I,O,E>,that:Cascade<O,Oi,E>):Attempt<I,Oi,E>{
     return lift(self.then(that));
+  }
+  static public function execute<I,O,E>(self:Attempt<I,O,E>,that:Execute<E>):Attempt<I,O,E>{
+    return Attempt.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
+            o -> that.proceed(Proceed.pure(o)).prepare(cont),
+            e -> cont.value(__.reject(e)).serve()
+          )
+        )
+      )
+    );
+  }
+  static public function command<I,O,E>(self:Attempt<I,O,E>,that:Command<O,E>):Attempt<I,O,E>{
+    return Attempt.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
+            o -> that.proceed(Proceed.pure(o)).prepare(o,cont),
+            e -> cont.value(__.reject(e)).serve()
+          )
+        )
+      )
+    );
   }
 }
