@@ -140,7 +140,20 @@ class ReframeLift{
       }
     ));
   }
-
+  static public function commandeer<I,O,E>(self:Reframe<I,O,E>,fn:O->Command<I,E>):Command<I,E>{
+    return Command.lift(
+      Arrowlet.Anon(
+        (ipt:I,cont:Terminal<Report<E>,Noise>) -> self.commandment(fn).then(
+          Arrowlet.Sync(
+            (res:Res<Couple<O,I>,E>) -> res.fold(
+              _ -> Report.unit(),
+              Report.pure
+            )
+          )
+        ).prepare(__.accept(ipt),cont)
+      )
+    );
+  }
   static public function commandment<I,O,E>(self:Reframe<I,O,E>,fn:O->Command<I,E>):Reframe<I,O,E>{
     return lift(Arrowlet.Anon(
       (ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {

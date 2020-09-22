@@ -219,4 +219,17 @@ class CascadeLift {
 			)
 		));
 	}
+	static public function command<I,O,E>(self:Cascade<I,O,E>,that:Command<O,E>):Cascade<I,O,E>{
+    return Cascade.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Anon(
+          (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
+            o -> that.proceed(Proceed.pure(o)).prepare(o,cont),
+            e -> cont.value(__.reject(e)).serve()
+          )
+        )
+      )
+    );
+  }
 }

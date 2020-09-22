@@ -139,4 +139,7 @@ class ExecuteLift{
       )
     );
   }
+  static public function and<E>(self:Execute<E>,that:Execute<E>):Execute<E>{
+    return self.execute(that);
+  }
 }

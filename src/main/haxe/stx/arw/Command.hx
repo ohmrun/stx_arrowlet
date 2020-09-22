@@ -9,6 +9,9 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   public function new(self){
     this = self;
   }
+  static public function unit<I,E>():Command<I,E>{
+    return lift(Arrowlet.Sync((i:I)->Report.unit()));
+  }
   static public function lift<I,E>(self:CommandDef<I,E>):Command<I,E>{
     return new Command(self);
   }

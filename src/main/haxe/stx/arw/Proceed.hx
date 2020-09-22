@@ -134,9 +134,6 @@ class ProceedLift{
     );
   }
   static public function crack<O,E>(self:Proceed<O,E>):Forward<O>{
-    return report(self);
-  }
-  static public function report<O,E>(self:Proceed<O,E>):Forward<O>{
     return Forward.lift(
       Arrowlet._.postfix(self,
         res -> res.fold(
@@ -145,6 +142,10 @@ class ProceedLift{
         )
       )
     );
+  }
+  @:deprecated
+  static public function report<O,E>(self:Proceed<O,E>):Forward<O>{
+    return crack(self);
   }
   static public function process<O,Oi,E>(self:Proceed<O,E>,then:Process<O,Oi>):Proceed<Oi,E>{
     return lift(Arrowlet.Then(self,then.toCascade()));
