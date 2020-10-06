@@ -84,6 +84,11 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
   @:noUsing static public function FlatMap<I,Oi,Oii,E>(self : Arrowlet<I,Oi,E>,func : Oi -> Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
     return lift(new FlatMap(self,func));
   }
+  @:noUsing static public function Delay<I,E>(milliseconds:Int):Arrowlet<I,I,E>{
+    return new stx.arw.arrowlet.term.Delay(milliseconds);
+  }
+
+
   @:noUsing static public function Fun1Future<I,O,E>(self:I->TinkFuture<O>):Arrowlet<I,O,E>{
     return lift(new Fun1Future(self));
   }
