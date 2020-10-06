@@ -101,7 +101,7 @@ typedef Perform                               = stx.arw.Perform;
 typedef ExudateDef<I,O,E>                     = stx.arw.Exudate.ExudateDef<I,O,E>;
 typedef Exudate<I,O,E>                        = stx.arw.Exudate<I,O,E>;
 
-#if (test=="stx_arrowlet")
+#if (test=="stx_arw")
   typedef Test                                = stx.arw.Test;
 #end
 class LiftArrowletToCascade{

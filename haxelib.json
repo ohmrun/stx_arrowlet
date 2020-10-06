@@ -1,21 +1,24 @@
 {
-    "name": "stx_arrowlet",
+    "name": "stx_arw",
     "url": "https://github.com/0b1kn00b/arrowlets",
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
-    "version": "0.10.3",
+    "version": "0.10.4",
     "releasenote": "Cascade.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
-        "tink_core": "",
+        "tink_core": "2.0.0-rc.1",
 
-        "stx_fn": "",
-        "stx_pico": "",
-        "stx_nano": "",
+        "stx_fn": "1.0.0",
+        "stx_pico": "1.0.0",
+        "stx_nano": "0.1.5",
         
-        "stx_assert": "",
-        "stx_async": ""
+        "stx_assert": "0.1.0",
+        "stx_async": "1.0.1",
+        "stx_log": "0,1,4",
+        
+        "stx_ext": ""
     },
     "classPath": "src/main/haxe"
 }

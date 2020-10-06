@@ -12,7 +12,7 @@ package stx.arw.test;
 
   using stx.Pico;
   using stx.Nano;
-  //using stx.Arrowlet;
+  using stx.arw.Test;
 #end
 
 

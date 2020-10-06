@@ -2,17 +2,19 @@
 --interp
 
  
--lib utest
+-lib utest:git
 
 -lib tink_core
 
 -lib stx_pico
 -lib stx_nano
 -lib stx_fn
+-lib stx_ext
 -lib stx_assert
 -lib stx_async
+-lib stx_log:0.1.4
 
--D test=stx_arrowlet
+-D test=stx_arw
 #-D error_stack
 
 -cp src/main/haxe
