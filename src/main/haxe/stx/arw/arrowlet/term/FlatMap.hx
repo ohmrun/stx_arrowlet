@@ -1,5 +1,7 @@
 package stx.arw.arrowlet.term;
 
+import stx.log.Facade;
+
 class FlatMap<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
   var self : Arrowlet<I,Oi,E>;
   var func : Oi -> Arrowlet<I,Oii,E>;
@@ -10,6 +12,7 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
 		this.func = func;
 	}
   override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
+		__.log()("FlatMap.apply");
 		var defer 									= Future.trigger();
 		var future_response_trigger = Future.trigger();
 

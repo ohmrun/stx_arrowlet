@@ -1,17 +1,26 @@
 package stx.arw;
 
+import stx.log.Facade;
 import utest.Async;
 import utest.Assert in Rig;
 
 import stx.arw.test.*;
 
 class Test{
+  static public function log(wildcard:Wildcard){
+    return new stx.Log().tag("stx.arw.test");
+  }
   public function new(){}
   static public function main(){
+    var f = Facade.unit();
+        //f.includes.push("stx.async");
+        f.includes.push("stx.arw.test");
+        f.includes.push("stx.arw");
+        
     utest.UTest.run(
       [
-        new FlatMapTest(),
-        //new ProceedTest(),
+        //new FlatMapTest(),
+        new ProceedTest(),
         //new TerminalTest(),
         //new AfterRewriteTest(),
         //new TestCascade(),
@@ -58,27 +67,10 @@ class TestProcess extends utest.Test{
     var all     = f.cascade(cascade);
     all.environment(
       __.accept(1),
-      __.log().sink(),
+      __.log().printer(),
       (x) -> {
         Rig.pass();
       }
     ).crunch();
-  }
-}
-class TestCascade extends utest.Test{
-  public function test_cascade(async:utest.Async){
-    var a = Cascade.fromArrowlet(
-      Arrowlet.Sync(
-        (x) -> x + 1
-      )
-    );
-    a.environment(
-      1,
-      (x) -> {
-        Rig.pass();
-        async.done();
-      },
-      __.crack
-    ).submit();
   }
 }
