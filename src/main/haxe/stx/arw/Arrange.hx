@@ -2,7 +2,7 @@ package stx.arw;
 
 typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
 @:using(stx.arw.Arrange.ArrangeLift)
-@:forward abstract Arrange<I,S,O,E>(ArrangeDef<I,S,O,E>) from ArrangeDef<I,S,O,E> to ArrangeDef<I,S,O,E>{
+@:provide abstract Arrange<I,S,O,E>(ArrangeDef<I,S,O,E>) from ArrangeDef<I,S,O,E> to ArrangeDef<I,S,O,E>{
   static public var _(default,never) = ArrangeLift;
 
   public function new(self) this = self;
@@ -138,9 +138,9 @@ class ArrangeLift{
   static public function errate<I,S,O,E,EE>(self:Arrange<I,S,O,E>,fn:E->EE):Arrange<I,S,O,EE>{
     return Arrange.lift(errata(self,(oc) -> oc.map(fn)));
   }
-  static public function process<I,S,O,Oi,E>(self:Arrange<I,S,O,E>,that:Process<O,Oi>):Arrange<I,S,Oi,E>{
+  static public function convert<I,S,O,Oi,E>(self:Arrange<I,S,O,E>,that:Convert<O,Oi>):Arrange<I,S,Oi,E>{
     return Arrange.lift(
-      Cascade._.process(self,that)     
+      Cascade._.convert(self,that)     
     );
   }
   static public function cover<I,S,O,E>(self:Arrange<I,S,O,E>,i:I):Cascade<S,O,E>{
@@ -177,7 +177,7 @@ class ArrangeLift{
       ))
     ));
     //$type(c);
-    var d = Arrange.lift(b.split(c).process((tp:Couple<Oi,O>) -> tp.swap()));
+    var d = Arrange.lift(b.split(c).convert((tp:Couple<Oi,O>) -> tp.swap()));
     //$type(d);
     return d;
   }

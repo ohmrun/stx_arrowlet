@@ -1,35 +1,35 @@
 package stx.arw;
 
-typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
+typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
-@:using(stx.arw.Proceed.ProceedLift)
+@:using(stx.arw.Produce.ProduceLift)
 @:using(stx.arw.Arrowlet.ArrowletLift)
-@:forward(then) abstract Proceed<O,E>(ProceedDef<O,E>) from ProceedDef<O,E> to ProceedDef<O,E>{
-  static public var _(default,never) = ProceedLift;
+@:provide(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
+  static public var _(default,never) = ProduceLift;
 
-  public function new(self:ProceedDef<O,E>) this = self;
+  public function new(self:ProduceDef<O,E>) this = self;
 
-  @:noUsing static public function lift<O,E>(self:ProceedDef<O,E>):Proceed<O,E> return new Proceed(self);
+  @:noUsing static public function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return new Produce(self);
 
-  @:from @:noUsing static public function fromFunXProceed<O,E>(self:Void->Proceed<O,E>):Proceed<O,E>{
+  @:from @:noUsing static public function fromFunXProduce<O,E>(self:Void->Produce<O,E>):Produce<O,E>{
     return lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self().prepare(cont)
     ));
   }
-  @:noUsing static public function fromErr<O,E>(e:Err<E>):Proceed<O,E>{
+  @:noUsing static public function fromErr<O,E>(e:Err<E>):Produce<O,E>{
     return lift(Arrowlet.pure(__.reject(e)));
   }
-  @:noUsing static public function pure<O,E>(v:O):Proceed<O,E>{
+  @:noUsing static public function pure<O,E>(v:O):Produce<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> __.accept(v)));
   }
-  @:from @:noUsing static public function fromRes<O,E>(res:Res<O,E>):Proceed<O,E>{
+  @:from @:noUsing static public function fromRes<O,E>(res:Res<O,E>):Produce<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> res));
   }
-  @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Proceed<O,E>{
+  @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Produce<O,E>{
     return lift(Arrowlet.fromFun1R((_:Noise) -> fn()));
   }
   #if stx_ext
-  @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Proceed<O,E>{
+  @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Produce<O,E>{
     return lift(
       Arrowlet.Anon(      
         (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
@@ -39,14 +39,14 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
     );
   }
   #end
-  @:noUsing static public function fromFunXR<O,E>(fn:Void->O):Proceed<O,E>{
+  @:noUsing static public function fromFunXR<O,E>(fn:Void->O):Produce<O,E>{
     return lift(
       Arrowlet.fromFun1R(
         (_:Noise) -> __.accept(fn())
       )
     );
   }
-  @:noUsing static public function fromArrowlet<O,E>(arw:Arrowlet<Noise,O,E>):Proceed<O,E>{
+  @:noUsing static public function fromArrowlet<O,E>(arw:Arrowlet<Noise,O,E>):Produce<O,E>{
     return lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) ->  {
         var defer = Future.trigger();
@@ -65,8 +65,8 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       })
     );
   }
-  static public function fromForward<O,E>(self:Forward<Res<O,E>>):Proceed<O,E>{
-    return Proceed.lift(Arrowlet.Anon(
+  static public function fromProvide<O,E>(self:Provide<Res<O,E>>):Produce<O,E>{
+    return Produce.lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self.prepare(cont)
     ));
   }
@@ -83,34 +83,34 @@ typedef ProceedDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
   @:to public function toArrowlet():Arrowlet<Noise,Res<O,E>,Noise>{
     return this;
   }
-  @:to public function toProvide():Provide<O,E>{
-    return Provide.lift(this.then((res:Res<O,E>) -> res.fold(Val,End)));
+  @:to public function toPropose():Propose<O,E>{
+    return Propose.lift(this.then((res:Res<O,E>) -> res.fold(Val,End)));
   }
-  private var self(get,never):Proceed<O,E>;
-  private function get_self():Proceed<O,E> return this;
+  private var self(get,never):Produce<O,E>;
+  private function get_self():Produce<O,E> return this;
 
 }
-class ProceedLift{
-  @:noUsing static private function lift<O,E>(self:ProceedDef<O,E>):Proceed<O,E> return Proceed.lift(self);
+class ProduceLift{
+  @:noUsing static private function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return Produce.lift(self);
   
-  static public function postfix<I,O,Z,E>(self:Proceed<O,E>,fn:O->Z):Proceed<Z,E>{
+  static public function postfix<I,O,Z,E>(self:Produce<O,E>,fn:O->Z):Produce<Z,E>{
     return lift(self.then(
       Arrowlet.fromFun1R(
         (oc:Res<O,E>) -> oc.map(fn)
       )
     ));
   }
-  static public function errata<O,E,EE>(self:Proceed<O,E>,fn:Err<E>->Err<EE>):Proceed<O,EE>{
+  static public function errata<O,E,EE>(self:Produce<O,E>,fn:Err<E>->Err<EE>):Produce<O,EE>{
     return lift(self.then(
       Arrowlet.fromFun1R(
         (oc:Res<O,E>) -> oc.errata(fn)
       )
     ));
   }
-  static public function errate<O,E,EE>(self:Proceed<O,E>,fn:E->EE):Proceed<O,EE>{
+  static public function errate<O,E,EE>(self:Produce<O,E>,fn:E->EE):Produce<O,EE>{
     return errata(self,(er) -> er.map(fn));
   }
-  static public function point<O,E>(self:Proceed<O,E>,success:O->Execute<E>):Execute<E>{
+  static public function point<O,E>(self:Produce<O,E>,success:O->Execute<E>):Execute<E>{
     return Execute.lift(
       Arrowlet.Anon(
         (_:Noise,cont:Terminal<Report<E>,Noise>) -> {
@@ -133,8 +133,8 @@ class ProceedLift{
       )
     );
   }
-  static public function crack<O,E>(self:Proceed<O,E>):Forward<O>{
-    return Forward.lift(
+  static public function crack<O,E>(self:Produce<O,E>):Provide<O>{
+    return Provide.lift(
       Arrowlet._.postfix(self,
         res -> res.fold(
           (ok)  -> ok,
@@ -144,22 +144,22 @@ class ProceedLift{
     );
   }
   @:deprecated
-  static public function report<O,E>(self:Proceed<O,E>):Forward<O>{
+  static public function report<O,E>(self:Produce<O,E>):Provide<O>{
     return crack(self);
   }
-  static public function process<O,Oi,E>(self:Proceed<O,E>,then:Process<O,Oi>):Proceed<Oi,E>{
+  static public function convert<O,Oi,E>(self:Produce<O,E>,then:Convert<O,Oi>):Produce<Oi,E>{
     return lift(Arrowlet.Then(self,then.toCascade()));
   }
-  static public function prepare<O,E>(self:Proceed<O,E>,cont:Terminal<Res<O,E>,Noise>):Work{
+  static public function prepare<O,E>(self:Produce<O,E>,cont:Terminal<Res<O,E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,cont);
   }
-  static public function control<O,E>(self:Proceed<O,E>,rec:Recover<O,E>):Forward<O>{
-    return Forward.lift(self.then(rec.toRectify()));
+  static public function control<O,E>(self:Produce<O,E>,rec:Recover<O,E>):Provide<O>{
+    return Provide.lift(self.then(rec.toRectify()));
   }
-  static public function attempt<O,Oi,E>(self:Proceed<O,E>,that:Attempt<O,Oi,E>):Proceed<Oi,E>{
+  static public function attempt<O,Oi,E>(self:Produce<O,E>,that:Attempt<O,Oi,E>):Produce<Oi,E>{
     return lift(self.then(that.toCascade()));
   }
-  static public function deliver<O,E>(self:Proceed<O,E>,fn:O->Void):Execute<E>{
+  static public function deliver<O,E>(self:Produce<O,E>,fn:O->Void):Execute<E>{
     return Execute.lift(self.then(
       Arrowlet.Sync(
         (res:Res<O,E>) -> res.fold(
@@ -172,18 +172,18 @@ class ProceedLift{
       )
     ));
   }
-  static public function reclaim<O,Oi,E>(self:Proceed<O,E>,next:Process<O,Proceed<Oi,E>>):Proceed<Oi,E>{
+  static public function reclaim<O,Oi,E>(self:Produce<O,E>,next:Convert<O,Produce<Oi,E>>):Produce<Oi,E>{
     return lift(
       self.then(
         next.toCascade()
       )).attempt(
         Attempt.lift(Arrowlet.Anon(
-          (prd:Proceed<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
+          (prd:Produce<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
             prd.prepare(cont)
         ))
       );
   }
-  static public function arrange<S,O,Oi,E>(self:Proceed<O,E>,next:Arrange<O,S,Oi,E>):Attempt<S,Oi,E>{
+  static public function arrange<S,O,Oi,E>(self:Produce<O,E>,next:Arrange<O,S,Oi,E>):Attempt<S,Oi,E>{
     return Attempt.lift(Arrowlet.Anon(
       (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
         var bound : FutureTrigger<Work> = Future.trigger();
@@ -201,7 +201,7 @@ class ProceedLift{
       })
     );
   }
-  static public function rearrange<S,O,Oi,E>(self:Proceed<O,E>,next:Arrange<Res<O,E>,S,Oi,E>):Attempt<S,Oi,E>{
+  static public function rearrange<S,O,Oi,E>(self:Produce<O,E>,next:Arrange<Res<O,E>,S,Oi,E>):Attempt<S,Oi,E>{
     return Attempt.lift(
       Arrowlet.Anon(
         (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
@@ -220,25 +220,25 @@ class ProceedLift{
       )
     );
   }
-  static public function cascade<O,Oi,E>(self:Proceed<O,E>,that:Cascade<O,Oi,E>):Proceed<Oi,E>{
+  static public function cascade<O,Oi,E>(self:Produce<O,E>,that:Cascade<O,Oi,E>):Produce<Oi,E>{
     return lift(self.then(that));
   }
-  static public function fudge<O,E>(self:Proceed<O,E>):O{
+  static public function fudge<O,E>(self:Produce<O,E>):O{
     return Arrowlet._.fudge(self,Noise).fudge();
   }
-  static public function flat_map<O,Oi,E>(self:Proceed<O,E>,that:O->Proceed<Oi,E>):Proceed<Oi,E>{
+  static public function flat_map<O,Oi,E>(self:Produce<O,E>,that:O->Produce<Oi,E>):Produce<Oi,E>{
     return lift(
       Arrowlet.FlatMap(
         self,
         (res:Res<O,E>) -> res.fold(
           (o) -> that(o),
-          (e) -> Proceed.fromRes(__.reject(e))
+          (e) -> Produce.fromRes(__.reject(e))
         )
       )
     );
   }
-  static public function then<O,Oi,E,EE>(self:Proceed<O,E>,that:Arrowlet<Res<O,E>,Oi,Noise>):Forward<Oi>{
-    return Forward.lift(Arrowlet.Then(
+  static public function then<O,Oi,E,EE>(self:Produce<O,E>,that:Arrowlet<Res<O,E>,Oi,Noise>):Provide<Oi>{
+    return Provide.lift(Arrowlet.Then(
       self,
       that
     ));

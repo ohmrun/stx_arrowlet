@@ -3,7 +3,7 @@ package stx.arw;
 typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
 
 @:using(stx.arw.Attempt.AttemptLift)
-@:forward abstract Attempt<I,O,E>(AttemptDef<I,O,E>) from AttemptDef<I,O,E> to AttemptDef<I,O,E>{
+@:provide abstract Attempt<I,O,E>(AttemptDef<I,O,E>) from AttemptDef<I,O,E> to AttemptDef<I,O,E>{
   static public var _(default,never) = AttemptLift;
   
   public function new(self) this = self;
@@ -40,20 +40,20 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       }
     ));
   }
-  @:from static public function fromFun1Proceed<Pi,O,E>(fn:Pi->Proceed<O,E>):Attempt<Pi,O,E>{
+  @:from static public function fromFun1Produce<Pi,O,E>(fn:Pi->Produce<O,E>):Attempt<Pi,O,E>{
     return lift(Arrowlet.Anon(
       (pI:Pi,cont:Terminal<Res<O,E>,Noise>) -> {
         return fn(pI).prepare(cont);
       }
     ));
   }
-  @:from static public function fromUnary1Proceed<Pi,O,E>(fn:Unary<Pi,Proceed<O,E>>):Attempt<Pi,O,E>{
-    return fromFun1Proceed(fn);
+  @:from static public function fromUnary1Produce<Pi,O,E>(fn:Unary<Pi,Produce<O,E>>):Attempt<Pi,O,E>{
+    return fromFun1Produce(fn);
   }
-  @:from static public function fromFun1Forward<Pi,O,E>(fn:Pi->Forward<O>):Attempt<Pi,O,E>{
+  @:from static public function fromFun1Provide<Pi,O,E>(fn:Pi->Provide<O>):Attempt<Pi,O,E>{
     return lift(Arrowlet.Anon(
       (pI:Pi,cont:Terminal<Res<O,E>,Noise>) -> {
-        return Proceed.lift(fn(pI).process(__.accept)).prepare(cont);
+        return Produce.lift(fn(pI).convert(__.accept)).prepare(cont);
       }
     ));
   }
@@ -101,14 +101,14 @@ class AttemptLift{
   static public function resolve<I,O,E>(self:Attempt<I,O,E>,next:Resolve<O,E>):Attempt<I,O,E>{
     return lift(self.then(next.toCascade()));
   }
-  static public function reclaim<I,O,Oi,E>(self:Attempt<I,O,E>,next:Process<O,Proceed<Oi,E>>):Attempt<I,Oi,E>{
+  static public function reclaim<I,O,Oi,E>(self:Attempt<I,O,E>,next:Convert<O,Produce<Oi,E>>):Attempt<I,Oi,E>{
     return lift(
       then(
         self,
         next.toCascade()
       ).attempt(
         lift(Arrowlet.Anon(
-          (prd:Proceed<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
+          (prd:Produce<Oi,E>,cont:Terminal<Res<Oi,E>,Noise>) ->
             prd.prepare(cont)
         ))
       )
@@ -117,7 +117,7 @@ class AttemptLift{
   static public function recover<I,O,E>(self:Attempt<I,O,E>,next:Recover<O,E>):Attempt<I,O,E>{
     return lift(self.then(next.toCascade()));
   }
-  static public function process<I,O,Oi,E>(self:Attempt<I,O,E>,next:Process<O,Oi>):Attempt<I,Oi,E>{
+  static public function convert<I,O,Oi,E>(self:Attempt<I,O,E>,next:Convert<O,Oi>):Attempt<I,Oi,E>{
     return then(self,next.toCascade());
   }
   static public function errata<I,O,E,EE>(self:Attempt<I,O,E>,fn:Err<E>->Err<EE>):Attempt<I,O,EE>{
@@ -135,14 +135,14 @@ class AttemptLift{
   static public function broach<I,O,E>(self:Attempt<I,O,E>):Attempt<I,Couple<I,O>,E>{
     return Attempt.lift(
       Arrowlet.Anon(
-        (ipt:I,cont:Terminal<Res<Couple<I,O>,E>,Noise>) -> self.process(
+        (ipt:I,cont:Terminal<Res<Couple<I,O>,E>,Noise>) -> self.convert(
           (o:O) -> __.couple(ipt,o)
         ).prepare(ipt,cont)
       )
     );
   }
-  static public function forward<I,O,E>(self:Attempt<I,O,E>,i:I):Proceed<O,E>{
-    return Proceed.lift(
+  static public function provide<I,O,E>(self:Attempt<I,O,E>,i:I):Produce<O,E>{
+    return Produce.lift(
       Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
    );
   }  
@@ -181,7 +181,7 @@ class AttemptLift{
         self,
         Arrowlet.Anon(
           (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
-            o -> that.proceed(Proceed.pure(o)).prepare(cont),
+            o -> that.produce(Produce.pure(o)).prepare(cont),
             e -> cont.value(__.reject(e)).serve()
           )
         )
@@ -194,7 +194,7 @@ class AttemptLift{
         self,
         Arrowlet.Anon(
           (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
-            o -> that.proceed(Proceed.pure(o)).prepare(o,cont),
+            o -> that.produce(Produce.pure(o)).prepare(o,cont),
             e -> cont.value(__.reject(e)).serve()
           )
         )

@@ -4,7 +4,7 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
 @:using(stx.arw.Reframe.ReframeLift)
 @:using(stx.arw.Arrowlet.ArrowletLift)
-@:forward abstract Reframe<I,O,E>(ReframeDef<I,O,E>) from ReframeDef<I,O,E> to ReframeDef<I,O,E>{
+@:provide abstract Reframe<I,O,E>(ReframeDef<I,O,E>) from ReframeDef<I,O,E> to ReframeDef<I,O,E>{
   static public var _(default,never) = ReframeLift;
 
   public function new(self) this = self;
@@ -47,8 +47,8 @@ class ReframeLift{
       )
     ):Res<Couple<Oi,I>,E>);
     var arw =  lift(
-      Arrowlet._.postfix(self.toCascade().process(
-        Process.lift(that.toArrowlet().first())
+      Arrowlet._.postfix(self.toCascade().convert(
+        Convert.lift(that.toArrowlet().first())
       ),fn)
     );
     return arw;
@@ -105,7 +105,7 @@ class ReframeLift{
       )
     );
   }
-  //static public function process<I,O,Oi,E>(self:Reframe<I,O,E>,that:Process<O,Oi>):Reframe<I,O,E>{
+  //static public function convert<I,O,Oi,E>(self:Reframe<I,O,E>,that:Convert<O,Oi>):Reframe<I,O,E>{
     //return self.
  // }
   static public function arrange<I,O,Oi,E>(self:Reframe<I,O,E>,that:Arrange<O,I,Oi,E>):Reframe<I,Oi,E>{
@@ -204,7 +204,7 @@ class ReframeLift{
   }
   
   //static public function modify<I,Oi,Oii,E>(self:Reframe<I,Oi,E>,fn:Oi->)
-  static public function process<I,O,Oi,E>(self:Reframe<I,O,E>,fn:Process<O,Oi>):Reframe<I,Oi,E>{
+  static public function convert<I,O,Oi,E>(self:Reframe<I,O,E>,fn:Convert<O,Oi>):Reframe<I,Oi,E>{
     return lift(self.cascade(
       fn.first().toCascade()
     ));

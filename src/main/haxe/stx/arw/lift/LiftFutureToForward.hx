@@ -1,8 +1,8 @@
 package stx.arw.lift;
 
-class LiftFutureToForward{
-  static public function toForward<T>(fut:TinkFuture<T>):Forward<T>{
-    return Forward.fromFunXFuture(
+class LiftFutureToProvide{
+  static public function toProvide<T>(fut:TinkFuture<T>):Provide<T>{
+    return Provide.fromFunXFuture(
       () -> fut
     );
   }

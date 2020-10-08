@@ -41,7 +41,7 @@ typedef ArrowletDef<P,O,E>       = {
   public function asArrowletDef():ArrowletDef<P,O,E>;
 }
 @:using(stx.arw.Arrowlet.ArrowletLift)
-@:forward(applyII,asArrowletDef)
+@:provide(applyII,asArrowletDef)
 abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
   
   private function new(self:ArrowletDef<I,O,E>) this  = self;

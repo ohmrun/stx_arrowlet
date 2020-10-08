@@ -11,7 +11,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
 
   @:noUsing static public function bind_fold<T,E>(fn:T->Report<E>->Execute<E>,arr:Array<T>):Execute<E>{
     return arr.lfold(
-      (next:T,memo:Execute<E>) -> Execute.lift(Forward._.flat_map(
+      (next:T,memo:Execute<E>) -> Execute.lift(Provide._.flat_map(
         memo,
         (report) -> lift(fn(next,report))
       )),
@@ -31,7 +31,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
       unit()
     );
   }
-  @:to public function toForward():Forward<Report<E>>{
+  @:to public function toProvide():Provide<Report<E>>{
     return this;
   }
   public function toArrowlet():Arrowlet<Noise,Report<E>,Noise>{
@@ -88,8 +88,8 @@ class ExecuteLift{
   static public function report<E>(self:Execute<E>):Thread{
     return deliver(self,__.report);
   }
-  static public function then<E,O>(self:Execute<E>,that:Arrowlet<Report<E>,O,Noise>):Forward<O>{
-    return Forward.lift(Arrowlet.Then(
+  static public function then<E,O>(self:Execute<E>,that:Arrowlet<Report<E>,O,Noise>):Provide<O>{
+    return Provide.lift(Arrowlet.Then(
       self,
       that
     ));
@@ -105,8 +105,8 @@ class ExecuteLift{
       )
     ));
   }
-  static public function proceed<E,O>(self:Execute<E>,next:Proceed<O,E>):Proceed<O,E>{
-    return Proceed.lift(
+  static public function produce<E,O>(self:Execute<E>,next:Produce<O,E>):Produce<O,E>{
+    return Produce.lift(
       Arrowlet.Then(
         self,
         Arrowlet.Anon(
@@ -118,8 +118,8 @@ class ExecuteLift{
       )
     );
   }
-  static public function provide<E,O>(self:Execute<E>,next:Provide<O,E>):Provide<O,E>{
-    return Provide.lift(
+  static public function propose<E,O>(self:Execute<E>,next:Propose<O,E>):Propose<O,E>{
+    return Propose.lift(
       Arrowlet.Then(
         self,
         Arrowlet.Anon(

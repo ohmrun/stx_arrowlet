@@ -1,8 +1,8 @@
 package stx.arw.lift;
 
-class LiftProceedOfOptionIRToProvide{
-  static public function toProceed<O,E>(self:Proceed<Option<O>,E>):Provide<O,E>{
-    return Provide.lift(self.toArrowlet().postfix(
+class LiftProduceOfOptionIRToPropose{
+  static public function toProduce<O,E>(self:Produce<Option<O>,E>):Propose<O,E>{
+    return Propose.lift(self.toArrowlet().postfix(
       (res -> res.fold(
         opt -> opt.fold(Val,()->Tap),
         (e) -> End(e)

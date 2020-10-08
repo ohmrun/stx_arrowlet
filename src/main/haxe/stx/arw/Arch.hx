@@ -16,7 +16,7 @@ class Arch{
   }
 
   //shortcuts
-  static public function process(){
+  static public function convert(){
     return value().value();
   }
   static public function attempt(){
@@ -31,10 +31,10 @@ class Arch{
   static public function resolve(){
     return make().error();
   }
-  static public function forward(){
+  static public function provide(){
     return make().close().value();
   }
-  static public function proceed(){
+  static public function produce(){
     return make().close();
   }
 }
@@ -65,7 +65,7 @@ class ArchChunk<O,E> extends Clazz{
 class ArchClose<O,E>{
   public function new(){}
   public function get(self:Void->Res<O,E>){
-    return Proceed.lift(Arrowlet.Sync((_:Noise) -> self()));
+    return Produce.lift(Arrowlet.Sync((_:Noise) -> self()));
   }
   public function value(){
     return new ArchCloseValue();
@@ -79,14 +79,14 @@ class ArchClose<O,E>{
 }
 class ArchCloseDefer<O,E>{
   public function new(){}
-  public function get(self:Proceed<O,E>){
+  public function get(self:Produce<O,E>){
     return self;
   }
   public function cont(self:(Res<O,E>->Void)->Void){
-    return Proceed.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
+    return Produce.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
   }
   public function future(self:Future<Res<O,E>>){
-    return Proceed.lift(Arrowlet.Fun1Future((_:Noise) -> self));
+    return Produce.lift(Arrowlet.Fun1Future((_:Noise) -> self));
   }
 }
 class ArchCloseError<E>{
@@ -104,7 +104,7 @@ class ArchCloseError<E>{
 class ArchCloseValue<O,E>{
   public function new(){}
   public function get(self:Void->O){
-    return Forward.lift(Arrowlet.Sync((_:Noise) -> self));
+    return Provide.lift(Arrowlet.Sync((_:Noise) -> self));
   }
   public function defer(){
     return new ArchCloseValueDefer();
@@ -112,14 +112,14 @@ class ArchCloseValue<O,E>{
 }
 class ArchCloseValueDefer<O>{
   public function new(){}
-  public function get(self:Forward<O>){
+  public function get(self:Provide<O>){
     return self;
   }
   public function cont(self:(O->Void)->Void){
-    return Forward.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
+    return Provide.lift(Arrowlet.fromFunSink((_:Noise,cont) -> self(cont)));
   }
   public function future(self:Future<O>){
-    return Forward.lift(Arrowlet.Fun1Future((_:Noise)->self));
+    return Provide.lift(Arrowlet.Fun1Future((_:Noise)->self));
   }
 }
 class ArchLeave<I,O,E>{
@@ -247,8 +247,8 @@ class ArchValueErrorDefer<I,O,E>{
 }
 class ArchValueValue<I,O,E>{
   public function new(){}
-  public function get(self:I->O):Process<I,O>{
-    return Process.fromFun1R(self);
+  public function get(self:I->O):Convert<I,O>{
+    return Convert.fromFun1R(self);
   }
   public function defer(){
     return new ArchValueValueDefer();
@@ -256,14 +256,14 @@ class ArchValueValue<I,O,E>{
 }
 class ArchValueValueDefer<I,O,E>{
   public function new(){}
-  public function get(self:Process<I,O>){
+  public function get(self:Convert<I,O>){
     return self;
   }
   public function cont(fn:I->(O->Void)->Void){
-    return Process.lift(Arrowlet.fromFunSink(fn));
+    return Convert.lift(Arrowlet.fromFunSink(fn));
   }
   public function future(fn:I->Future<O>){
-    return Process.lift(Arrowlet.Fun1Future(fn));
+    return Convert.lift(Arrowlet.Fun1Future(fn));
   }
 }
 class ArchTest{

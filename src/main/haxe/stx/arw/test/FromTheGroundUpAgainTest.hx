@@ -133,7 +133,7 @@ class FromTheGroundUpAgainTest extends utest.Test{
     //var b = __.arw().fn(i -> i +1).bound(__.arw().fn(__.through()));
   }
   //@Ignored
-  // public function test_process(){
+  // public function test_convert(){
   //   var proc  = Cascade.fromArrowlet(arw());
   //   proc.prepare(__.accept(1),(x)-> trace(x)).crunch();
   // }

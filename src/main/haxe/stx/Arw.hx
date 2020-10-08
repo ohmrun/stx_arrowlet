@@ -46,8 +46,8 @@ typedef LiftHandlerToArrowlet                 = stx.arw.lift.LiftHandlerToArrowl
 typedef LiftThunkToArrowlet                   = stx.arw.lift.LiftThunkToArrowlet;
 typedef LiftToLeftChoice                      = stx.arw.lift.LiftToLeftChoice;
 typedef LiftToRightChoice                     = stx.arw.lift.LiftToRightChoice;
-typedef LiftFutureToForward                   = stx.arw.lift.LiftFutureToForward;
-typedef LiftFun1RToProcess                    = stx.arw.lift.LiftFun1RToProcess;
+typedef LiftFutureToProvide                   = stx.arw.lift.LiftFutureToProvide;
+typedef LiftFun1RToConvert                    = stx.arw.lift.LiftFun1RToConvert;
 typedef ArrowletLift                          = stx.arw.Arrowlet.ArrowletLift;
 
 typedef Thread                                = stx.arw.arrowlet.term.Thread;
@@ -62,8 +62,8 @@ typedef Cascade<I,O,E>                        = stx.arw.Cascade<I,O,E>;
   Noise<
         \_____ Err<E>____
 **/
-typedef ProceedDef<O,E>                       = stx.arw.Proceed.ProceedDef<O,E>;
-typedef Proceed<O,E>                          = stx.arw.Proceed<O,E>;
+typedef ProduceDef<O,E>                       = stx.arw.Produce.ProduceDef<O,E>;
+typedef Produce<O,E>                          = stx.arw.Produce<O,E>;
 
 typedef CommandDef<I,E>                       = stx.arw.Command.CommandDef<I,E>;
 typedef Command<I,E>                          = stx.arw.Command<I,E>;
@@ -77,17 +77,17 @@ typedef Resolve<I,E>                          = stx.arw.Resolve<I,E>;
 typedef RecoverDef<I,E>                       = stx.arw.Recover.RecoverDef<I,E>;
 typedef Recover<I,E>                          = stx.arw.Recover<I,E>;
 
-typedef ProcessDef<I,O>                       = stx.arw.Process.ProcessDef<I,O>;
-typedef Process<I,O>                          = stx.arw.Process<I,O>;
+typedef ConvertDef<I,O>                       = stx.arw.Convert.ConvertDef<I,O>;
+typedef Convert<I,O>                          = stx.arw.Convert<I,O>;
 
-typedef ForwardDef<O>                         = stx.arw.Forward.ForwardDef<O>;
-typedef Forward<O>                            = stx.arw.Forward<O>;
+typedef ProvideDef<O>                         = stx.arw.Provide.ProvideDef<O>;
+typedef Provide<O>                            = stx.arw.Provide<O>;
 
 typedef ExecuteDef<E>                         = stx.arw.Execute.ExecuteDef<E>;
 typedef Execute<E>                            = stx.arw.Execute<E>;
 
-typedef ProvideDef<O,E>                       = stx.arw.Provide.ProvideDef<O,E>;
-typedef Provide<O,E>                          = stx.arw.Provide<O,E>;
+typedef ProposeDef<O,E>                       = stx.arw.Propose.ProposeDef<O,E>;
+typedef Propose<O,E>                          = stx.arw.Propose<O,E>;
 
 typedef AttemptDef<I,O,E>                     = stx.arw.Attempt.AttemptDef<I,O,E>;
 typedef Attempt<I,O,E>                        = stx.arw.Attempt<I,O,E>;
@@ -101,8 +101,8 @@ typedef Arrange<I,S,O,E>                      = stx.arw.Arrange<I,S,O,E>;
 typedef PerformDef                            = stx.arw.Perform.PerformDef;
 typedef Perform                               = stx.arw.Perform;
 
-typedef ExudateDef<I,O,E>                     = stx.arw.Exudate.ExudateDef<I,O,E>;
-typedef Exudate<I,O,E>                        = stx.arw.Exudate<I,O,E>;
+//typedef ExudateDef<I,O,E>                     = stx.arw.Exudate.ExudateDef<I,O,E>;
+//typedef Exudate<I,O,E>                        = stx.arw.Exudate<I,O,E>;
 
 #if (test=="stx_arw")
   typedef Test                                = stx.arw.Test;
@@ -137,10 +137,10 @@ class LiftAttemptFunctionToAttempt{
     return Attempt.fromFun1Res(fn);
   }
 }
-typedef LiftThunkToProceed                = stx.arw.lift.LiftThunkToProceed;
-typedef LiftFun1ProceedToAttempt          = stx.arw.lift.LiftFun1ProceedToAttempt;
+typedef LiftThunkToProduce                = stx.arw.lift.LiftThunkToProduce;
+typedef LiftFun1ProduceToAttempt          = stx.arw.lift.LiftFun1ProduceToAttempt;
 typedef LiftFun1ResToCascade              = stx.arw.lift.LiftFun1ResToCascade;
 typedef LiftFun1AttemptToArrange          = stx.arw.lift.LiftFun1AttemptToArrange;
-typedef LiftProceedOfOptionIRToProvide    = stx.arw.lift.LiftProceedOfOptionIRToProvide;
+typedef LiftProduceOfOptionIRToPropose    = stx.arw.lift.LiftProduceOfOptionIRToPropose;
 
 typedef Arch                              = stx.arw.Arch;

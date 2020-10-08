@@ -2,7 +2,7 @@ package stx.arw;
         
 typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
 
-@:forward abstract Recover<I,E>(RecoverDef<I,E>) from RecoverDef<I,E> to RecoverDef<I,E>{
+@:provide abstract Recover<I,E>(RecoverDef<I,E>) from RecoverDef<I,E> to RecoverDef<I,E>{
   public function new(self) this = self;
   @:noUsing static public function lift<I,E>(self:RecoverDef<I,E>) return new Recover(self);
 

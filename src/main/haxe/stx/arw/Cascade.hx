@@ -3,7 +3,7 @@ package stx.arw;
 typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 
 @:using(stx.arw.Cascade.CascadeLift)
-@:forward abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
+@:provide abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
 	static public var _(default, never) = CascadeLift;
 
 	public function new(self)
@@ -71,11 +71,11 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 		}, typical_fail_handler(cont))));
 	}
 
-	@:noUsing static public function fromProceed<O, E>(arw:Arrowlet<Noise, Res<O, E>, Noise>):Cascade<Noise, O, E> {
+	@:noUsing static public function fromProduce<O, E>(arw:Arrowlet<Noise, Res<O, E>, Noise>):Cascade<Noise, O, E> {
 		return lift(Arrowlet.Anon((i:Res<Noise, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((_) -> arw.prepare(_, cont), typical_fail_handler(cont))));
 	}
 
-	@:from @:noUsing static public function fromFun1Proceed<I, O, E>(arw:I->Proceed<O, E>):Cascade<I, O, E> {
+	@:from @:noUsing static public function fromFun1Produce<I, O, E>(arw:I->Produce<O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i) -> arw(i).prepare(cont), typical_fail_handler(cont))));
 	}
 
@@ -94,8 +94,8 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	public function prefix<Ii>(fn:Ii->I):Cascade<Ii, O, E> {
 		return _.prefix(this, fn);
   }
-  public function process<Oi>(that:Process<O, Oi>):Cascade<I, Oi, E> {
-		return _.process(this, that);
+  public function convert<Oi>(that:Convert<O, Oi>):Cascade<I, Oi, E> {
+		return _.convert(this, that);
   }
   public function broach():Cascade<I, Couple<I,O>,E>{ 
     return _.broach(this);
@@ -151,12 +151,12 @@ class CascadeLift {
 		return cascade(self, that.toCascade());
 	}
 
-	static public function process<I, O, Oi, E>(self:Cascade<I, O, E>, that:Process<O, Oi>):Cascade<I, Oi, E> {
+	static public function convert<I, O, Oi, E>(self:Cascade<I, O, E>, that:Convert<O, Oi>):Cascade<I, Oi, E> {
 		return cascade(self, that.toCascade());
 	}
 
 	static public function postfix<I, O, Oi, E>(self:Cascade<I, O, E>, fn:O->Oi):Cascade<I, Oi, E> {
-		return process(self, Process.fromFun1R(fn));
+		return convert(self, Convert.fromFun1R(fn));
 	}
 
 	static public function prefix<I, Ii, O, E>(self:Cascade<I, O, E>, fn:Ii->I):Cascade<Ii, O, E> {
@@ -171,13 +171,13 @@ class CascadeLift {
 		return Arrowlet._.environment(self, __.accept(i), (res) -> res.fold(success, failure), (err) -> throw err);
 	}
 
-	static public function forward<I, O, E>(self:Cascade<I, O, E>, i:I):Proceed<O, E> {
-		return Proceed.lift(Arrowlet.Anon((_:Noise, cont) -> self.prepare(__.accept(i), cont)));
+	static public function provide<I, O, E>(self:Cascade<I, O, E>, i:I):Produce<O, E> {
+		return Produce.lift(Arrowlet.Anon((_:Noise, cont) -> self.prepare(__.accept(i), cont)));
 	}
 
-	static public function reclaim<I, O, Oi, E>(self:Cascade<I, O, E>, that:Process<O, Proceed<Oi, E>>):Cascade<I, Oi, E> {
+	static public function reclaim<I, O, Oi, E>(self:Cascade<I, O, E>, that:Convert<O, Produce<Oi, E>>):Cascade<I, Oi, E> {
 		return lift(cascade(self,
-			that.toCascade()).attempt(Attempt.lift(Arrowlet.Anon((prd:Proceed<Oi, E>, cont:Terminal<Res<Oi, E>, Noise>) -> prd.prepare(cont)))));
+			that.toCascade()).attempt(Attempt.lift(Arrowlet.Anon((prd:Produce<Oi, E>, cont:Terminal<Res<Oi, E>, Noise>) -> prd.prepare(cont)))));
 	}
 
 	static public function arrange<I, O, Oi, E>(self:Cascade<I, O, E>, then:Arrange<O, I, Oi, E>):Cascade<I, Oi, E> {
@@ -225,7 +225,7 @@ class CascadeLift {
         self,
         Arrowlet.Anon(
           (ipt:Res<O,E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
-            o -> that.proceed(Proceed.pure(o)).prepare(o,cont),
+            o -> that.produce(Produce.pure(o)).prepare(o,cont),
             e -> cont.value(__.reject(e)).serve()
           )
         )

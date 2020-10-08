@@ -20,18 +20,18 @@ class Test{
     utest.UTest.run(
       [
         //new FlatMapTest(),
-        new ProceedTest(),
+        new ProduceTest(),
         //new TerminalTest(),
         //new AfterRewriteTest(),
         //new TestCascade(),
-        //new TestProcess()
+        //new TestConvert()
       ]//.last().toArray();
     );
   }
 }
-class TestProcess extends utest.Test{
+class TestConvert extends utest.Test{
   function proc(){
-    return Process.lift(
+    return Convert.lift(
       Arrowlet.Sync(
         (x) -> {
           trace(x);

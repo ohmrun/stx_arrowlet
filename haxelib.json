@@ -4,7 +4,7 @@
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
-    "version": "0.10.4",
+    "version": "1.0.0",
     "releasenote": "Cascade.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
@@ -15,8 +15,8 @@
         "stx_nano": "0.1.5",
         
         "stx_assert": "0.1.0",
-        "stx_async": "1.0.1",
-        "stx_log": "0,1,4",
+        "stx_async": "1.0.1"    ,
+        "stx_log": "0.1.    4",
         
         "stx_ext": ""
     },

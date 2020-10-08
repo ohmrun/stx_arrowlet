@@ -1,6 +1,6 @@
 ## What Is It For?
 
-This library is designed to abstract over Thread and Event programming, provide a natural, unobtrusive
+This library is designed to abstract over Thread and Event programming, propose a natural, unobtrusive
 and consistent interface, and is based on a theoretically sound scheduler framework.
 
 ## How does it work
@@ -64,20 +64,20 @@ constructor should be to hand.
   Arch.defer()//Default on the input and output being Res so is Cascade<I,O,E>
   Arch.leave().value()//leave says you've specified Res as the input and need to specify the output. Rectify(Res<I,E> -> O)
 
-  Arch.close()//no input, gives you constructors for Proceed, Forward and Execute.
-      //Proceed(Void -> Res<O,E>)
+  Arch.close()//no input, gives you constructors for Produce, Provide and Execute.
+      //Produce(Void -> Res<O,E>)
     Arch.close();
-      //Forward(Void -> O)
+      //Provide(Void -> O)
     Arch.close().value();
       //Execute(Void-> Option<Err<E>>)
     Arch.close().error();
 
-  Arch.value();//value input, gives you constructors from Attempt, Command and Process
+  Arch.value();//value input, gives you constructors from Attempt, Command and Convert
       //Attempt(I -> Res<O,E>)
     Arch.value();
       //Command(I -> Option<Err<E>>)
     Arch.value().error()
-      //Process(I->O)
+      //Convert(I->O)
     Arch.value().value()
 
   //Defer gives you `cont` and `future` functions that help simplify integration. Any integrations you need just pop me a message.
@@ -85,7 +85,7 @@ constructor should be to hand.
 
 Terminal is responsible internally for passing control flow along, and you don't normally need to expose the internals unless you're writing combinators.
 
-As the `applyII` or `prepare` functions return `Work` to be done, if you're inside an async function, you need to pass the work forward of any arrowlets you are calling internally in the correct order.
+As the `applyII` or `prepare` functions return `Work` to be done, if you're inside an async function, you need to pass the work provide of any arrowlets you are calling internally in the correct order.
 
 Between `Terminal` and `Work`, there is an intermediate type responsible for the handling of the arrowlet return value, called `Receiver`.
 

@@ -4,7 +4,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
 
 @:using(stx.arw.Arrowlet.ArrowletLift)
 @:using(stx.arw.Command.CommandLift)
-@:forward abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
+@:provide abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
   static public var _(default,never) = CommandLift;
   public function new(self){
     this = self;
@@ -92,7 +92,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   public function errata<EE>(fn:Err<E>->Err<EE>){
     return self.postfix((report) -> report.errata(fn));
   }
-  public function forward(i:I):Execute<E>{
+  public function provide(i:I):Execute<E>{
     return Execute.lift(
       Arrowlet.Anon((_:Noise,cont:Terminal<Report<E>,Noise>) -> this.prepare(i,cont))
     );
@@ -101,14 +101,14 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   private function get_self():Command<I,E> return this;
 } 
 class CommandLift{
-  static public function proceed<I,O,E>(command:Command<I,E>,proceed:Proceed<O,E>):Attempt<I,O,E>{
+  static public function produce<I,O,E>(command:Command<I,E>,produce:Produce<O,E>):Attempt<I,O,E>{
     return Attempt.lift(
       Arrowlet.Then(
         command.toArrowlet(),
         Arrowlet.Anon(
           (ipt:Report<E>,cont:Terminal<Res<O,E>,Noise>) -> ipt.fold(
             e   -> cont.value(__.reject(e)).serve(),
-            () -> proceed.prepare(cont)
+            () -> produce.prepare(cont)
           )
         )
       )

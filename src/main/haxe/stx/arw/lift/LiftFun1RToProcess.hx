@@ -1,7 +1,7 @@
 package stx.arw.lift;
 
-class LiftFun1RToProcess{
-  static public function toProcess<P,R>(fn:P->R):Process<P,R>{
-    return Process.fromFun1R(fn);
+class LiftFun1RToConvert{
+  static public function toConvert<P,R>(fn:P->R):Convert<P,R>{
+    return Convert.fromFun1R(fn);
   }
 }
