@@ -128,3 +128,5 @@ In order to defer a value, use `defer`
   return cont.defer(ft).serve();
  }
 ```
+
+![arrowlet schematics](https://raw.githubusercontent.com/ohmrun/stx_arw/master/Arrowlets.jpg)
