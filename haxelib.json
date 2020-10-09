@@ -4,7 +4,7 @@
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "releasenote": "Cascade.unit()",
     "contributors": ["0b1kn00b"],
     "dependencies": {
