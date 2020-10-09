@@ -18,7 +18,7 @@
         "stx_async": "1.0.1",
         "stx_log": "0.1.4",
         
-        "stx_ext": ""
+        "stx_ext": "0.1.0"
     },
     "classPath": "src/main/haxe"
 }
