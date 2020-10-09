@@ -1,3 +1,12 @@
+# [](/compare/v1.2.0...v) (2020-10-09)
+
+
+### Features
+
+* Diffuse = Chunk<I,E> -> Chunk<O,E> f47ac67
+
+
+
 # [](/compare/v1.0.0...v) (2020-10-09)
 
 
