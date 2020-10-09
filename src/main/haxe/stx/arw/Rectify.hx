@@ -2,7 +2,7 @@ package stx.arw;
 
 typedef RectifyDef<I,O,E>               = ArrowletDef<Res<I,E>,O,Noise>;
 
-@:provide abstract Rectify<I,O,E>(RectifyDef<I,O,E>) from RectifyDef<I,O,E> to RectifyDef<I,O,E>{
+@:forward abstract Rectify<I,O,E>(RectifyDef<I,O,E>) from RectifyDef<I,O,E> to RectifyDef<I,O,E>{
   public function new(self){
     this = self;
   }

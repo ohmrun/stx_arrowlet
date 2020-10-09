@@ -2,7 +2,7 @@ package stx.arw;
 
 typedef StateDef<S,A> = ArrowletA<S,Couple<A,S>>;
 
-@:provide @:callable abstract State<S,A>(StateDef<S,A>) from StateDef<S,A> to StateDef<S,A>{
+@:forward @:callable abstract State<S,A>(StateDef<S,A>) from StateDef<S,A> to StateDef<S,A>{
   public function new(self:StateDef<S,A>){
     this = self;
   }

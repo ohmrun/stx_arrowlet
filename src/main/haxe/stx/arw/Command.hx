@@ -4,7 +4,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
 
 @:using(stx.arw.Arrowlet.ArrowletLift)
 @:using(stx.arw.Command.CommandLift)
-@:provide abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
+@:forward abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
   static public var _(default,never) = CommandLift;
   public function new(self){
     this = self;

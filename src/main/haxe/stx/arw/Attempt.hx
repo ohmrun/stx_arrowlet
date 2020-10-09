@@ -3,7 +3,7 @@ package stx.arw;
 typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
 
 @:using(stx.arw.Attempt.AttemptLift)
-@:provide abstract Attempt<I,O,E>(AttemptDef<I,O,E>) from AttemptDef<I,O,E> to AttemptDef<I,O,E>{
+@:forward abstract Attempt<I,O,E>(AttemptDef<I,O,E>) from AttemptDef<I,O,E> to AttemptDef<I,O,E>{
   static public var _(default,never) = AttemptLift;
   
   public function new(self) this = self;

@@ -3,7 +3,7 @@ package stx.arw.arrowlet.term;
 typedef ApplyDef<I,O,E>                       = ArrowletDef<Couple<Arrowlet<I,O,E>,I>,O,E>;
 
 @:allow(stx.arw)
-@:provide abstract Apply<I,O,E>(ApplyDef<I,O,E>) from ApplyDef<I,O,E> to ApplyDef<I,O,E>{
+@:forward abstract Apply<I,O,E>(ApplyDef<I,O,E>) from ApplyDef<I,O,E> to ApplyDef<I,O,E>{
   static public inline function _() return Constructor.ZERO;
 
   @:deprecated

@@ -4,7 +4,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
 @:using(stx.arw.Produce.ProduceLift)
 @:using(stx.arw.Arrowlet.ArrowletLift)
-@:provide(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
+@:forward(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
   static public var _(default,never) = ProduceLift;
 
   public function new(self:ProduceDef<O,E>) this = self;

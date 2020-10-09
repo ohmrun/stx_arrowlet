@@ -3,7 +3,7 @@ package stx.arw;
 typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 
 @:using(stx.arw.Cascade.CascadeLift)
-@:provide abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
+@:forward abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
 	static public var _(default, never) = CascadeLift;
 
 	public function new(self)
