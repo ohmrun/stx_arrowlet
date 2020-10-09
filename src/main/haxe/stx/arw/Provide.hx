@@ -18,6 +18,15 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   @:noUsing static public function pure<O>(v:O):Provide<O>{
     return lift(Arrowlet.pure(v));
   }
+  @:noUsing static public function fromFuture<O>(future:Future<O>):Provide<O>{
+    return lift(
+      Arrowlet.Anon(
+        (_:Noise,cont:Terminal<O,Noise>) -> {
+          return cont.defer(Slot.Guard(future.map(__.success))).serve();
+        }
+      )
+    );
+  }
   @:from static public function fromFunXR<O>(fn:Void->O):Provide<O>{
     return lift(
       Arrowlet.Anon(
@@ -45,16 +54,6 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       )
     );
   }
-  public function environment(handler:O->Void):Thread{
-    return Arrowlet._.environment(
-      this,
-      Noise,
-      (o) -> {
-        handler(o);
-      },
-      (e) -> throw(e)
-    );
-  }
   static public function bind_fold<T,O>(fn:Convert<Couple<T,O>,O>,arr:Array<T>,seed:O):Provide<O>{
     return arr.lfold(
       (next:T,memo:Provide<O>) -> {
@@ -76,6 +75,16 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
 }
 
 class ProvideLift{
+  static public function environment<O>(self:Provide<O>,handler:O->Void):Thread{
+    return Arrowlet._.environment(
+      self,
+      Noise,
+      (o) -> {
+        handler(o);
+      },
+      (e) -> throw(e)
+    );
+  }
   static public function flat_map<O,Oi>(self:Provide<O>,fn:O->ProvideDef<Oi>):Provide<Oi>{
     return Provide.lift(Arrowlet.FlatMap(self.toArrowlet(),fn));
   }
