@@ -1,3 +1,17 @@
+# [](/compare/v1.0.0...v) (2020-10-09)
+
+
+### Bug Fixes
+
+* stx_ext version 47639cb
+
+
+### Features
+
+* Provide.environment now Provide._.environment, Provide.fromFuture 335e269
+
+
+
 # [](/compare/v0.10.4...v) (2020-10-06)
 
 
