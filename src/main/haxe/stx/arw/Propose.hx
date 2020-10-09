@@ -96,15 +96,15 @@ class ProposeLift{
       )
     ));
   }
-  /*
-  static public function exudate<O,Oi,E>(self:Propose<O,E>,next:Exudate<O,Oi,E>):Propose<Oi,E>{
+
+  static public function diffuse<O,Oi,E>(self:Propose<O,E>,next:Exudate<O,Oi,E>):Propose<Oi,E>{
     return Propose.lift(
       Arrowlet.Then(
         self,
         next.toArrowlet()
       )
     );
-  }*/
+  }
   static public function or<O,E>(self:Propose<O,E>,or:Void->Propose<O,E>):Propose<O,E>{
     return Propose.lift(
       Arrowlet.Then(

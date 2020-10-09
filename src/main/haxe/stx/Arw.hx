@@ -101,8 +101,8 @@ typedef Arrange<I,S,O,E>                      = stx.arw.Arrange<I,S,O,E>;
 typedef PerformDef                            = stx.arw.Perform.PerformDef;
 typedef Perform                               = stx.arw.Perform;
 
-//typedef ExudateDef<I,O,E>                     = stx.arw.Exudate.ExudateDef<I,O,E>;
-//typedef Exudate<I,O,E>                        = stx.arw.Exudate<I,O,E>;
+typedef DiffuseDef<I,O,E>                     = stx.arw.Diffuse.DiffuseDef<I,O,E>;
+typedef Diffuse<I,O,E>                        = stx.arw.Diffuse<I,O,E>;
 
 #if (test=="stx_arw")
   typedef Test                                = stx.arw.Test;

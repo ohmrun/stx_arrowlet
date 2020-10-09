@@ -8,8 +8,8 @@
 
 ### Features
 
+* bump to v1.1.0 ac47932
 * Provide.environment now Provide._.environment, Provide.fromFuture 335e269
-
 
 
 # [](/compare/v0.10.4...v) (2020-10-06)
