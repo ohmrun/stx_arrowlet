@@ -97,8 +97,8 @@ class ProposeLift{
     ));
   }
 
-  static public function diffuse<O,Oi,E>(self:Propose<O,E>,next:Exudate<O,Oi,E>):Propose<Oi,E>{
-    return Diffuse.lift(
+  static public function diffuse<O,Oi,E>(self:Propose<O,E>,next:Diffuse<O,Oi,E>):Propose<Oi,E>{
+    return Propose.lift(
       Arrowlet.Then(
         self,
         next.toArrowlet()

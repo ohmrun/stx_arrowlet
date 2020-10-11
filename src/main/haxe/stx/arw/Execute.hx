@@ -85,8 +85,13 @@ class ExecuteLift{
       )
     );
   }
-  static public function report<E>(self:Execute<E>):Thread{
-    return deliver(self,__.report);
+  static public function crack<E>(self:Execute<E>):Thread{
+    return deliver(self,
+      (report) -> report.fold(
+        __.crack,
+        () -> {}
+      )
+    );
   }
   static public function then<E,O>(self:Execute<E>,that:Arrowlet<Report<E>,O,Noise>):Provide<O>{
     return Provide.lift(Arrowlet.Then(

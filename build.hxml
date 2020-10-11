@@ -10,7 +10,7 @@
 -lib stx_nano
 -lib stx_fn
 -lib stx_ext
--lib stx_assert
+-lib stx_assert:0.1.1
 -lib stx_async
 -lib stx_log:0.1.4
 

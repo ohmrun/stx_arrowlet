@@ -12,7 +12,7 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
 		this.func = func;
 	}
   override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
-		__.log()("FlatMap.apply");
+		__.log().tag("stx.arw.test")("FlatMap.apply");
 		var defer 									= Future.trigger();
 		var future_response_trigger = Future.trigger();
 

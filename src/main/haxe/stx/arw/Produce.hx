@@ -143,10 +143,6 @@ class ProduceLift{
       )
     );
   }
-  @:deprecated
-  static public function report<O,E>(self:Produce<O,E>):Provide<O>{
-    return crack(self);
-  }
   static public function convert<O,Oi,E>(self:Produce<O,E>,then:Convert<O,Oi>):Produce<Oi,E>{
     return lift(Arrowlet.Then(self,then.toCascade()));
   }

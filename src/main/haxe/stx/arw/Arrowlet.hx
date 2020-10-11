@@ -26,8 +26,7 @@ interface ArrowletApi<P,O,E>{
 class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E>{
 	public function new(){}
 	public function applyII(p:P,t:Terminal<O,E>):Work{
-		var output = doApplyII(p,t);
-		return output;
+		return doApplyII(p,t);
 	}
 	private function doApplyII(p:P,t:Terminal<O,E>):Work{
     return throw __.fault().err(E_AbstractMethod);
@@ -225,7 +224,7 @@ class ArrowletLift{
     );
   }
 
-  static public function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
+  static public inline function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
     //__.assert().exists(self);
     return self.applyII(i,cont); 
   }
