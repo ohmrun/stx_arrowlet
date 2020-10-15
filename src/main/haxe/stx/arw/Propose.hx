@@ -120,7 +120,7 @@ class ProposeLift{
     );
   }
   //static public function def<O,E>(self:Propose<O,E>,or:)
-  static public function prepare<O,E>(self:Propose<O,E>,cont:Terminal<Chunk<O,E>,Noise>):Work{
+  static public inline function prepare<O,E>(self:Propose<O,E>,cont:Terminal<Chunk<O,E>,Noise>):Work{
     return Arrowlet._.prepare(
       Arrowlet.lift(self),
       Noise,

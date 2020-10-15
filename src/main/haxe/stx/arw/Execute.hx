@@ -71,6 +71,13 @@ class ExecuteLift{
       Arrowlet.Sync((report:Report<E>) -> report.errata(fn))
     ));
   }
+  static public function errate<E,EE>(self:Execute<E>,fn:E->EE):Execute<EE>{
+    return Execute.lift(self.toArrowlet().then(
+      Arrowlet.Sync((report:Report<E>) -> report.errata(
+        (e:Err<E>) -> e.map(fn)
+      ))
+    ));
+  }
   static public function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,term);
   }
