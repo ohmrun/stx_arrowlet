@@ -22,7 +22,15 @@ package stx.arw.arrowlet.term;
       scheduler
     );
   }
+  public function prj():ArrowletDef<Noise,Noise,Noise>{
+    return this;
+  }
 }
 class ThreadLift{
-  
+  static public function then<O>(self:Thread,that:Provide<O>):Provide<O>{
+    return Provide.lift(Arrowlet.Then(
+      self.prj(),
+      that
+    ));
+  }
 }
