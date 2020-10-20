@@ -1,10 +1,7 @@
 package stx;
 
 class Arw{
-  static public function log(wildcard:Wildcard):Log{
-    return new stx.Log().tag("stx.arw");
-  }
-  static public function Fun<I,O,E>(fn:I->O):Arrowlet<I,O,E>{
+  @:noUsing static public function Fun<I,O,E>(fn:I->O):Arrowlet<I,O,E>{
     return Arrowlet.Sync(fn);
   }
 }
