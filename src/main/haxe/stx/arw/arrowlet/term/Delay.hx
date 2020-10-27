@@ -10,7 +10,7 @@ class Delay<I,E> extends ArrowletBase<I,I,E>{
     super();
     this.milliseconds = milliseconds;
   }
-  override private function doApplyII(i:I,cont:Terminal<I,E>):Work{
+  override public function applyII(i:I,cont:Terminal<I,E>):Work{
     var ft = TinkFuture.trigger();
     //trace('here:$milliseconds');
     Timer.delay(

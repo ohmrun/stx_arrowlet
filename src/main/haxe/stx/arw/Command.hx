@@ -41,7 +41,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
             defer.trigger(__.success(value));
           }
         );
-        return cont.defer(Slot.Guard(defer)).after(self.prepare(i,inner));
+        return cont.defer(defer).after(self.prepare(i,inner));
       })
     );
   }

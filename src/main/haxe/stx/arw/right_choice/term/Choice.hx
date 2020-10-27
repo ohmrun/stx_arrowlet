@@ -6,7 +6,7 @@ class Choice<I,O,E> extends ArrowletBase<Either<I,I>,Either<I,O>,E>{
     super();
     this.delegate = delegate;
   }
-	override private function doApplyII(i:Either<I,I>,cont:Terminal<Either<I,O>,E>):Work{
+	override public function applyII(i:Either<I,I>,cont:Terminal<Either<I,O>,E>):Work{
     return switch (i) {
       case Right(v) 	:
         Arrowlet.Apply().postfix(

@@ -8,7 +8,7 @@ class Inform<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
+  override public function applyII(i:I,cont:Terminal<Oii,E>):Work{
     return lhs.flat_map(
       (oI) -> Arrowlet.Anon(
         (_:I,contI:Terminal<Oii,E>) -> rhs.flat_map(

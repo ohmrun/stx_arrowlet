@@ -6,7 +6,7 @@ class Base<Ii,O,Iii,E> extends ArrowletBase<Either<Iii,Ii>,Either<Iii,O>,E>{
     super();
     this.delegate = delegate;
   }
-	override private function doApplyII(i:Either<Iii,Ii>,cont:Terminal<Either<Iii,O>,E>):Work{
+	override public function applyII(i:Either<Iii,Ii>,cont:Terminal<Either<Iii,O>,E>):Work{
     return switch (i) {
       case Right(v) 	: Arrowlet.Apply().then(Right).prepare(__.couple(delegate,v),cont);
       case Left(v) 		: cont.value(Left(v)).serve();

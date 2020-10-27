@@ -13,9 +13,9 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletBase<Couple<Ii,Iii>,Couple<Oi,Oii>,E
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override private function doApplyII(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
+	override public function applyII(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
 		var future 		= Future.trigger();
-		var defer 		= cont.defer(future.toSlot());
+		var defer 		= cont.defer(future);
 		var l_val			= None;
 		var r_val			= None;
 

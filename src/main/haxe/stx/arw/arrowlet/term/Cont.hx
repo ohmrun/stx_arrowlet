@@ -7,7 +7,7 @@ class Cont<I,O,E> extends ArrowletBase<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override private function doApplyII(i:I,cont:Terminal<O,E>):Work{
+  override public function applyII(i:I,cont:Terminal<O,E>):Work{
     var defer = Future.trigger();
     var work  = Work.unit();
     delegate(

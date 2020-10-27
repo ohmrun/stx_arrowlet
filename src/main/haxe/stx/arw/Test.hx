@@ -20,13 +20,18 @@ class Test{
     utest.UTest.run(
       [
         //new FlatMapTest(),
-        new ProduceTest(),
+        //new ProduceTest(),
         //new TerminalTest(),
         //new AfterRewriteTest(),
         //new TestCascade(),
         //new TestConvert()
       ]//.last().toArray();
     );
+  }
+}
+class TestOptimisedThen extends utest.Test{
+  public function test(){
+
   }
 }
 class TestConvert extends utest.Test{

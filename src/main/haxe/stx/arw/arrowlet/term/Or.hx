@@ -9,7 +9,7 @@ class Or<Ii,Iii,O,E> extends ArrowletBase<Either<Ii,Iii>,O,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override private function doApplyII(i:Either<Ii,Iii>,cont:Terminal<O,E>):Work{
+  override public function applyII(i:Either<Ii,Iii>,cont:Terminal<O,E>):Work{
     return i.fold(
       (iI)  -> lhs.prepare(iI,cont),
       (iII) -> rhs.prepare(iII,cont)

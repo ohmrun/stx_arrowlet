@@ -33,7 +33,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
     return lift(
       Arrowlet.Anon(      
         (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
-          return cont.defer(pl.map(Success).toSlot()).serve();
+          return cont.defer(pl.map(Success)).serve();
         }
       )
     );

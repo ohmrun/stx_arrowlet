@@ -20,19 +20,17 @@ import stx.arw.arrowlet.term.Inform;
 
 interface ArrowletApi<P,O,E>{
 	public function applyII(p:P,t:Terminal<O,E>):Work;
-	private function doApplyII(p:P,t:Terminal<O,E>):Work;
   public function asArrowletDef():ArrowletDef<P,O,E>;
 }
-class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E>{
+abstract class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E>{
 	public function new(){}
-	public function applyII(p:P,t:Terminal<O,E>):Work{
-		return doApplyII(p,t);
-	}
-	private function doApplyII(p:P,t:Terminal<O,E>):Work{
-    return throw __.fault().err(E_AbstractMethod);
-  }
+	abstract public function applyII(p:P,t:Terminal<O,E>):Work;
+	
   public function asArrowletDef():ArrowletDef<P,O,E>{
     return this;
+  }
+  public function toString(){
+    return std.Type.getClassName(__.definition(this)).split(".").last().defv('');
   }
 }
 typedef ArrowletDef<P,O,E>       = {
@@ -108,7 +106,7 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
       Arrowlet.Anon(
         (i:I,term:Terminal<O,E>) -> {
           return term.defer(
-            Slot.fromFunSinkVoid(fn.bind(i)).map(Success)
+            TinkFuture.irreversible(fn.bind(i)).map(Success)
           ).serve();
         }
       )
@@ -242,7 +240,7 @@ class ArrowletLift{
               }
             );
         return 
-          cont.defer(defer.toSlot())
+          cont.defer(defer)
               .after(self.prepare(i,inner));
       }
     );

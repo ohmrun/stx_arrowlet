@@ -1,7 +1,6 @@
 package stx.arw;
 
 typedef ProvideDef<O> = ConvertDef<Noise,O>;
-
 @:using(stx.arw.Provide.ProvideLift)
 abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   static public var _(default,never) = ProvideLift;
@@ -22,7 +21,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
     return lift(
       Arrowlet.Anon(
         (_:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.defer(Slot.Guard(future.map(__.success))).serve();
+          return cont.defer(future.map(__.success)).serve();
         }
       )
     );
@@ -40,7 +39,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.defer(fn.toSlot().map(Success)).serve();
+          return cont.defer(fn().map(Success)).serve();
         }
       )
     );
@@ -117,5 +116,13 @@ class ProvideLift{
   }
   static public function attempt<O,Oi,E>(self:Provide<O>,that:Attempt<O,Oi,E>):Produce<Oi,E>{
     return toProduce(self).attempt(that);
+  }
+  static public function postfix<O,Oi>(self:Provide<O>,fn:O->Oi):Provide<Oi>{
+    return Provide.lift(
+      Arrowlet.Then(
+        self,
+        Arrowlet.Sync(fn)
+      )
+    );
   }
 }

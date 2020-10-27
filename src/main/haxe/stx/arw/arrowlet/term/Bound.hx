@@ -8,7 +8,7 @@ class Bound<I,Oi,Oii,E> extends ArrowletBase<I,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override private function doApplyII(i:I,cont:Terminal<Oii,E>):Work{
+  override public function applyII(i:I,cont:Terminal<Oii,E>):Work{
     return new FlatMap(
       lhs,
       (oI) -> Arrowlet.pure(__.couple(i,oI)).then(rhs)
