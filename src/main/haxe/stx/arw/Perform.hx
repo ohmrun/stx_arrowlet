@@ -3,7 +3,7 @@ package stx.arw;
 typedef PerformDef = ArrowletDef<Noise,Noise,Noise>;
 
 abstract Perform(PerformDef) from PerformDef to PerformDef{
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   static public function lift(self:PerformDef):Perform return new Perform(self);
   
   

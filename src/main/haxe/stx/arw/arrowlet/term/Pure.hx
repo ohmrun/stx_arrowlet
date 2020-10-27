@@ -2,6 +2,10 @@ package stx.arw.arrowlet.term;
 
 class Pure<I,O,E> extends stx.async.task.term.Pure<O,E> implements ArrowletApi<I,O,E>{
 
+  public inline function apply(i:I):O{ 
+    return this.result;
+  };
+  
   public inline function applyII(i:I,cont:Terminal<O,E>):Work{
     return cont.lense(this).serve();
   }

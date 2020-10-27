@@ -8,7 +8,7 @@ typedef ConvertDef<I,O> = ArrowletDef<I,O,Noise>;
 @:using(stx.arw.Convert.ConvertLift)
 abstract Convert<I,O>(ConvertDef<I,O>) from ConvertDef<I,O> to ConvertDef<I,O>{
   static public var _(default,never) = ConvertLift;
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   @:noUsing static public function lift<I,O>(self:ConvertDef<I,O>):Convert<I,O> return new Convert(self);
   @:noUsing static public function unit<I>():Convert<I,I> return lift(Arrowlet.Sync((i:I)->i));
 
@@ -117,7 +117,7 @@ class ConvertLift{
       )
     );
   }
-  static public function prepare<I,O>(self:Convert<I,O>,ipt:I,cont:Terminal<O,Noise>):Work{
+  static public inline function prepare<I,O>(self:Convert<I,O>,ipt:I,cont:Terminal<O,Noise>):Work{
     return Arrowlet._.prepare(self.toArrowlet(),ipt,cont);
   }
 }

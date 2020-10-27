@@ -18,39 +18,44 @@ import stx.arw.arrowlet.term.Pure;
 import stx.arw.arrowlet.term.FlatMap;
 import stx.arw.arrowlet.term.Inform;
 
-interface ArrowletApi<P,O,E>{
+interface ArrowletApi<P,O,E> extends ApplyApi<P,O,E>{
 	public function applyII(p:P,t:Terminal<O,E>):Work;
   public function asArrowletDef():ArrowletDef<P,O,E>;
 }
-abstract class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E>{
-	public function new(){}
-	abstract public function applyII(p:P,t:Terminal<O,E>):Work;
-	
-  public function asArrowletDef():ArrowletDef<P,O,E>{
-    return this;
+abstract class ArrowletBase<P,O,E> implements ArrowletApi<P,O,E> extends ApplyCls<P,O,E>{
+	public function new(){
+    super();
+    this.status = Applied;
   }
-  public function toString(){
+	abstract public function applyII(p:P,t:Terminal<O,E>):Work;
+  
+  override public function apply(v:P):O{
+    throw 'do not use this like this';
+    return null;
+  }
+  public function asArrowletDef():ArrowletDef<P,O,E> return this;
+  
+  override public function toString(){
     return std.Type.getClassName(__.definition(this)).split(".").last().defv('');
   }
 }
-typedef ArrowletDef<P,O,E>       = {
+typedef ArrowletDef<P,O,E>       = ApplyDef<P,O,E> & {
   public function applyII(p:P,t:Terminal<O,E>):Work;
   public function asArrowletDef():ArrowletDef<P,O,E>;
 }
 @:using(stx.arw.Arrowlet.ArrowletLift)
-@:forward(applyII,asArrowletDef)
-abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
+@:forward abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
   
-  private function new(self:ArrowletDef<I,O,E>) this  = self;
+  private inline function new(self:ArrowletDef<I,O,E>) this  = self;
   static public var _(default,never) = ArrowletLift;
 
-  @:noUsing static public function lift<I,O,E>(self:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
+  @:noUsing static public inline function lift<I,O,E>(self:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
     return new Arrowlet(self);
   }
   static public function unit<I,E>():Arrowlet<I,I,E>{
     return lift(new Sync((i:I) -> i).asArrowletDef());
   }
-  @:noUsing static public function pure<I,O,E>(o:O):Arrowlet<I,O,E>{
+  @:noUsing static public inline function pure<I,O,E>(o:O):Arrowlet<I,O,E>{
     return lift(new Pure(o));
   }
   #if stx_log
@@ -66,42 +71,42 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
     ));
   }
   #end
-  @:noUsing static public function Sync<I,O,E>(self:I->O):Arrowlet<I,O,E>{
+  @:noUsing static public inline function Sync<I,O,E>(self:I->O):Arrowlet<I,O,E>{
     return lift(new Sync(self));
   }
-  @:noUsing static public function Then<I,Oi,Oii,E>(self:ArrowletDef<I,Oi,E>,that:ArrowletDef<Oi,Oii,E>):Arrowlet<I,Oii,E>{
+  @:noUsing static public inline function Then<I,Oi,Oii,E>(self:ArrowletDef<I,Oi,E>,that:ArrowletDef<Oi,Oii,E>):Arrowlet<I,Oii,E>{
     return new Then(self,that);
   }
-  @:noUsing static public function Anon<I,O,E>(fn:I->Terminal<O,E>->Work):Arrowlet<I,O,E>{
+  @:noUsing static public inline function Anon<I,O,E>(fn:I->Terminal<O,E>->Work):Arrowlet<I,O,E>{
     return lift(new stx.arw.arrowlet.term.Anon(fn));
   }
-  @:noUsing static public function Apply<I,O,E>():Arrowlet<Couple<Arrowlet<I,O,E>,I>,O,E>{
-    return lift(new Apply());
+  @:noUsing static public inline function Applier<I,O,E>():Arrowlet<Couple<Arrowlet<I,O,E>,I>,O,E>{
+    return lift(new Applier());
   }
-  @:noUsing static public function FlatMap<I,Oi,Oii,E>(self : Arrowlet<I,Oi,E>,func : Oi -> Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
+  @:noUsing static public inline function FlatMap<I,Oi,Oii,E>(self : Arrowlet<I,Oi,E>,func : Oi -> Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{
     return lift(new FlatMap(self,func));
   }
-  @:noUsing static public function Delay<I,E>(milliseconds:Int):Arrowlet<I,I,E>{
+  @:noUsing static public inline function Delay<I,E>(milliseconds:Int):Arrowlet<I,I,E>{
     return new stx.arw.arrowlet.term.Delay(milliseconds);
   }
 
 
-  @:noUsing static public function Fun1Future<I,O,E>(self:I->TinkFuture<O>):Arrowlet<I,O,E>{
+  @:noUsing static public inline function Fun1Future<I,O,E>(self:I->TinkFuture<O>):Arrowlet<I,O,E>{
     return lift(new Fun1Future(self));
   }
-  @:noUsing static public function Future<O,E>(ft:TinkFuture<O>):Arrowlet<Noise,O,E>{
+  @:noUsing static public inline function Future<O,E>(ft:TinkFuture<O>):Arrowlet<Noise,O,E>{
     return lift(new Future(ft));
   }
-  @:from @:noUsing static public function fromFunXR<O>(f:Void->O):Arrowlet<Noise,O,Dynamic>{
+  @:from @:noUsing static public inline function fromFunXR<O,E>(f:Void->O):Arrowlet<Noise,O,E>{
     return lift(new Sync((_:Noise)->f()));
   }
-  @:from @:noUsing static public function fromFun1R<I,O,E>(f:I->O):Arrowlet<I,O,E>{
+  @:from @:noUsing static public inline function fromFun1R<I,O,E>(f:I->O):Arrowlet<I,O,E>{
     return lift(new Sync(f));
   }
-  @:from @:noUsing static public function fromFun2R<Pi,Pii,R,E>(f:Pi->Pii->R):Arrowlet<Couple<Pi,Pii>,R,E>{
+  @:from @:noUsing static public inline function fromFun2R<Pi,Pii,R,E>(f:Pi->Pii->R):Arrowlet<Couple<Pi,Pii>,R,E>{
     return lift(new Sync(__.decouple(f)));
   }
-  @:from @:noUsing static public function fromFunSink<I,O,E>(fn:I->(O->Void)->Void):Arrowlet<I,O,E>{
+  @:from @:noUsing static public inline function fromFunSink<I,O,E>(fn:I->(O->Void)->Void):Arrowlet<I,O,E>{
     return lift(
       Arrowlet.Anon(
         (i:I,term:Terminal<O,E>) -> {
@@ -122,7 +127,7 @@ class ArrowletLift{
   static public function unto<I,O,E>(t:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
     return lift(t.asArrowletDef());
   }
-  static private function lift<I,O,E>(def:Arrowlet<I,O,E>):Arrowlet<I,O,E>{
+  static private inline function lift<I,O,E>(def:Arrowlet<I,O,E>):Arrowlet<I,O,E>{
     return Arrowlet.lift(def);
   }
   static public function inject<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,v:Oii):Arrowlet<I,Oii,E>{

@@ -7,9 +7,9 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 @:forward(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
   static public var _(default,never) = ProduceLift;
 
-  public function new(self:ProduceDef<O,E>) this = self;
+  public inline function new(self:ProduceDef<O,E>) this = self;
 
-  @:noUsing static public function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return new Produce(self);
+  @:noUsing static public inline function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return new Produce(self);
 
   @:from @:noUsing static public function fromFunXProduce<O,E>(self:Void->Produce<O,E>):Produce<O,E>{
     return lift(Arrowlet.Anon(
@@ -146,7 +146,7 @@ class ProduceLift{
   static public function convert<O,Oi,E>(self:Produce<O,E>,then:Convert<O,Oi>):Produce<Oi,E>{
     return lift(Arrowlet.Then(self,then.toCascade()));
   }
-  static public function prepare<O,E>(self:Produce<O,E>,cont:Terminal<Res<O,E>,Noise>):Work{
+  static public inline function prepare<O,E>(self:Produce<O,E>,cont:Terminal<Res<O,E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,cont);
   }
   static public function control<O,E>(self:Produce<O,E>,rec:Recover<O,E>):Provide<O>{

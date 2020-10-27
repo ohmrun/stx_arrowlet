@@ -4,7 +4,7 @@ typedef HaulageDef<I,O,Oi,E> = ArrowletDef<Res<Couple<O,I>,E>,Res<Couple<Oi,I>,E
 
 abstract Haulage<I,O,Oi,E>(HaulageDef<I,O,Oi,E>) from HaulageDef<I,O,Oi,E> to HaulageDef<I,O,Oi,E>{
   static public var _(default,never) = HaulageLift;
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   static public function lift<I,O,Oi,E>(self:HaulageDef<I,O,Oi,E>):Haulage<I,O,Oi,E> return new Haulage(self);
   
 

@@ -8,13 +8,17 @@ class Arw{
 //typedef Terminal<R,E>                         = stx.arw.Terminal<R,E>;
 //typedef Work                                  = stx.arw.Work;
 
+typedef ApplyApi<I,O,E>                         = stx.arw.Apply.ApplyApi<I,O,E>;
+typedef ApplyDef<I,O,E>                         = stx.arw.Apply.ApplyDef<I,O,E>;
+typedef ApplyCls<I,O,E>                         = stx.arw.Apply.ApplyCls<I,O,E>;
+
 typedef ArrowletDef<I,O,E>                      = stx.arw.Arrowlet.ArrowletDef<I,O,E>;
 typedef ArrowletApi<I,O,E>                      = stx.arw.Arrowlet.ArrowletApi<I,O,E>;
 typedef ArrowletBase<I,O,E>                     = stx.arw.Arrowlet.ArrowletBase<I,O,E>;
 typedef Arrowlet<I,O,E>                         = stx.arw.Arrowlet<I,O,E>;
 
-typedef ApplyDef<I,O,E>                         = stx.arw.arrowlet.term.Apply.ApplyDef<I,O,E>;
-typedef Apply<I,O,E>                            = stx.arw.arrowlet.term.Apply<I,O,E>;
+typedef ApplierDef<I,O,E>                         = stx.arw.arrowlet.term.Applier.Applier<I,O,E>;
+typedef Applier<I,O,E>                            = stx.arw.arrowlet.term.Applier<I,O,E>;
 
 //typedef RightChoice<B,C,D>                    = ArrowletA<Either<D,B>,Either<D,C>>
 //typedef ActionDef                             = Arrowlet<Noise,Noise>;

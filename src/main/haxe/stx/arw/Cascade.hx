@@ -106,7 +106,7 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 }
 
 class CascadeLift {
-	static public function prepare<I, O, E>(self:Cascade<I, O, E>, i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) {
+	static public inline function prepare<I, O, E>(self:Cascade<I, O, E>, i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) {
 		return Arrowlet._.prepare(self, i, cont);
 	}
 

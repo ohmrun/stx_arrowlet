@@ -5,7 +5,7 @@ typedef DiffuseDef<I,O,E> = ArrowletDef<Chunk<I,E>,Chunk<O,E>,Noise>;
 @:using(stx.arw.Diffuse.DiffuseDef)
 abstract Diffuse<I,O,E>(DiffuseDef<I,O,E>) from DiffuseDef<I,O,E> to DiffuseDef<I,O,E>{
   static public var _(default,never) = DiffuseLift;
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   static public function lift<I,O,E>(self:DiffuseDef<I,O,E>):Diffuse<I,O,E> return new Diffuse(self);
 
   

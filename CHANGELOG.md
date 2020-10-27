@@ -1,12 +1,15 @@
-* 	 caff0dc 2020-10-20  (HEAD -> master) ignore test.hxml
+* 	 ef210e3 2020-10-27  (HEAD -> master) bump 1.4.0
+* 	 412c014 2020-10-27  removed doApplyII and made class abstract
+* 	 d237944 2020-10-20  (github/master) changelog inception
+* 	 caff0dc 2020-10-20  ignore test.hxml
 * 	 6e1050e 2020-10-20  package logger by default
 * 	 1db3d08 2020-10-20  `Thread.provide`
 * 	 ad5d5f7 2020-10-20  Arw.Fun @:noUsing
 * 	 cb6bde9 2020-10-20  moved build.hxml to test.hxml because it's changing too often
 * 	 5205daa 2020-10-15  feat: Execute.errate
-* 	 0f423f2 2020-10-11  (tag: v1.3.0, github/master) refactor: removed report in favour of crack, and fixed it, plus a couple fixes
+* 	 0f423f2 2020-10-11  (tag: v1.3.0) refactor: removed report in favour of crack, and fixed it, plus a couple fixes
 * 	 f703ef0 2020-10-09  (tag: v1.2.1) fix: typo
-* 	 9cfa527 2020-10-09  doc: CHANGELOG.md
+* 	 9cfa527 2020-10-09  doc: CHgitANGELOG.md
 * 	 f47ac67 2020-10-09  feat: Diffuse = Chunk<I,E> -> Chunk<O,E>
 * 	 1579052 2020-10-09  feat: bump to v1.1.0
 * 	 8116d9e 2020-10-09  doc: CHANGELOG.md

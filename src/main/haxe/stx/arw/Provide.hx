@@ -4,20 +4,20 @@ typedef ProvideDef<O> = ConvertDef<Noise,O>;
 @:using(stx.arw.Provide.ProvideLift)
 abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   static public var _(default,never) = ProvideLift;
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   static public function lift<O>(self:ProvideDef<O>):Provide<O> return new Provide(self);
 
-  @:from static public function fromFunTerminalWork<O>(fn:Terminal<O,Noise>->Work):Provide<O>{
+  @:from static public inline function fromFunTerminalWork<O>(fn:Terminal<O,Noise>->Work):Provide<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> fn(cont)
       )
     );
   }
-  @:noUsing static public function pure<O>(v:O):Provide<O>{
+  @:noUsing static public inline function pure<O>(v:O):Provide<O>{
     return lift(Arrowlet.pure(v));
   }
-  @:noUsing static public function fromFuture<O>(future:Future<O>):Provide<O>{
+  @:noUsing static public inline function fromFuture<O>(future:Future<O>):Provide<O>{
     return lift(
       Arrowlet.Anon(
         (_:Noise,cont:Terminal<O,Noise>) -> {
@@ -26,7 +26,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       )
     );
   }
-  @:from static public function fromFunXR<O>(fn:Void->O):Provide<O>{
+  @:from static public inline function fromFunXR<O>(fn:Void->O):Provide<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
@@ -35,7 +35,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       )
     );
   }
-  @:from static public function fromFunXFuture<O>(fn:Void->Future<O>):Provide<O>{
+  @:from static public inline function fromFunXFuture<O>(fn:Void->Future<O>):Provide<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
@@ -44,7 +44,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       )
     );
   }
-  @:from static public function fromFunFuture<O>(ft:Future<O>):Provide<O>{
+  @:from static public inline function fromFunFuture<O>(ft:Future<O>):Provide<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
@@ -53,7 +53,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       )
     );
   }
-  static public function bind_fold<T,O>(fn:Convert<Couple<T,O>,O>,arr:Array<T>,seed:O):Provide<O>{
+  static public inline function bind_fold<T,O>(fn:Convert<Couple<T,O>,O>,arr:Array<T>,seed:O):Provide<O>{
     return arr.lfold(
       (next:T,memo:Provide<O>) -> {
         return memo.convert(
@@ -101,7 +101,7 @@ class ProvideLift{
       that
     ));
   }
-  static public function prepare<O>(self:ProvideDef<O>,cont:Terminal<O,Noise>):Work{
+  static public inline function prepare<O>(self:ProvideDef<O>,cont:Terminal<O,Noise>):Work{
     return Arrowlet._.prepare(self,Noise,cont);
   }
   static public inline function fudge<O>(self:Provide<O>):O{

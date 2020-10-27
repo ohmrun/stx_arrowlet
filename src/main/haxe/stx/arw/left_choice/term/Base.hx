@@ -8,7 +8,7 @@ class Base<Ii,Iii,O,E> extends ArrowletBase<Either<Ii,Iii>,Either<O,Iii>,E>{
 	}
 	override public function applyII(either:Either<Ii,Iii>,cont:Terminal<Either<O,Iii>,E>):Work{
 		return switch (either) {
-			case Left(v) 	: Arrowlet.Apply().then(Left).prepare(__.couple(delegate,v),cont);
+			case Left(v) 	: Arrowlet.Applier().then(Left).prepare(__.couple(delegate,v),cont);
 			case Right(v) : 
 				cont.value(Right(v)).serve();
 		}

@@ -5,7 +5,7 @@ typedef ProposeDef<O,E> = ArrowletDef<Noise,Chunk<O,E>,Noise>;
 @:using(stx.arw.Propose.ProposeLift)
 abstract Propose<O,E>(ProposeDef<O,E>) from ProposeDef<O,E> to ProposeDef<O,E>{
   static public var _(default,never) = ProposeLift;
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   @:noUsing static public function lift<O,E>(self:ProposeDef<O,E>):Propose<O,E> return new Propose(self);
     
   @:noUsing static public function fromChunk<O,E>(chunk:Chunk<O,E>):Propose<O,E>{

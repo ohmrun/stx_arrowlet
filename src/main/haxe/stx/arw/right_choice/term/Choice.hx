@@ -9,7 +9,7 @@ class Choice<I,O,E> extends ArrowletBase<Either<I,I>,Either<I,O>,E>{
 	override public function applyII(i:Either<I,I>,cont:Terminal<Either<I,O>,E>):Work{
     return switch (i) {
       case Right(v) 	:
-        Arrowlet.Apply().postfix(
+        Arrowlet.Applier().postfix(
           (either:Either<O,I>) -> either.flip()
         ).prepare(__.couple(delegate,v),cont);
       case Left(v) 		:

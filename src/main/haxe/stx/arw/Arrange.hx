@@ -5,7 +5,7 @@ typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
 @:forward abstract Arrange<I,S,O,E>(ArrangeDef<I,S,O,E>) from ArrangeDef<I,S,O,E> to ArrangeDef<I,S,O,E>{
   static public var _(default,never) = ArrangeLift;
 
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   @:noUsing static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         
     return new Arrange(self);
 
@@ -89,7 +89,7 @@ typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
      );
    }
    //success:O->Void,failure:Err<E>->Void
-   public function prepare(i:Couple<I,S>,cont:Terminal<Res<O,E>, Noise>):Work{
+   public inline function prepare(i:Couple<I,S>,cont:Terminal<Res<O,E>, Noise>):Work{
      return Cascade._.prepare(
        this,
        __.accept(i),

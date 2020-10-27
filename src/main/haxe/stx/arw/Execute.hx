@@ -4,7 +4,7 @@ typedef ExecuteDef<E>                   = ArrowletDef<Noise,Report<E>,Noise>;
 
 @:using(stx.arw.Execute.ExecuteLift)
 abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   @:noUsing static public function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
   @:noUsing static public function pure<E>(e:Err<E>):Execute<E> return lift(Arrowlet.pure(Report.pure(e)));
   @:noUsing static public function unit<E>():Execute<E> return lift(Arrowlet.pure(Report.unit()));
@@ -78,7 +78,7 @@ class ExecuteLift{
       ))
     ));
   }
-  static public function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Work{
+  static public inline function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,term);
   }
   static public function deliver<E>(self:Execute<E>,fn:Report<E>->Void):Thread{

@@ -7,7 +7,7 @@ class Anon<I,O,E> extends ArrowletBase<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override public function applyII(i:I,cont:Terminal<O,E>):Work{
+  override inline public function applyII(i:I,cont:Terminal<O,E>):Work{
     return delegate(i,cont);
   }
 }

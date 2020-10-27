@@ -7,7 +7,7 @@ typedef ResolveDef<I,E> = ArrowletDef<Err<E>,Chunk<I,E>,Noise>;
 **/
 @:using(stx.arw.Resolve.ResolveLift)
 abstract Resolve<I,E>(ResolveDef<I,E>) from ResolveDef<I,E> to ResolveDef<I,E>{
-  public function new(self) this = self;
+  public inline function new(self) this = self;
   static public function lift<I,E>(self:ResolveDef<I,E>):Resolve<I,E> return new Resolve(self);
   
   @:from static public function fromResolvePropose<I,E>(arw:Arrowlet<Err<E>,Propose<I,E>,Noise>):Resolve<I,E>{
