@@ -4,8 +4,8 @@
     "license": "MIT",
     "tags": ["functional", "asynchronous", "callbacks"],
     "description": "A library for (somewhat) pain free asynchronous programming",
-    "version": "1.3.0",
-    "releasenote": "Cascade.unit()",
+    "version": "1.4.0",
+    "releasenote": "see CHANGELOG.md",
     "contributors": ["0b1kn00b"],
     "dependencies": {
         "tink_core": "2.0.0-rc.1",
