@@ -40,28 +40,28 @@ class Finisher<I,O,E> implements ArrowletApi<I,Noise,Noise>{
   public inline function get_loaded(){
     return this.status == Secured;
   }
-  public function toWork():Work return Work.lift(this);
-  public function toTaskApi():TaskApi<Noise,Noise> return this;
+  public inline function toWork():Work return Work.lift(this);
+  public inline function toTaskApi():TaskApi<Noise,Noise> return this;
 
   public var signal(get,null):tink.core.Signal<Noise>;
-  public function get_signal():tink.core.Signal<Noise>{
+  public inline function get_signal():tink.core.Signal<Noise>{
     return this.arrow.signal;
   }
   public var defect(get,null):Defect<Noise>;
-  public function get_defect():Defect<Noise>{
+  public inline function get_defect():Defect<Noise>{
     return Defect.unit();
   }
   public var result(get,null):Null<Noise>;
-  public function get_result():Null<Noise>{
+  public inline function get_result():Null<Noise>{
     return Noise;
   }
   public var status(get,null):GoalStatus;
-  public function get_status():GoalStatus{ return this.arrow.status; }
+  public inline function get_status():GoalStatus{ return this.arrow.status; }
 
-  public function pursue(){
+  public inline function pursue(){
     this.arrow.pursue();
   }
-  public function escape(){
+  public inline function escape(){
     this.arrow.escape();
   }
 }

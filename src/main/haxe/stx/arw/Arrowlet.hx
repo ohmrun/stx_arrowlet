@@ -3,7 +3,7 @@ package stx.arw;
 import stx.arw.arrowlet.term.*;
 
 @:using(stx.arw.arrowlet.ArrowletLift)
-@:forward abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
+abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
   
   private inline function new(self:ArrowletDef<I,O,E>) this  = self;
   static public var _(default,never) = stx.arw.arrowlet.ArrowletLift;
