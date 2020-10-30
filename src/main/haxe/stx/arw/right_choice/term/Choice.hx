@@ -1,12 +1,15 @@
 package stx.arw.right_choice.term;
 
-class Choice<I,O,E> extends ArrowletBase<Either<I,I>,Either<I,O>,E>{
+class Choice<I,O,E> extends ArrowletCls<Either<I,I>,Either<I,O>,E>{
   private var delegate : Arrowlet<I,Either<O,I>,E>;
   public function new(delegate){
     super();
     this.delegate = delegate;
   }
-	override public function applyII(i:Either<I,I>,cont:Terminal<Either<I,O>,E>):Work{
+  override public function apply(i:Either<I,I>):Either<I,O>{
+    return throw E_Arw_IncorrectCallingConvention;
+  }
+	override public function defer(i:Either<I,I>,cont:Terminal<Either<I,O>,E>):Work{
     return switch (i) {
       case Right(v) 	:
         Arrowlet.Applier().postfix(

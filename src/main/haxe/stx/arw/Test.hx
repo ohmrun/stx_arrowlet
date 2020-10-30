@@ -2,6 +2,8 @@ package stx.arw;
 
 import stx.log.Facade;
 import utest.Async;
+import utest.Assert.*;
+
 import utest.Assert in Rig;
 
 import stx.arw.test.*;
@@ -16,9 +18,11 @@ class Test{
         //f.includes.push("stx.async");
         f.includes.push("stx.arw.test");
         f.includes.push("stx.arw");
+        //f.includes.push("stx.async");
         
     utest.UTest.run(
       [
+        new TestOptimised(),
         //new FlatMapTest(),
         //new ProduceTest(),
         //new TerminalTest(),
@@ -29,9 +33,16 @@ class Test{
     );
   }
 }
-class TestOptimisedThen extends utest.Test{
-  public function test(){
-
+class TestOptimised extends utest.Test{
+  public function test_unit_crunch(){
+    var l = Arrowlet.unit();
+    l.environment(
+      1,
+      (x) -> {
+        equals(1,x);
+      },
+      __.crack
+    ).crunch();
   }
 }
 class TestConvert extends utest.Test{

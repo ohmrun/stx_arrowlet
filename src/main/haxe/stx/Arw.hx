@@ -5,17 +5,12 @@ class Arw{
     return Arrowlet.Sync(fn);
   }
 }
-//typedef Terminal<R,E>                         = stx.arw.Terminal<R,E>;
-//typedef Work                                  = stx.arw.Work;
-
-typedef ApplyApi<I,O,E>                         = stx.arw.Apply.ApplyApi<I,O,E>;
-typedef ApplyDef<I,O,E>                         = stx.arw.Apply.ApplyDef<I,O,E>;
-typedef ApplyCls<I,O,E>                         = stx.arw.Apply.ApplyCls<I,O,E>;
-
-typedef ArrowletDef<I,O,E>                      = stx.arw.Arrowlet.ArrowletDef<I,O,E>;
-typedef ArrowletApi<I,O,E>                      = stx.arw.Arrowlet.ArrowletApi<I,O,E>;
-typedef ArrowletBase<I,O,E>                     = stx.arw.Arrowlet.ArrowletBase<I,O,E>;
+typedef ArrowletFailure                         = stx.fail.ArrowletFailure;
+typedef ArrowletDef<I,O,E>                      = stx.arw.ArrowletDef<I,O,E>;
+typedef ArrowletApi<I,O,E>                      = stx.arw.ArrowletApi<I,O,E>;
+typedef ArrowletCls<I,O,E>                      = stx.arw.ArrowletCls<I,O,E>;
 typedef Arrowlet<I,O,E>                         = stx.arw.Arrowlet<I,O,E>;
+typedef ArrowletLift                            = stx.arw.arrowlet.ArrowletLift;
 
 typedef ApplierDef<I,O,E>                         = stx.arw.arrowlet.term.Applier.Applier<I,O,E>;
 typedef Applier<I,O,E>                            = stx.arw.arrowlet.term.Applier<I,O,E>;
@@ -49,7 +44,7 @@ typedef LiftToLeftChoice                      = stx.arw.lift.LiftToLeftChoice;
 typedef LiftToRightChoice                     = stx.arw.lift.LiftToRightChoice;
 typedef LiftFutureToProvide                   = stx.arw.lift.LiftFutureToProvide;
 typedef LiftFun1RToConvert                    = stx.arw.lift.LiftFun1RToConvert;
-typedef ArrowletLift                          = stx.arw.Arrowlet.ArrowletLift;
+
 
 typedef Thread                                = stx.arw.arrowlet.term.Thread;
 typedef CascadeDef<I,O,E>                     = stx.arw.Cascade.CascadeDef<I,O,E>;
@@ -145,3 +140,5 @@ typedef LiftFun1AttemptToArrange          = stx.arw.lift.LiftFun1AttemptToArrang
 typedef LiftProduceOfOptionIRToPropose    = stx.arw.lift.LiftProduceOfOptionIRToPropose;
 
 typedef Arch                              = stx.arw.Arch;
+typedef ConventionSum                     = stx.arw.Convention.ConventionSum;
+typedef Convention                        = stx.arw.Convention;

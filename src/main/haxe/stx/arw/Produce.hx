@@ -3,7 +3,7 @@ package stx.arw;
 typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
 @:using(stx.arw.Produce.ProduceLift)
-@:using(stx.arw.Arrowlet.ArrowletLift)
+@:using(stx.arw.arrowlet.ArrowletLift)
 @:forward(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
   static public var _(default,never) = ProduceLift;
 
@@ -51,12 +51,12 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) ->  {
         var defer = Future.trigger();
         var inner = cont.inner(
-              (outcome:Outcome<O,E>) -> {
+              (outcome:Outcome<O,Array<E>>) -> {
                 //trace("INNER");
                 defer.trigger(Success(
                   outcome.fold(
                     __.accept,
-                    (e) -> __.reject(__.fault().of(e))
+                    (e) -> __.reject(Err.grow(e))
                   )
                 ));
               }
@@ -116,14 +116,14 @@ class ProduceLift{
         (_:Noise,cont:Terminal<Report<E>,Noise>) -> {
           var defer   = Future.trigger();
           var inner   = cont.inner(
-            (outcome:Outcome<Res<O,E>,Noise>) -> {
+            (outcome:Outcome<Res<O,E>,Array<Noise>>) -> {
               defer.trigger(
                 outcome.fold(
                   (s) -> s.fold(
                     (o) -> success(o).prepare(cont),
                     (e) -> cont.value(Report.pure(e)).serve()
                   ),
-                  (_) -> cont.error(Noise).serve()
+                  (_) -> cont.error([Noise]).serve()
                 )
               );
             }
@@ -184,10 +184,10 @@ class ProduceLift{
       (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
         var bound : FutureTrigger<Work> = Future.trigger();
         var inner = cont.inner(
-          (outcome:Outcome<Res<O,E>,Noise>) -> {
+          (outcome:Outcome<Res<O,E>,Array<Noise>>) -> {
             var input = outcome.fold(
               (res) -> next.toCascade().prepare(res.map(lhs -> __.couple(lhs,i)),cont),
-              (_)   -> cont.error(Noise).serve()
+              (_)   -> cont.error([Noise]).serve()
             );
             bound.trigger(input);
           }
@@ -203,10 +203,10 @@ class ProduceLift{
         (i:S,cont:Terminal<Res<Oi,E>,Noise>) -> {
           var bound = Future.trigger();
           var inner = cont.inner(
-            (outcome:Outcome<Res<O,E>,Noise>) -> {
+            (outcome:Outcome<Res<O,E>,Array<Noise>>) -> {
               var value = outcome.fold(
                 res -> next.prepare(__.couple(res,i),cont),
-                _   -> cont.error(Noise).serve()
+                _   -> cont.error([Noise]).serve()
               );
               bound.trigger(value);
             }

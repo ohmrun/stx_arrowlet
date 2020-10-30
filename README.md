@@ -42,7 +42,7 @@ arrow.environment(
 ```
 
 ```haxe
-public function applyII(i:I,cont:Terminal<O,E>):Work{
+public function defer(i:I,cont:Terminal<O,E>):Work{
  ...
 }
 ```
@@ -85,18 +85,18 @@ constructor should be to hand.
 
 Terminal is responsible internally for passing control flow along, and you don't normally need to expose the internals unless you're writing combinators.
 
-As the `applyII` or `prepare` functions return `Work` to be done, if you're inside an async function, you need to pass the work provide of any arrowlets you are calling internally in the correct order.
+As the `defer` or `prepare` functions return `Work` to be done, if you're inside an async function, you need to pass the work provide of any arrowlets you are calling internally in the correct order.
 
 Between `Terminal` and `Work`, there is an intermediate type responsible for the handling of the arrowlet return value, called `Receiver`.
 
 ```haxe
-  public function applyII(i:I,cont:Terminal<O,E>):Work{
+  public function defer(i:I,cont:Terminal<O,E>):Work{
     var value  = cont.value(1);//Receiver<Int,E>;
     var result = value.serve();//Work
     return result;//OK
   }
 
-  public function applyII(i:I,cont:Terminal<O,E>):Work{
+  public function defer(i:I,cont:Terminal<O,E>):Work{
     var defer     = Future.sync(Success())
     var value     = cont.value(1);//Receiver<Int,E>;
     var result    = value.serve();//Work
@@ -113,7 +113,7 @@ Work is like `Job` except the `O` type has been given a handler.
 In order to return a value immediately, use `value` to produce a `Job`, and then `serve` to transform that to `Work`
 
 ```haxe
- public function applyII(i:I,cont:Terminal<O,E>):Work{
+ public function defer(i:I,cont:Terminal<O,E>):Work{
   return cont.value(f(i)).serve();
  }
 ```
@@ -124,7 +124,7 @@ In order to defer a value, use `defer`
 
 ```haxe
 //Constructor in `Arrowlet.Future` 
- public function applyII(i:I,cont:Terminal<I,E>):Work{
+ public function defer(i:I,cont:Terminal<I,E>):Work{
   return cont.defer(ft).serve();
  }
 ```

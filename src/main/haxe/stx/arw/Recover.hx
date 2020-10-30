@@ -18,7 +18,7 @@ typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
         (e:Err<E>) -> {
           var defer = Future.trigger();
           var inner = cont.inner(
-            (res:Outcome<I,Noise>) -> {
+            (res:Outcome<I,Array<Noise>>) -> {
               defer.trigger(Success(
                 res.fold(
                   (i) -> __.accept(i),
@@ -39,7 +39,7 @@ typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
         (e) -> {
           var defer = Future.trigger();
           var inner = cont.inner(
-            (res:Outcome<I,Noise>) -> {
+            (res:Outcome<I,Array<Noise>>) -> {
               defer.trigger(res);
             }
           );

@@ -2,7 +2,7 @@ package stx.arw;
         
 typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
 
-@:using(stx.arw.Arrowlet.ArrowletLift)
+@:using(stx.arw.arrowlet.ArrowletLift)
 @:using(stx.arw.Command.CommandLift)
 @:forward abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
   static public var _(default,never) = CommandLift;
@@ -29,12 +29,12 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
       (i:I,cont:Terminal<Report<E>,Noise>) -> {
         var defer = Future.trigger();
         var inner = cont.inner(
-          (res:Outcome<Noise,E>) -> {
+          (res:Outcome<Noise,Array<E>>) -> {
             var value = Report.lift(
               (
                 res.fold(
                   (_) -> Report.unit(),
-                  (e) -> Report.pure(__.fault().of(e))
+                  (e) -> Report.pure(Err.grow(e))
                 ):Report<E>
               )
             );
@@ -60,7 +60,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
             (i:I) -> {
               var defer = Future.trigger();
               var inner = cont.inner(
-                (res:Outcome<Report<E>,Noise>) -> {
+                (res:Outcome<Report<E>,Array<Noise>>) -> {
                   var value : Res<I,E> = res.fold(
                    ok   -> Res.fromReport(ok).map( _ -> i ),
                    (_)  -> __.accept(i)

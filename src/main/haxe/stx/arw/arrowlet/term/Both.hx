@@ -3,7 +3,7 @@ package stx.arw.arrowlet.term;
 /**
 	* Runs the `lhs` and `rhs` concurrently.
 **/
-class Both<Ii,Oi,Iii,Oii,E> extends ArrowletBase<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
+class Both<Ii,Oi,Iii,Oii,E> extends ArrowletCls<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
 
 	private var lhs : Arrowlet<Ii,Oi,E>;
 	private var rhs : Arrowlet<Iii,Oii,E>;
@@ -13,39 +13,51 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletBase<Couple<Ii,Iii>,Couple<Oi,Oii>,E
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override public function applyII(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
-		var future 		= Future.trigger();
-		var defer 		= cont.defer(future);
-		var l_val			= None;
-		var r_val			= None;
+	override public function apply(i:Couple<Ii,Iii>):Couple<Oi,Oii>{
+		return this.convention.fold(
+			() -> throw E_Arw_IncorrectCallingConvention,
+			() -> __.couple(this.lhs.apply(i.fst()),this.rhs.apply(i.snd()))
+		);
+	}
+	override public function defer(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
+		return switch([lhs.status,rhs.status]){
+			case [Applied,Applied] 	:	cont.value(__.couple(lhs.apply(i.fst()),rhs.apply(i.snd()))).serve();
+			case [Secured,Secured]	: cont.value(__.couple(lhs.result,rhs.result)).serve();
+			case [Applied,Secured]	: cont.value(__.couple(lhs.apply(i.fst()),rhs.result)).serve();
+			case [Secured,Applied]	: cont.value(__.couple(lhs.result,rhs.apply(i.snd()))).serve();
+			case [Problem,_]				: cont.error(lhs.defect).serve();
+			case [_,Problem]				: cont.error(rhs.defect).serve();
+			default :
+				var fut_lhs  = Future.trigger();
+				var fut_rhs  = Future.trigger();
 
-		var guard 		= () -> {
-			switch([l_val,r_val]){
-				case [Some(Failure(x)),None]  						: 
-					future.trigger(Failure(x));//TODO does it get here?
-				case [None,Some(Failure(x))]  						: 
-					future.trigger(Failure(x));
-				case [Some(Success(l)),Some(Success(r))] 	:
-					future.trigger(Success(__.couple(l,r)));
-				default : 
-			}
-		};
-		var l_set 		= cont.inner(
-					(oi:Outcome<Oi,E>)		-> { 
-						l_val = Some(oi); 	
-						guard(); 	
+				var fut_done = fut_lhs.asFuture().merge(fut_rhs.asFuture(),
+					(l:Outcome<Oi,Array<E>>,r:Outcome<Oii,Array<E>>) -> switch([l,r]){
+						case [Failure(l),Failure(r)] : __.failure(l.concat(r));
+						case [Failure(e),_] 				 : __.failure(e);
+						case [_,Failure(e)] 				 : __.failure(e);
+						case [Success(l),Success(r)] : __.success(__.couple(l,r));
 					}
 				);
-		var r_set 		= cont.inner(
-					(oii:Outcome<Oii,E>)	-> { 
-						r_val = Some(oii);	
-						guard(); 
+				
+				var inner_lhs = cont.inner(
+					(outcome:Outcome<Oi,Array<E>>) -> {
+						fut_lhs.trigger(outcome);
+					}
+				);
+				var inner_rhs = cont.inner(
+					(outcome:Outcome<Oii,Array<E>>) -> {
+						fut_rhs.trigger(outcome);
 					}
 				);
 
-		var l_task 		= lhs.prepare(i.fst(),l_set);
-		var r_task 		= rhs.prepare(i.snd(),r_set);
-		
-		return defer.after(l_task.par(r_task));
+				var lhr = lhs.defer(i.fst(),inner_lhs);
+				var rhr = rhs.defer(i.snd(),inner_rhs);
+
+				return lhr.par(rhr);
+		}
+	}
+	override public function get_convention():Convention{
+		return lhs.convention || rhs.convention;
 	}
 }

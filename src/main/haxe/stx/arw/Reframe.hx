@@ -3,7 +3,7 @@ package stx.arw;
 typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
 @:using(stx.arw.Reframe.ReframeLift)
-@:using(stx.arw.Arrowlet.ArrowletLift)
+@:using(stx.arw.arrowlet.ArrowletLift)
 @:forward abstract Reframe<I,O,E>(ReframeDef<I,O,E>) from ReframeDef<I,O,E> to ReframeDef<I,O,E>{
   static public var _(default,never) = ReframeLift;
 
@@ -62,10 +62,10 @@ class ReframeLift{
           var waits : FutureTrigger<Work> = Future.trigger();
           var waitsII                     = Future.trigger();
           var inner = cont.inner(
-            (outcome:Outcome<Res<Couple<O,I>,E>,Noise>) -> {
+            (outcome:Outcome<Res<Couple<O,I>,E>,Array<Noise>>) -> {
               //trace(outcome);
               var innerI = cont.inner(
-                (outcome:Outcome<Res<Oi,E>,Noise>) -> {
+                (outcome:Outcome<Res<Oi,E>,Array<Noise>>) -> {
                   var val = ipt.fold((i) -> outcome.fold(
                       (res) -> Success(res.fold(
                           (oI)  -> __.accept(__.couple(oI,i)),
@@ -93,7 +93,7 @@ class ReframeLift{
                   );
                   val;
                 },
-                (_) -> cont.error(Noise).serve()
+                (_) -> cont.error([Noise]).serve()
               );
               //trace(value);
               waits.trigger(value);
@@ -124,13 +124,13 @@ class ReframeLift{
       (ipt:Couple<Ii,I>,cont:Terminal<Res<Oi,E>,Noise>) -> {
         var defer = Future.trigger();
         var inner = cont.inner(
-          (chk:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(chk){
+          (chk:Outcome<Res<Couple<O,I>,E>,Array<Noise>>) -> switch(chk){
             case Success(Accept(tp)) : 
               defer.trigger(
                 that(tp.fst()).prepare(__.couple(ipt.fst(),tp.snd()),cont)
               );null;
             case Failure(_) :
-              defer.trigger(cont.error(Noise).serve());null;
+              defer.trigger(cont.error([Noise]).serve());null;
             case Success(Reject(e)) : 
               defer.trigger(cont.value(__.reject(e)).serve());null;
           }
@@ -159,7 +159,7 @@ class ReframeLift{
       (ipt:Res<I,E>,cont:Terminal<Res<Couple<O,I>,E>,Noise>) -> {
         var defer = Future.trigger();
         var inner = cont.inner(
-          (out:Outcome<Res<Couple<O,I>,E>,Noise>) -> switch(out){
+          (out:Outcome<Res<Couple<O,I>,E>,Array<Noise>>) -> switch(out){
             case Success(Accept(tp)) : 
               defer.trigger(fn(tp.fst()).postfix(
                 (opt) -> opt.fold(
@@ -170,7 +170,7 @@ class ReframeLift{
             case Success(Reject(e))  : 
               defer.trigger(cont.value(__.reject(e)).serve());null;
             default : 
-              defer.trigger(cont.error(Noise).serve());null;
+              defer.trigger(cont.error([Noise]).serve());null;
           }
         );
         return self.prepare(ipt,inner).seq(defer);

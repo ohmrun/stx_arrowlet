@@ -21,7 +21,7 @@ abstract Convert<I,O>(ConvertDef<I,O>) from ConvertDef<I,O> to ConvertDef<I,O>{
         (i:I,cont:Terminal<O,Noise>) -> {
           var defer = Future.trigger();
           var inner = cont.inner(
-            (res:Outcome<Provide<O>,Noise>) -> {
+            (res:Outcome<Provide<O>,Array<Noise>>) -> {
               defer.trigger(
                 res.fold(
                   (ok)  -> Arrowlet._.prepare(ok,Noise,cont),
@@ -49,12 +49,12 @@ abstract Convert<I,O>(ConvertDef<I,O>) from ConvertDef<I,O> to ConvertDef<I,O>{
         (i:Res<I,E>,cont:Terminal<Res<O,E>,Noise>) ->
           i.fold(
             (i) -> {
-              var defer : FutureTrigger<Outcome<Res<O,E>,Noise>> = Future.trigger();
+              var defer : FutureTrigger<Outcome<Res<O,E>,Array<Noise>>> = Future.trigger();
               var inner = cont.inner(
-                (outcome:Outcome<O,Noise>) -> {
+                (outcome:Outcome<O,Array<Noise>>) -> {
                   defer.trigger(outcome.fold(
                     (s) -> Success(__.accept(s)),
-                    (_) -> Failure(Noise)
+                    (_) -> Failure([Noise])
                   ));
                 }
               );

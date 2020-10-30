@@ -6,7 +6,7 @@ class Pure<I,O,E> extends stx.async.task.term.Pure<O,E> implements ArrowletApi<I
     return this.result;
   };
   
-  public inline function applyII(i:I,cont:Terminal<O,E>):Work{
+  public inline function defer(i:I,cont:Terminal<O,E>):Work{
     return cont.lense(this).serve();
   }
   public function asArrowletDef():ArrowletDef<I,O,E>{
@@ -14,5 +14,9 @@ class Pure<I,O,E> extends stx.async.task.term.Pure<O,E> implements ArrowletApi<I
   }
   override public function toString(){
     return 'Pure($result)';
+  }
+  public var convention(get,default):Convention;
+  public function get_convention():Convention{
+    return SYNC;
   }
 }

@@ -51,7 +51,7 @@
 *   	 df7d1fe 2020-06-29  Merge branch 'master' of github.com:ohmrun/stx_arrowlet
 |\  
 | * 	 6819c94 2020-06-25  Update README.md
-* | 	 249dde9 2020-06-29  ArrowletBase seperated from ArrowletApi
+* | 	 249dde9 2020-06-29  ArrowletCls seperated from ArrowletApi
 |/  
 * 	 bad1e82 2020-06-25  God knows how I'm actually goint to *document* this
 * 	 34a2d35 2020-06-25  Still filling this out

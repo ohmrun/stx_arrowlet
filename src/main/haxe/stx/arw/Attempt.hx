@@ -152,13 +152,13 @@ class AttemptLift{
         (i:I,cont:Terminal<Res<Oi,E>,Noise>) -> {
           var bound = Future.trigger();
           var inner = cont.inner(
-            (outcome:Outcome<Res<O,E>,Noise>) -> {
+            (outcome:Outcome<Res<O,E>,Array<Noise>>) -> {
               var input = outcome.fold(
                 (res) -> res.fold(
                   (lhs) -> then.prepare(__.couple(lhs,i),cont),
                   (e)   -> cont.value(__.reject(e)).serve()
                 ),
-                (_)   -> cont.error(Noise).serve()
+                (_)   -> cont.error([Noise]).serve()
               );
               bound.trigger(input);
             }

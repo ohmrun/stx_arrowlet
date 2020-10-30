@@ -51,8 +51,8 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromArrowlet<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i : I) -> {
 			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, E>) -> {
-				var outer_res = Success(res.fold(__.accept, (e:E) -> __.reject(__.fault().of(e))));
+			var inner = cont.inner((res:Outcome<O, Array<E>>) -> {
+				var outer_res = __.success(res.fold(__.accept, (e:Array<E>) -> __.reject(Err.grow(e))));
 				defer.trigger(outer_res);
 			});
 			return cont.defer(defer).after(arw.prepare(i, inner));
@@ -64,8 +64,8 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromAttempt<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i) -> {
 			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, E>) -> {
-				defer.trigger(Success(res.fold(__.accept, (e) -> __.reject(__.fault().of(e)))));
+			var inner = cont.inner((res:Outcome<O, Array<E>>) -> {
+				defer.trigger(Success(res.fold(__.accept, (e) -> __.reject(Err.grow(e)))));
 			});
 			return cont.defer(defer).after(arw.prepare(i, inner));
 		}, typical_fail_handler(cont))));
@@ -135,7 +135,7 @@ class CascadeLift {
 		return Reframe.lift(Arrowlet.Anon((ipt:Res<I, E>, cont:Terminal<Res<Couple<O, I>, E>, Noise>) -> {
 			// trace(ipt);
 			var defer = Future.trigger();
-			var inner = cont.inner((opt:Outcome<Res<O, E>, Noise>) -> {
+			var inner = cont.inner((opt:Outcome<Res<O, E>, Array<Noise>>) -> {
 				// trace(opt);
 				defer.trigger(opt.map(res -> res.zip(ipt)));
 			});
@@ -183,11 +183,11 @@ class CascadeLift {
 	static public function arrange<I, O, Oi, E>(self:Cascade<I, O, E>, then:Arrange<O, I, Oi, E>):Cascade<I, Oi, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<Oi, E>, Noise>) -> {
 			var bound = Future.trigger();
-			var inner = cont.inner((outcome:Outcome<Res<O, E>, Noise>) -> {
+			var inner = cont.inner((outcome:Outcome<Res<O, E>, Array<Noise>>) -> {
 				var input = outcome.fold((res) -> res.fold((lhs) -> i.fold((i) -> then.prepare(__.couple(lhs, i), cont),
 					(e) -> cont.value(__.reject(e)).serve()),
 					(e) -> cont.value(__.reject(e)).serve()),
-					(_) -> cont.error(Noise).serve());
+					(_) -> cont.error([Noise]).serve());
 				bound.trigger(input);
 			});
 			var lhs = self.prepare(i, inner);
