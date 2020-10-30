@@ -20,13 +20,13 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 		var future_response_trigger = Future.trigger();
 
 		var inner 		= cont.inner(
-			(res:Outcome<Oi,Array<E>>) -> {
+			(res:Outcome<Oi,Defect<E>>) -> {
 				future_response_trigger.trigger(
 					res.fold(
 						(oI:Oi) 			-> {
 							return func(oI).prepare(i,cont);
 						},
-						(e:Array<E>)	-> {
+						(e:Defect<E>)	-> {
 							return cont.error(e).serve();
 						}
 					)

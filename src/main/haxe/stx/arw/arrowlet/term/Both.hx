@@ -32,7 +32,7 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletCls<Couple<Ii,Iii>,Couple<Oi,Oii>,E>
 				var fut_rhs  = Future.trigger();
 
 				var fut_done = fut_lhs.asFuture().merge(fut_rhs.asFuture(),
-					(l:Outcome<Oi,Array<E>>,r:Outcome<Oii,Array<E>>) -> switch([l,r]){
+					(l:Outcome<Oi,Defect<E>>,r:Outcome<Oii,Defect<E>>) -> switch([l,r]){
 						case [Failure(l),Failure(r)] : __.failure(l.concat(r));
 						case [Failure(e),_] 				 : __.failure(e);
 						case [_,Failure(e)] 				 : __.failure(e);
@@ -41,12 +41,12 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletCls<Couple<Ii,Iii>,Couple<Oi,Oii>,E>
 				);
 				
 				var inner_lhs = cont.inner(
-					(outcome:Outcome<Oi,Array<E>>) -> {
+					(outcome:Outcome<Oi,Defect<E>>) -> {
 						fut_lhs.trigger(outcome);
 					}
 				);
 				var inner_rhs = cont.inner(
-					(outcome:Outcome<Oii,Array<E>>) -> {
+					(outcome:Outcome<Oii,Defect<E>>) -> {
 						fut_rhs.trigger(outcome);
 					}
 				);

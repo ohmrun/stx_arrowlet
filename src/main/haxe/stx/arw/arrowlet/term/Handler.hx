@@ -14,6 +14,6 @@ class Handler<O,E> extends ArrowletCls<Noise,O,E>{
     delegate(
       (o) -> defer.trigger(Success(o))
     );
-    return cont.defer(defer).serve();
+    return cont.later(defer).serve();
   }
 }

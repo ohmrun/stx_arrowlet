@@ -20,4 +20,5 @@ abstract class ArrowletCls<P,O,E> implements ArrowletApi<P,O,E> extends TaskCls<
   override public function pursue(){
     this.status = Secured;
   }
+  
 }

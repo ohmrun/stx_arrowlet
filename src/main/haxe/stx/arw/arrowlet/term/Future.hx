@@ -13,6 +13,6 @@ class Future<O,E> extends ArrowletCls<Noise,O,E>{
   }
   override public function defer(i:Noise,cont:Terminal<O,E>):Work{
     var outcome = delegate.map(Success);
-    return cont.defer(outcome).serve();
+    return cont.later(outcome).serve();
   }
 }

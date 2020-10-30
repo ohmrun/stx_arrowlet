@@ -125,7 +125,7 @@ In order to defer a value, use `defer`
 ```haxe
 //Constructor in `Arrowlet.Future` 
  public function defer(i:I,cont:Terminal<I,E>):Work{
-  return cont.defer(ft).serve();
+  return cont.later(ft).serve();
  }
 ```
 

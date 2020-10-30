@@ -142,3 +142,5 @@ typedef LiftProduceOfOptionIRToPropose    = stx.arw.lift.LiftProduceOfOptionIRTo
 typedef Arch                              = stx.arw.Arch;
 typedef ConventionSum                     = stx.arw.Convention.ConventionSum;
 typedef Convention                        = stx.arw.Convention;
+typedef Capture<I,O,E>                    = stx.arw.arrowlet.term.Capture<I,O,E>;
+typedef Finisher<I,O,E>                   = stx.arw.arrowlet.term.Finisher<I,O,E>;

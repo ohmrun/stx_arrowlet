@@ -16,9 +16,7 @@ class ReplyFuture<O,E> extends ArrowletCls<Noise,O,E>{
     var handler   = (o:O) ->{
       defer.trigger(Success(o));
     }
-    var canceller = delegate().handle(
-      handler
-    );//TODO
-    return cont.defer(defer).serve();
+    var canceller = delegate().handle(handler);
+    return Work.Canceller(cont.later(defer).serve(),canceller);
   }
 }

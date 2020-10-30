@@ -23,6 +23,6 @@ class Delay<I,E> extends ArrowletCls<I,I,E>{
       },
       milliseconds
     );
-    return cont.defer(ft).serve();
+    return cont.later(ft).serve();
   }
 }

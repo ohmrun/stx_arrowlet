@@ -18,7 +18,7 @@ class Then<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 			case Pending | Working | Waiting  : 
 				var later = Future.trigger();
 				var inner = cont.inner(
-					(outcome:Outcome<Oi,Array<E>>) -> {
+					(outcome:Outcome<Oi,Defect<E>>) -> {
 						var later_work = outcome.fold(
 							(ok) -> handle_rhs(rhs,ok,cont),
 							(no) -> cont.error(no).serve()

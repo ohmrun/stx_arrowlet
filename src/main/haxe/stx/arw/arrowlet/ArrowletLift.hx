@@ -110,31 +110,14 @@ class ArrowletLift{
       })
     );
   }
-
   static public inline function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
-    //__.assert().exists(self);
-    return self.defer(i,cont); 
-  }
-  @:noUsing static public inline function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:Array<E>->Void):Thread{
-    return Arrowlet.Anon(
-      (_:Noise,cont:Terminal<Noise,Noise>) -> {
-        __.log().debug('environment: $self');
-        var defer = TinkFuture.trigger();
-        var inner = cont.inner(
-              (outcome:Outcome<O,Array<E>>) -> {
-                __.log().debug(outcome);
-                outcome.fold(
-                  success,
-                  failure
-                );
-                defer.trigger(Success(Noise));
-              }
-            );
-        return 
-          cont.defer(defer)
-              .after(self.prepare(i,inner));
-      }
+    return self.convention.fold(
+      () -> self.defer(i,cont),
+      () -> cont.value(self.apply(i)).serve()
     );
+  }
+  @:noUsing static public inline function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:Defect<E>->Void):Thread{
+    return Thread.lift(Arrowlet.Finisher(Arrowlet.Capture(self,i),success,failure));
   }
   static public function fudge<I,O,E>(self:Arrowlet<I,O,E>,i:I):O{
     var v = null;

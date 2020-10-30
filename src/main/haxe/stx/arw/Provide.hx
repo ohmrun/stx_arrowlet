@@ -21,7 +21,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
     return lift(
       Arrowlet.Anon(
         (_:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.defer(future.map(__.success)).serve();
+          return cont.later(future.map(__.success)).serve();
         }
       )
     );
@@ -39,7 +39,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.defer(fn().map(Success)).serve();
+          return cont.later(fn().map(Success)).serve();
         }
       )
     );
@@ -48,7 +48,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
     return lift(
       Arrowlet.Anon(
         (i:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.defer(ft.map(Success)).serve();
+          return cont.later(ft.map(Success)).serve();
         }
       )
     );

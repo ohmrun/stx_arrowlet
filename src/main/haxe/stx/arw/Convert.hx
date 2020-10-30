@@ -58,7 +58,7 @@ abstract Convert<I,O>(ConvertDef<I,O>) from ConvertDef<I,O> to ConvertDef<I,O>{
                   ));
                 }
               );
-              return cont.defer(defer).after(this.prepare(i,inner));
+              return cont.later(defer).after(this.prepare(i,inner));
             },
             (err) -> {
               return cont.value(__.reject(err)).serve();

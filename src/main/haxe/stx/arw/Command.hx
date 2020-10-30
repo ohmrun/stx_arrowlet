@@ -29,7 +29,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
       (i:I,cont:Terminal<Report<E>,Noise>) -> {
         var defer = Future.trigger();
         var inner = cont.inner(
-          (res:Outcome<Noise,Array<E>>) -> {
+          (res:Outcome<Noise,Defect<E>>) -> {
             var value = Report.lift(
               (
                 res.fold(
@@ -41,7 +41,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
             defer.trigger(__.success(value));
           }
         );
-        return cont.defer(defer).after(self.prepare(i,inner));
+        return cont.later(defer).after(self.prepare(i,inner));
       })
     );
   }
@@ -68,7 +68,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
                   defer.trigger(__.success(value));
                 }
               );
-              return cont.defer(defer).after(this.prepare(i,inner));
+              return cont.later(defer).after(this.prepare(i,inner));
             },
             (e:Err<E>) -> {
               return cont.value(__.reject(e)).serve();

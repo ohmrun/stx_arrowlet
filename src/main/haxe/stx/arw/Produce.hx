@@ -33,7 +33,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
     return lift(
       Arrowlet.Anon(      
         (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
-          return cont.defer(pl.map(Success)).serve();
+          return cont.later(pl.map(Success)).serve();
         }
       )
     );
@@ -51,7 +51,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) ->  {
         var defer = Future.trigger();
         var inner = cont.inner(
-              (outcome:Outcome<O,Array<E>>) -> {
+              (outcome:Outcome<O,Defect<E>>) -> {
                 //trace("INNER");
                 defer.trigger(Success(
                   outcome.fold(
@@ -61,7 +61,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
                 ));
               }
             );
-        return cont.defer(defer).after(arw.prepare(Noise,inner)); 
+        return cont.later(defer).after(arw.prepare(Noise,inner)); 
       })
     );
   }

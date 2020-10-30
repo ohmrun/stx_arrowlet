@@ -27,7 +27,7 @@ typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
               ));
             }
           );
-          return cont.defer(defer).after(this.prepare(e,inner));
+          return cont.later(defer).after(this.prepare(e,inner));
         }
       )
     ));
@@ -43,7 +43,7 @@ typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
               defer.trigger(res);
             }
           );
-          return cont.defer(defer).after(this.prepare(e,inner));
+          return cont.later(defer).after(this.prepare(e,inner));
         }
       )
     ));

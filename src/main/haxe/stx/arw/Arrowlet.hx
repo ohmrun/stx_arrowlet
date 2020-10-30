@@ -48,6 +48,12 @@ import stx.arw.arrowlet.term.*;
   @:noUsing static public inline function Delay<I,E>(milliseconds:Int):Arrowlet<I,I,E>{
     return new stx.arw.arrowlet.term.Delay(milliseconds);
   }
+  @:noUsing static public inline function Capture<I,O,E>(self:Arrowlet<I,O,E>,input:I):Arrowlet<Noise,O,E>{
+    return new stx.arw.arrowlet.term.Capture(self,input);
+  }
+  @:noUsing static public inline function Finisher<I,O,E>(self:Arrowlet<I,O,E>,success,failure):Arrowlet<I,Noise,Noise>{
+    return new stx.arw.arrowlet.term.Finisher(self,success,failure);
+  }
   @:noUsing static public inline function Fun1Future<I,O,E>(self:I->TinkFuture<O>):Arrowlet<I,O,E>{
     return lift(new Fun1Future(self));
   }
@@ -64,17 +70,11 @@ import stx.arw.arrowlet.term.*;
     return lift(new Sync(__.decouple(f)));
   }
   @:from @:noUsing static public inline function fromFunSink<I,O,E>(fn:I->(O->Void)->Void):Arrowlet<I,O,E>{
-    return lift(
-      Arrowlet.Anon(
-        (i:I,term:Terminal<O,E>) -> {
-          return term.defer(
-            TinkFuture.irreversible(fn.bind(i)).map(Success)
-          ).serve();
-        }
-      )
-    );
+    return lift(new stx.arw.arrowlet.term.Raw(
+      (i:I,cont) -> fn(i,(o) -> cont(__.success(o)))
+    ));
   }
- public function environment(i:I,success:O->Void,failure:Array<E>->Void):Thread{
+ public function environment(i:I,success:O->Void,failure:Defect<E>->Void):Thread{
   return _.environment(this,i,success,failure);
  }
   //@:from static public function fromFunXX

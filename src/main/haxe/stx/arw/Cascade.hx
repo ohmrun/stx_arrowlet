@@ -51,11 +51,11 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromArrowlet<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i : I) -> {
 			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, Array<E>>) -> {
-				var outer_res = __.success(res.fold(__.accept, (e:Array<E>) -> __.reject(Err.grow(e))));
+			var inner = cont.inner((res:Outcome<O, Defect<E>>) -> {
+				var outer_res = __.success(res.fold(__.accept, (e:Defect<E>) -> __.reject(Err.grow(e))));
 				defer.trigger(outer_res);
 			});
-			return cont.defer(defer).after(arw.prepare(i, inner));
+			return cont.later(defer).after(arw.prepare(i, inner));
 		}, (e:Err<E>) -> {
 				return cont.value(__.reject(e)).serve();
 			})));
@@ -64,10 +64,10 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 	@:noUsing static public function fromAttempt<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
 		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i) -> {
 			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, Array<E>>) -> {
+			var inner = cont.inner((res:Outcome<O, Defect<E>>) -> {
 				defer.trigger(Success(res.fold(__.accept, (e) -> __.reject(Err.grow(e)))));
 			});
-			return cont.defer(defer).after(arw.prepare(i, inner));
+			return cont.later(defer).after(arw.prepare(i, inner));
 		}, typical_fail_handler(cont))));
 	}
 
@@ -139,7 +139,7 @@ class CascadeLift {
 				// trace(opt);
 				defer.trigger(opt.map(res -> res.zip(ipt)));
 			});
-			return cont.defer(defer).after(self.prepare(ipt, inner));
+			return cont.later(defer).after(self.prepare(ipt, inner));
 		}));
 	}
 
