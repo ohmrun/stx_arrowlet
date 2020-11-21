@@ -11,10 +11,12 @@ class AfterRewriteTest extends utest.Test{
         Rig.equals(2,v);
         async.done();
       },
-      (e) -> {}
+      (e) -> {
+        trace(e);
+      }
     ).submit();
   }
-  //@Ignored
+  @Ignored
   public function testAsync(async:utest.Async){
     Arrowlet.fromFunSink(
       (i,cb) -> {
@@ -30,14 +32,17 @@ class AfterRewriteTest extends utest.Test{
     ).submit();
   }
   //@:timeout(2000)
-  @:timeout(70)
+  @:timeout(7000)
   //@Ignored
   public function test_after_tick(async:utest.Async){
     Arrowlet.fromFunSink(
-      (i,cb) -> {
+      (i:Int,cb) -> {
         haxe.Timer.delay(
-          () -> cb(++i),
-          10 
+          () -> {
+            //__.log().debug('calling callback: $i');
+            cb(++i);
+          },
+          100
         );
       }
     ).environment(
@@ -51,19 +56,17 @@ class AfterRewriteTest extends utest.Test{
       }
     ).submit();
   }
-  //@Ignored
+  @Ignored
   public function test_arrowlet_error(async:utest.Async){
     Arrowlet.Anon(
       (i,cont) -> {
-        return cont.issue(
-          Failure(__.fault().err(E_UnexpectedNullValueEncountered))
-        ).serve();
+        return cont.issue(Failure(E_UnexpectedNullValueEncountered)).serve();
       }
     ).environment(
       1,
       (_) -> {},
-      (e:Err<String>) -> {
-        Rig.same(Some(ERR(E_UnexpectedNullValueEncountered)),e.data);
+      (e:Defect<FailCode>) -> {
+        Rig.same([E_UnexpectedNullValueEncountered],e);
         async.done();
       }
     ).submit();

@@ -6,8 +6,8 @@ package stx.arw.arrowlet.term;
   it's input.
 **/
 class Inform<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
-  var lhs : Arrowlet<I,Oi,E>;
-  var rhs : Arrowlet<Oi,Arrowlet<Oi,Oii,E>,E>;
+  var lhs : Internal<I,Oi,E>;
+  var rhs : Internal<Oi,Arrowlet<Oi,Oii,E>,E>;
   public function new(lhs,rhs){
     super();
     this.lhs = lhs;
@@ -17,12 +17,12 @@ class Inform<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     return throw E_Arw_IncorrectCallingConvention;
   }
   override public function defer(i:I,cont:Terminal<Oii,E>):Work{
-    return lhs.flat_map(
+    return lhs.toArrowlet().flat_map(
       (oI) -> Arrowlet.Anon(
-        (_:I,contI:Terminal<Oii,E>) -> rhs.flat_map(
+        (_:I,contI:Terminal<Oii,E>) -> rhs.toArrowlet().flat_map(
           (aOiOii) -> aOiOii
-        ).defer(oI,contI)
+        ).toInternal().defer(oI,contI)
       )
-    ).defer(i,cont);
+    ).toInternal().defer(i,cont);
   }
 }

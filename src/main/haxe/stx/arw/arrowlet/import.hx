@@ -1,5 +1,6 @@
 package stx.arw.arrowlet;
 
+import stx.arw.Internal;
 // import stx.arw.arrowlet.term.Both;
 // import stx.arw.arrowlet.term.Bound;
 // import stx.arw.arrowlet.term.Delay;

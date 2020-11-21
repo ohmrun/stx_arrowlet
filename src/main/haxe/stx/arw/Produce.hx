@@ -44,24 +44,23 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       Arrowlet.fromFun1R(
         (_:Noise) -> __.accept(fn())
       )
-    );
+    ); 
   }
   @:noUsing static public function fromArrowlet<O,E>(arw:Arrowlet<Noise,O,E>):Produce<O,E>{
     return lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) ->  {
-        var defer = Future.trigger();
-        var inner = cont.inner(
-              (outcome:Outcome<O,Defect<E>>) -> {
-                //trace("INNER");
-                defer.trigger(Success(
-                  outcome.fold(
-                    __.accept,
-                    (e) -> __.reject(Err.grow(e))
-                  )
-                ));
-              }
-            );
-        return cont.later(defer).after(arw.prepare(Noise,inner)); 
+        arw.prepare(
+          Noise,
+          cont.joint(
+            (outcome:Outcome<O,Defect<E>>) -> 
+              cont.value(
+                outcome.fold(
+                __.accept,
+                (e) -> __.reject(Err.grow(e))
+               )
+              ).serve()
+          )
+        );
       })
     );
   }
@@ -70,7 +69,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self.prepare(cont)
     ));
   }
-  public inline function environment(success:O->Void,failure:Err<E>->Void):Thread{
+  public inline function environment(success:O->Void,failure:Err<E>->Void):Fiber{
     return Arrowlet._.environment(
       this,
       Noise,
@@ -80,7 +79,7 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
       __.crack
     );
   }
-  @:to public function toArrowlet():Arrowlet<Noise,Res<O,E>,Noise>{
+  @:to public inline function toArrowlet():Arrowlet<Noise,Res<O,E>,Noise>{
     return this;
   }
   @:to public function toPropose():Propose<O,E>{
@@ -219,7 +218,7 @@ class ProduceLift{
   static public function cascade<O,Oi,E>(self:Produce<O,E>,that:Cascade<O,Oi,E>):Produce<Oi,E>{
     return lift(self.then(that));
   }
-  static public function fudge<O,E>(self:Produce<O,E>):O{
+  static public inline function fudge<O,E>(self:Produce<O,E>):O{
     return Arrowlet._.fudge(self,Noise).fudge();
   }
   static public function flat_map<O,Oi,E>(self:Produce<O,E>,that:O->Produce<Oi,E>):Produce<Oi,E>{

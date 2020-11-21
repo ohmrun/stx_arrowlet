@@ -9,7 +9,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
   public inline function new(self) this = self;
   
 
-  static public function lift<I,O,E>(self:AttemptDef<I,O,E>) return new Attempt(self);
+  static public inline function lift<I,O,E>(self:AttemptDef<I,O,E>) return new Attempt(self);
 
   static public function unit<I,E>():Attempt<I,I,E>{
     return lift(
@@ -62,7 +62,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       Arrowlet.Anon((i,cont) -> cont.value(__.accept(fn(i))).serve())
     );
   }
-  @:to public function toArrowlet():ArrowletDef<I,Res<O,E>,Noise>{
+  @:to public inline function toArrowlet():ArrowletDef<I,Res<O,E>,Noise>{
     return this;
   }
   public function toCascade():Cascade<I,O,E>{
@@ -74,7 +74,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
         )
     ));  
   }
-  public function environment(i:I,success:O->Void,failure:Err<E>->Void):Thread{
+  public inline function environment(i:I,success:O->Void,failure:Err<E>->Void):Fiber{
     return Cascade._.environment(this.toCascade(),i,success,failure);
   }
   public function prefix<Ii>(that:Ii->I):Attempt<Ii,O,E>{
@@ -89,7 +89,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
 class AttemptLift{
   static private function lift<I,O,E>(self:AttemptDef<I,O,E>)          return new Attempt(self);
 
-  //static public function toArrowlet<I,O,E>(self:Attempt<I,O,E>):Arrowlet<I,O,E>{
+  //static public inline function toArrowlet<I,O,E>(self:Attempt<I,O,E>):Arrowlet<I,O,E>{
     
   //}
   static public function then<I,O,Oi,E>(self:Attempt<I,O,E>,that:Cascade<O,Oi,E>):Attempt<I,Oi,E>{
@@ -143,31 +143,15 @@ class AttemptLift{
   }
   static public function provide<I,O,E>(self:Attempt<I,O,E>,i:I):Produce<O,E>{
     return Produce.lift(
-      Arrowlet.Anon((_:Noise,cont) -> self.prepare(i,cont))
+      Arrowlet.Anon(
+        (_:Noise,cont) -> {
+          return self.prepare(i,cont);
+        }
+      )
    );
   }  
   static public function arrange<I,O,Oi,E>(self:Attempt<I,O,E>,then:Arrange<O,I,Oi,E>):Attempt<I,Oi,E>{
-    return lift(
-      Arrowlet.Anon(
-        (i:I,cont:Terminal<Res<Oi,E>,Noise>) -> {
-          var bound = Future.trigger();
-          var inner = cont.inner(
-            (outcome:Outcome<Res<O,E>,Array<Noise>>) -> {
-              var input = outcome.fold(
-                (res) -> res.fold(
-                  (lhs) -> then.prepare(__.couple(lhs,i),cont),
-                  (e)   -> cont.value(__.reject(e)).serve()
-                ),
-                (_)   -> cont.error([Noise]).serve()
-              );
-              bound.trigger(input);
-            }
-          );
-          var lhs = self.prepare(i,inner);
-          return lhs.seq(bound);
-        }
-      )
-    );
+    return lift(new stx.arw.attempt.AttemptArrange(self,then));
   }
   static public function prefix<I,Ii,O,E>(self:Attempt<I,O,E>,that:Ii->I):Attempt<Ii,O,E>{
     return lift(Arrowlet._.prefix(self.toArrowlet(),that));

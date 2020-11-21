@@ -5,9 +5,9 @@ typedef ExecuteDef<E>                   = ArrowletDef<Noise,Report<E>,Noise>;
 @:using(stx.arw.Execute.ExecuteLift)
 abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   public inline function new(self) this = self;
-  @:noUsing static public function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
-  @:noUsing static public function pure<E>(e:Err<E>):Execute<E> return lift(Arrowlet.pure(Report.pure(e)));
-  @:noUsing static public function unit<E>():Execute<E> return lift(Arrowlet.pure(Report.unit()));
+  @:noUsing static public inline function lift<E>(self:ExecuteDef<E>):Execute<E> return new Execute(self);
+  @:noUsing static public inline function pure<E>(e:Err<E>):Execute<E> return lift(Arrowlet.pure(Report.pure(e)));
+  @:noUsing static public inline function unit<E>():Execute<E> return lift(Arrowlet.pure(Report.unit()));
 
   @:noUsing static public function bind_fold<T,E>(fn:T->Report<E>->Execute<E>,arr:Array<T>):Execute<E>{
     return arr.lfold(
@@ -34,7 +34,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   @:to public function toProvide():Provide<Report<E>>{
     return this;
   }
-  public function toArrowlet():Arrowlet<Noise,Report<E>,Noise>{
+  public inline function toArrowlet():Arrowlet<Noise,Report<E>,Noise>{
     return this;
   }
   @:from static public function fromFunXR<E>(fn:Void->Report<E>):Execute<E>{
@@ -53,7 +53,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   @:noUsing static public function fromErr<E>(err:Err<E>):Execute<E>{
     return fromFunXR(() -> Report.pure(err));
   }
-  public function environment(success:Void->Void,failure:Err<E>->Void){
+  public inline function environment(success:Void->Void,failure:Err<E>->Void){
     return Arrowlet._.environment(
       this,
       Noise,
@@ -81,7 +81,7 @@ class ExecuteLift{
   static public inline function prepare<E>(self:Execute<E>,term:Terminal<Report<E>,Noise>):Work{
     return self.toArrowlet().prepare(Noise,term);
   }
-  static public function deliver<E>(self:Execute<E>,fn:Report<E>->Void):Thread{
+  static public function deliver<E>(self:Execute<E>,fn:Report<E>->Void):Fiber{
     return Arrowlet.Then(
       self,
       Arrowlet.Sync(
@@ -92,7 +92,7 @@ class ExecuteLift{
       )
     );
   }
-  static public function crack<E>(self:Execute<E>):Thread{
+  static public function crack<E>(self:Execute<E>):Fiber{
     return deliver(self,
       (report) -> report.fold(
         __.crack,

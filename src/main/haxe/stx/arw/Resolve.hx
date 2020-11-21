@@ -8,23 +8,20 @@ typedef ResolveDef<I,E> = ArrowletDef<Err<E>,Chunk<I,E>,Noise>;
 @:using(stx.arw.Resolve.ResolveLift)
 abstract Resolve<I,E>(ResolveDef<I,E>) from ResolveDef<I,E> to ResolveDef<I,E>{
   public inline function new(self) this = self;
-  static public function lift<I,E>(self:ResolveDef<I,E>):Resolve<I,E> return new Resolve(self);
+  static public inline function lift<I,E>(self:ResolveDef<I,E>):Resolve<I,E> return new Resolve(self);
   
   @:from static public function fromResolvePropose<I,E>(arw:Arrowlet<Err<E>,Propose<I,E>,Noise>):Resolve<I,E>{
     return lift(
       arw.then(
-        Arrowlet.Anon(
-          (i:Propose<I,E>,cont:Terminal<Chunk<I,E>,Noise>) -> Arrowlet._.prepare(i.toArrowlet(),Noise,cont)
-        )
+        Arrowlet.Anon((i:Propose<I,E>,cont:Terminal<Chunk<I,E>,Noise>) -> Arrowlet._.prepare(i.toArrowlet(),Noise,cont))
       )
     );
   }
   @:from static public function fromFunErrPropose<I,E>(arw:Err<E>->Propose<I,E>):Resolve<I,E>{
     return lift(
-      Arrowlet.Sync(arw).then(
-        Arrowlet.Anon(
-          (i:Propose<I,E>,cont:Terminal<Chunk<I,E>,Noise>) -> Arrowlet._.prepare(i.toArrowlet(),Noise,cont)
-        )
+      Arrowlet.ThenArw(
+        arw,
+        Arrowlet.Anon((i:Propose<I,E>,cont:Terminal<Chunk<I,E>,Noise>) -> Arrowlet._.prepare(i.toArrowlet(),Noise,cont))
       )
     );
   }
@@ -38,7 +35,7 @@ abstract Resolve<I,E>(ResolveDef<I,E>) from ResolveDef<I,E> to ResolveDef<I,E>{
   public function prj():ResolveDef<I,E> return this;
   private var self(get,never):Resolve<I,E>;
   private function get_self():Resolve<I,E> return lift(this);
-  @:to public function toArrowlet():Arrowlet<Err<E>,Chunk<I,E>,Noise>{
+  @:to public inline function toArrowlet():Arrowlet<Err<E>,Chunk<I,E>,Noise>{
     return this;
   }
 }

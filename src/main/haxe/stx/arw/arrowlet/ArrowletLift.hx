@@ -3,8 +3,8 @@ package stx.arw.arrowlet;
 import stx.arw.arrowlet.term.*;
 
 class ArrowletLift{
-  static private function lift<I,O,E>(t:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
-    return lift(t.asArrowletDef());
+  static private inline function lift<I,O,E>(t:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
+    return Arrowlet.lift(t.asArrowletDef());
   }
   static public function inject<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,v:Oii):Arrowlet<I,Oii,E>{
     return then(self,Arrowlet.fromFun1R((b:Oi) -> v));
@@ -12,6 +12,13 @@ class ArrowletLift{
   @doc("left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`.")
   static public function then<I,Oi,Oii,E>(lhs:Arrowlet<I,Oi,E>,rhs:Arrowlet<Oi,Oii,E>):Arrowlet<I,Oii,E> {
     return lift(Arrowlet.Then(lhs,rhs));
+  }
+  static public inline function next<I,Oi,Oii,E>(lhs:Arrowlet<I,Oi,E>,rhs:Oi->Oii):Arrowlet<I,Oii,E>{
+    //__.log().debug(lhs);
+    return lhs.toInternal().convention.fold(
+      () -> lift(Arrowlet.ThenFun(lhs,rhs)),
+      () -> Arrowlet.ThenFunFun(lhs.toInternal().apply,rhs)
+    );
   }
   @doc("Takes an Arrowlet<A,B>, and produces one taking a Couple that runs the Arrowlet on the left-hand side, leaving the right-handside liftuched.")
   static public function first<Ii,Iii,O,E>(self:Arrowlet<Ii,O,E>):Arrowlet<Couple<Ii,Iii>,Couple<O,Iii>,E>{
@@ -74,7 +81,7 @@ class ArrowletLift{
     return lift(new Sync(fn)).then(self);
   }
   static public function postfix<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,fn:Oi->Oii):Arrowlet<I,Oii,E>{
-    return self.then(lift(new Sync(fn)));
+    return self.next(fn);
   }
   /**
     * Asynchronous version of `FlatMap`
@@ -83,7 +90,7 @@ class ArrowletLift{
     return lift(new Inform(lhs,rhs));
   }
   static public function broach<I,O,E>(self:Arrowlet<I,O,E>):Arrowlet<I,Couple<I,O>,E>{
-    return bound(self,Arrowlet.fromFun2R(__.couple));
+    return new stx.arw.arrowlet.term.Broach(self);
   }
   static public function state<I,O,E>(self:Arrowlet<I,O,E>):Arrowlet<I,Couple<O,I>,E>{
     return bound(self,Arrowlet.fromFun2R(__.couple.fn().then(tp -> tp.swap())));
@@ -111,18 +118,20 @@ class ArrowletLift{
     );
   }
   static public inline function prepare<I,O,E>(self:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
-    return self.convention.fold(
-      () -> self.defer(i,cont),
-      () -> cont.value(self.apply(i)).serve()
+    return self.toInternal().convention.fold(
+      () -> self.toInternal().defer(i,cont),
+      () -> cont.value(self.toInternal().apply(i)).serve()
     );
   }
-  @:noUsing static public inline function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:Defect<E>->Void):Thread{
-    return Thread.lift(Arrowlet.Finisher(Arrowlet.Capture(self,i),success,failure));
+  @:noUsing static public inline function environment<I,O,E>(self:Arrowlet<I,O,E>,i:I,success:O->Void,failure:Defect<E>->Void):Fiber{
+    return Fiber.lift(Arrowlet.Deliver(Arrowlet.Fulfill(self,i),success,failure));
   }
-  static public function fudge<I,O,E>(self:Arrowlet<I,O,E>,i:I):O{
+
+  static public inline function fudge<I,O,E>(self:Arrowlet<I,O,E>,i:I):O{
     var v = null;
     function fn(x){v = x;}
-    environment(self,i,fn,__.crack  ).crunch();
+    environment(self,i,fn,__.crack).crunch();
+    //trace('fudge: $v');
     return v;
   }
   static public function flat_map<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,fn:Oi->Arrowlet<I,Oii,E>):Arrowlet<I,Oii,E>{

@@ -1,9 +1,18 @@
 package stx;
 
 class Arw{
+  static public function ctx<P,R,E>(wildcard:Wildcard,p:P):Contextualize<P,R,E>{
+    return Contextualize.pure(p);
+  }
   @:noUsing static public function Fun<I,O,E>(fn:I->O):Arrowlet<I,O,E>{
     return Arrowlet.Sync(fn);
   }
+  static public function name<I,O,E>(arw:ArrowletDef<I,O,E>):String{
+    return __.definition(arw).identifier().name();
+  }
+  // static public inline function after<I,O,E>(self:stx.async.Terminal.Receiver<O,E>,arrowlet:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
+  //   return Arrowlet._.prepare(arrowlet,i,cont).seq(lift(self).serve());
+  // }
 }
 typedef ArrowletFailure                         = stx.fail.ArrowletFailure;
 typedef ArrowletDef<I,O,E>                      = stx.arw.ArrowletDef<I,O,E>;
@@ -46,7 +55,7 @@ typedef LiftFutureToProvide                   = stx.arw.lift.LiftFutureToProvide
 typedef LiftFun1RToConvert                    = stx.arw.lift.LiftFun1RToConvert;
 
 
-typedef Thread                                = stx.arw.arrowlet.term.Thread;
+typedef Fiber                                 = stx.arw.arrowlet.term.Fiber;
 typedef CascadeDef<I,O,E>                     = stx.arw.Cascade.CascadeDef<I,O,E>;
 typedef Cascade<I,O,E>                        = stx.arw.Cascade<I,O,E>;
 //typedef CascadeLift                           = stx.arw.Cascade.CascadeLift;
@@ -100,9 +109,6 @@ typedef Perform                               = stx.arw.Perform;
 typedef DiffuseDef<I,O,E>                     = stx.arw.Diffuse.DiffuseDef<I,O,E>;
 typedef Diffuse<I,O,E>                        = stx.arw.Diffuse<I,O,E>;
 
-#if (test=="stx_arw")
-  typedef Test                                = stx.arw.Test;
-#end
 class LiftArrowletToCascade{
    static public function toCascade<A,B,E>(arw:Arrowlet<A,B,E>):Cascade<A,B,E>{
     return Cascade.fromArrowlet(arw);
@@ -142,5 +148,6 @@ typedef LiftProduceOfOptionIRToPropose    = stx.arw.lift.LiftProduceOfOptionIRTo
 typedef Arch                              = stx.arw.Arch;
 typedef ConventionSum                     = stx.arw.Convention.ConventionSum;
 typedef Convention                        = stx.arw.Convention;
-typedef Capture<I,O,E>                    = stx.arw.arrowlet.term.Capture<I,O,E>;
-typedef Finisher<I,O,E>                   = stx.arw.arrowlet.term.Finisher<I,O,E>;
+typedef Fulfill<I,O,E>                    = stx.arw.arrowlet.term.Fulfill<I,O,E>;
+typedef Deliver<I,O,E>                    = stx.arw.arrowlet.term.Deliver<I,O,E>;
+typedef Contextualize<P,R,E>              = stx.arw.Contextualize<P,R,E>;

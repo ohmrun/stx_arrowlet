@@ -1,11 +1,11 @@
 package stx.arw.arrowlet.term;
 
-class Finisher<I,O,E> implements ArrowletApi<I,Noise,Noise>{
+class Deliver<I,O,E> implements ArrowletApi<I,Noise,Noise>{
   var success  : O -> Void;
   var failure  : Defect<E> -> Void;
-  var arrow    : Arrowlet<I,O,E>;
+  var arrow    : Internal<I,O,E>;
 
-  public function new(arrow,success:O->Void,failure:Defect<E> -> Void){
+  public inline function new(arrow,success:O->Void,failure:Defect<E> -> Void){
     this.arrow   = arrow;
     this.success = success;
     this.failure = failure;
@@ -20,15 +20,12 @@ class Finisher<I,O,E> implements ArrowletApi<I,Noise,Noise>{
     );
   }
   inline public function defer(i:I,cont:Terminal<Noise,Noise>):Work{
-    __.log().debug('environment: $arrow');
-    var defer = TinkFuture.trigger();
-    var inner = cont.inner(handler.bind(defer));
-
-    return cont.later(defer).after(arrow.prepare(i,inner));
-  }
-  inline function handler(defer:FutureTrigger<stx.Outcome<Noise,Defect<Noise>>>,outcome:stx.Outcome<O,Defect<E>>){
-    outcome.fold(success,failure);
-    defer.trigger(__.success(Noise));
+    //__.log().debug('environment: $arrow');
+    return arrow.defer(i,cont.joint((outcome) -> {
+      //__.log().debug(outcome);
+      outcome.fold(success,failure);
+      return Work.ZERO;
+    }));
   }
   public var convention(get,default):Convention;
   public inline function get_convention():Convention{
@@ -59,9 +56,19 @@ class Finisher<I,O,E> implements ArrowletApi<I,Noise,Noise>{
   public inline function get_status():GoalStatus{ return this.arrow.status; }
 
   public inline function pursue(){
-    this.arrow.pursue();
+    this.arrow.toWork().pursue();
   }
   public inline function escape(){
-    this.arrow.escape();
+    this.arrow.toWork().escape();
+  }
+  public function toString(){
+    return 'Deliver($arrow)';
+  }
+  @:isVar public var id(get,null):Int;
+  public function get_id():Int{
+    return id == null ? id = Task.counter++ : id;
+  }
+  public function equals<Q:{id:Int}>(that:Q):Bool{
+    return this.id == that.id;
   }
 }

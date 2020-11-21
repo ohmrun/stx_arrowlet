@@ -16,11 +16,12 @@ class Fan<I,O,E> extends ArrowletCls<I,Couple<O,O>,E>{
     );
   }
   override public function defer(i:I,cont:Terminal<Couple<O,O>,E>):Work{
-    var future = TinkFuture.trigger();
-    var inner = cont.inner(
-      (o:Outcome<O,Defect<E>>) -> future.trigger(o.map(v -> __.couple(v,v)))
+    return delegate.prepare(
+      i,
+      cont.joint(
+        (o:Outcome<O,Defect<E>>) -> contv.value(o.map(v -> __.couple(v,v))).serve()
+      ) 
     );
-    return cont.later(future).after(delegate.prepare(i,inner));
   }
   override public function get_convention(){
     return this.delegate.convention;

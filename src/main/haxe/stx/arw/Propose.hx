@@ -6,7 +6,7 @@ typedef ProposeDef<O,E> = ArrowletDef<Noise,Chunk<O,E>,Noise>;
 abstract Propose<O,E>(ProposeDef<O,E>) from ProposeDef<O,E> to ProposeDef<O,E>{
   static public var _(default,never) = ProposeLift;
   public inline function new(self) this = self;
-  @:noUsing static public function lift<O,E>(self:ProposeDef<O,E>):Propose<O,E> return new Propose(self);
+  @:noUsing static public inline function lift<O,E>(self:ProposeDef<O,E>):Propose<O,E> return new Propose(self);
     
   @:noUsing static public function fromChunk<O,E>(chunk:Chunk<O,E>):Propose<O,E>{
     return lift(Arrowlet.pure(chunk));
@@ -33,7 +33,7 @@ abstract Propose<O,E>(ProposeDef<O,E>) from ProposeDef<O,E> to ProposeDef<O,E>{
       )
     );
   }
-  public function toArrowlet():Arrowlet<Noise,Chunk<O,E>,Noise>{
+  public inline function toArrowlet():Arrowlet<Noise,Chunk<O,E>,Noise>{
     return this;
   }
   public function elide():Propose<Any,E>{
@@ -196,7 +196,7 @@ class ProposeLift{
       )
     );
   }
-  static public function environment<O,E>(self:Propose<O,E>,success:Option<O>->Void,failure:Err<E>->Void){
+  static public inline function environment<O,E>(self:Propose<O,E>,success:Option<O>->Void,failure:Err<E>->Void){
     return Arrowlet._.environment(
       self.toArrowlet(),
       Noise,

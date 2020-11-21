@@ -24,9 +24,9 @@ private class ApplierImplementation<I,O,E> extends ArrowletCls<Couple<Arrowlet<I
     );
   }
   override public function apply(i:Couple<Arrowlet<I,O,E>,I>):O{
-    return i.fst().convention.fold(
+    return i.fst().toInternal().convention.fold(
       () -> throw E_Arw_IncorrectCallingConvention,
-      () -> i.fst().apply(i.snd())
+      () -> i.fst().toInternal().apply(i.snd())
     );
   }
   /**

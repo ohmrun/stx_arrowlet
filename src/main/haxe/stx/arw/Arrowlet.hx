@@ -17,19 +17,6 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
   @:noUsing static public inline function pure<I,O,E>(o:O):Arrowlet<I,O,E>{
     return lift(new Pure(o));
   }
-  #if stx_log
-  @:noUsing static public function logger<I,E>(?log,?pos:Pos):Arrowlet<I,I,E>{
-    if(log == null){
-      log = __.log();
-    }
-    return lift(new Sync(
-      function(i:I){
-        log(i,pos);
-        return i;
-      }
-    ));
-  }
-  #end
   @:noUsing static public inline function Sync<I,O,E>(self:I->O):Arrowlet<I,O,E>{
     return lift(new Sync(self));
   }
@@ -48,11 +35,23 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
   @:noUsing static public inline function Delay<I,E>(milliseconds:Int):Arrowlet<I,I,E>{
     return new stx.arw.arrowlet.term.Delay(milliseconds);
   }
-  @:noUsing static public inline function Capture<I,O,E>(self:Arrowlet<I,O,E>,input:I):Arrowlet<Noise,O,E>{
-    return new stx.arw.arrowlet.term.Capture(self,input);
+  @:noUsing static public inline function SplitFun<P,Ri,Rii,E>(lhs:Internal<P,Ri,E>,rhs:P->Rii):Arrowlet<P,Couple<Ri,Rii>,E>{
+    return new stx.arw.arrowlet.term.SplitFun(lhs,rhs);
   }
-  @:noUsing static public inline function Finisher<I,O,E>(self:Arrowlet<I,O,E>,success,failure):Arrowlet<I,Noise,Noise>{
-    return new stx.arw.arrowlet.term.Finisher(self,success,failure);
+  @:noUsing static public inline function Fulfill<I,O,E>(self:Arrowlet<I,O,E>,input:I):Arrowlet<Noise,O,E>{
+    return new stx.arw.arrowlet.term.Fulfill(self,input);
+  }
+  @:noUsing static public inline function Deliver<I,O,E>(self:Arrowlet<I,O,E>,success,failure):Arrowlet<I,Noise,Noise>{
+    return new stx.arw.arrowlet.term.Deliver(self,success,failure);
+  }
+  @:noUsing static public inline function ThenArw<I,Oi,Oii,E>(self:I->Oi,fn:Arrowlet<Oi,Oii,E>):Arrowlet<I,Oii,E>{
+    return stx.arw.arrowlet.term.ThenArw.make(self,fn);
+  }
+  @:noUsing static public inline function ThenFun<I,Oi,Oii,E>(self:Arrowlet<I,Oi,E>,fn:Oi->Oii):Arrowlet<I,Oii,E>{
+    return new stx.arw.arrowlet.term.ThenFun(self,fn);
+  }
+  @:noUsing static public inline function ThenFunFun<I,Oi,Oii,E>(self:I->Oi,fn:Oi->Oii):Arrowlet<I,Oii,E>{
+    return new stx.arw.arrowlet.term.ThenFunFun(self,fn);
   }
   @:noUsing static public inline function Fun1Future<I,O,E>(self:I->TinkFuture<O>):Arrowlet<I,O,E>{
     return lift(new Fun1Future(self));
@@ -74,9 +73,12 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
       (i:I,cont) -> fn(i,(o) -> cont(__.success(o)))
     ));
   }
- public function environment(i:I,success:O->Void,failure:Defect<E>->Void):Thread{
+ public inline function environment(i:I,success:O->Void,failure:Defect<E>->Void):Fiber{
   return _.environment(this,i,success,failure);
  }
   //@:from static public function fromFunXX
   //@:from static public function fromFun1X
+  @:allow(stx) @:to private inline function toInternal():Internal<I,O,E>{
+    return Internal.lift(this);
+  }
 } 

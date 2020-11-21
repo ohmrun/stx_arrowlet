@@ -4,6 +4,7 @@ package stx.arw.test;
   import haxe.PosInfos;
 	import utest.UTest;
 
+  import utest.Assert.*;
 	import utest.Assert in Rig;
 	import utest.Async;
 
@@ -13,6 +14,7 @@ package stx.arw.test;
   using stx.Pico;
   using stx.Nano;
   using stx.arw.Test;
+  import stx.Test.LoggedTest;
 #end
 
 

@@ -2,27 +2,14 @@ package stx.arw.test;
 
 @:access(stx) class TerminalTest extends utest.Test{
 
-	// public function test(async:utest.Async){
-  //   var term          = new Terminal();
-  //   var order_correct = false;
-	// 	var inner 				= term.inner();
-	// 	inner.later((val:Outcome<Int,Dynamic>) -> {
-	// 		order_correct = true;
-	// 		trace(val);
-	// 		term.issue(Success(1));
-	// 	});
-	// 	term.later(
-	// 		(val:Outcome<Int,Dynamic>) -> {
-	// 			trace(val);
-	// 			Rig.isTrue(order_correct);
-  //       async.done();
-	// 		}
-	// 	);
-	// 	term.serve().submit();
-
-	// 	var res = term.after(inner.issue(Success(2))
-	// 	inner.issue(Success(2));
-	// }
+	public function test(async:utest.Async){
+		var term          = new Terminal();
+		var a 						= Arrowlet.unit();
+		var b 						= Arrowlet.unit();
+		var c 						= a.then(b);
+		c.prepare(1,term).crunch();
+    
+	}
 	// public function test_reversed_call(async:utest.Async){
   //   var term          = new Terminal();
   //   var order_correct = false;
@@ -81,9 +68,9 @@ package stx.arw.test;
 	// 	next.issue(Success(2));
 	// }
 	//@Ignored
-  public function test_composition(async:utest.Async){
+  public function _test_composition(async:utest.Async){
     var t       = new Terminal();
-    var r0      = t.value(1).later(
+    var r0      = @:privateAccess t.value(1).listen(
       (s) -> trace(s)
     );
     var inner   = t.inner(
@@ -94,7 +81,6 @@ package stx.arw.test;
     var r1      = inner.value("str");
     var r2      = r0.after(r1.serve());
 
-
     function handler(v){
       trace(v);
       Rig.pass();
@@ -102,10 +88,10 @@ package stx.arw.test;
     }
     handler(r2);
   }
-  public function test_inner(async:utest.Async){
+  public function _test_inner(async:utest.Async){
     var t         = new Terminal();
     var deferI    = Future.trigger();
-    var r0        = t.defer(deferI).later(
+    var r0        = @:privateAccess t.later(deferI).listen(
       (s) -> trace(s)
     );
     var inner     = t.inner(
@@ -115,9 +101,9 @@ package stx.arw.test;
       }
     );
     var deferII   = Future.trigger();
-    var r1        = inner.defer(deferII);
+    var r1        = inner.later(deferII);
     var r2      = r0.after(r1.serve());
-        deferII.trigger(__.accept("hello"));
+        deferII.trigger(__.success("hello"));
 
     function handler(v){
       trace(v);

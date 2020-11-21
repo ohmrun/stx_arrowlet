@@ -1,7 +1,7 @@
 package stx.arw.test;
 
 class TaskRebuildReloadTest extends utest.Test{
-  var log : Log = __.log();
+  var log : Log = //__.log();
 
   public function testVanilla(async:Async){
     var arrowlet = new Fun1Arrowlet(

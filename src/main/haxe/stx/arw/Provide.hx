@@ -5,44 +5,29 @@ typedef ProvideDef<O> = ConvertDef<Noise,O>;
 abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   static public var _(default,never) = ProvideLift;
   public inline function new(self) this = self;
-  static public function lift<O>(self:ProvideDef<O>):Provide<O> return new Provide(self);
+  static public inline function lift<O>(self:ProvideDef<O>):Provide<O> return new Provide(self);
 
-  @:from static public inline function fromFunTerminalWork<O>(fn:Terminal<O,Noise>->Work):Provide<O>{
-    return lift(
-      Arrowlet.Anon(
-        (i:Noise,cont:Terminal<O,Noise>) -> fn(cont)
-      )
-    );
-  }
+  // @:from static public inline function fromFunTerminalWork<O>(fn:Terminal<O,Noise>->Work):Provide<O>{
+  //   return lift(
+  //     Arrowlet.Anon(
+  //       (i:Noise,cont:Terminal<O,Noise>) -> fn(cont)
+  //     )
+  //   );
+  // }
   @:noUsing static public inline function pure<O>(v:O):Provide<O>{
     return lift(Arrowlet.pure(v));
   }
   @:noUsing static public inline function fromFuture<O>(future:Future<O>):Provide<O>{
-    return lift(
-      Arrowlet.Anon(
-        (_:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.later(future.map(__.success)).serve();
-        }
-      )
-    );
+    return lift(new stx.arw.provide.term.Later(future));
   }
   @:from static public inline function fromFunXR<O>(fn:Void->O):Provide<O>{
-    return lift(
-      Arrowlet.Anon(
-        (i:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.value(fn()).serve();
-        }
-      )
-    );
+    return lift(new stx.arw.provide.term.Thunk(fn));
   }
   @:from static public inline function fromFunXFuture<O>(fn:Void->Future<O>):Provide<O>{
-    return lift(
-      Arrowlet.Anon(
-        (i:Noise,cont:Terminal<O,Noise>) -> {
-          return cont.later(fn().map(Success)).serve();
-        }
-      )
-    );
+    return lift(new stx.arw.provide.term.FunXFutureProvide(fn));
+  }
+  @:noUsing static public inline function fromFunTerminalWork<O>(fn):Provide<O>{
+    return lift(new stx.arw.provide.term.ProvideFunTerminalWork(fn));
   }
   @:from static public inline function fromFunFuture<O>(ft:Future<O>):Provide<O>{
     return lift(
@@ -65,7 +50,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
       Provide.pure(seed)
     );
   }
-  @:to public function toArrowlet():Arrowlet<Noise,O,Noise>{
+  @:to public inline function toArrowlet():Arrowlet<Noise,O,Noise>{
     return this;
   }
   public function prj():ProvideDef<O> return this;
@@ -74,7 +59,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
 }
 
 class ProvideLift{
-  static public function environment<O>(self:Provide<O>,handler:O->Void):Thread{
+  static public inline function environment<O>(self:Provide<O>,handler:O->Void):Fiber{
     return Arrowlet._.environment(
       self,
       Noise,

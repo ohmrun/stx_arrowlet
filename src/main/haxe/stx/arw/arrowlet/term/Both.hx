@@ -4,9 +4,11 @@ package stx.arw.arrowlet.term;
 	* Runs the `lhs` and `rhs` concurrently.
 **/
 class Both<Ii,Oi,Iii,Oii,E> extends ArrowletCls<Couple<Ii,Iii>,Couple<Oi,Oii>,E>{
-
-	private var lhs : Arrowlet<Ii,Oi,E>;
-	private var rhs : Arrowlet<Iii,Oii,E>;
+	@:noUsing static public inline function make<Ii,Oi,Iii,Oii,E>(lhs:Internal<Ii,Oi,E>,rhs:Internal<Iii,Oii,E>){
+		return new Both(lhs,rhs);
+	}
+	private var lhs : Internal<Ii,Oi,E>;
+	private var rhs : Internal<Iii,Oii,E>;
 
 	public function new(lhs,rhs){
 		super();

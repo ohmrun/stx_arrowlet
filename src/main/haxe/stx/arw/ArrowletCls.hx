@@ -5,7 +5,7 @@ abstract class ArrowletCls<P,O,E> implements ArrowletApi<P,O,E> extends TaskCls<
     super();
   }
   abstract public function apply(p:P):O;
-  abstract public function defer(p:P,t:Terminal<O,E>):Work;
+  abstract public function defer(p:P,cont:Terminal<O,E>):Work;
   
   public var convention(get,default):Convention;
   public function get_convention():Convention{

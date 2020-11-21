@@ -1,10 +1,10 @@
 package stx.arw.arrowlet.term;
 
 class Then<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
-	private var lhs : Arrowlet<I,Oi,E>;
-	private var rhs : Arrowlet<Oi,Oii,E>;
+	private var lhs : Internal<I,Oi,E>;
+	private var rhs : Internal<Oi,Oii,E>;
 
-  public function new(lhs,rhs){
+  public function new(lhs:Internal<I,Oi,E>,rhs:Internal<Oi,Oii,E>){
 		super();
 		this.lhs = lhs;
 		this.rhs = rhs;
@@ -16,22 +16,21 @@ class Then<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 		return switch(lhs.status){
 			case Problem : cont.error(lhs.defect).serve();
 			case Pending | Working | Waiting  : 
-				var later = Future.trigger();
-				var inner = cont.inner(
-					(outcome:Outcome<Oi,Defect<E>>) -> {
-						var later_work = outcome.fold(
-							(ok) -> handle_rhs(rhs,ok,cont),
-							(no) -> cont.error(no).serve()
-						);
-						later.trigger(later_work);
-					}
+				lhs.defer(
+					i,
+					cont.joint(joint.bind(_,cont))
 				);
-				return lhs.defer(i,inner).seq(later);
-			case Secured: handle_rhs(rhs,lhs.result,cont);
-			case Applied: handle_rhs(rhs,lhs.apply(i),cont);
+			case Secured: handle_rhs(lhs.result,cont);
+			case Applied: handle_rhs(lhs.apply(i),cont);
 		}
 	}
-	private inline function handle_rhs(rhs:Arrowlet<Oi,Oii,E>,i:Oi,cont:Terminal<Oii,E>):Work{
+	private function joint(outcome:Outcome<Oi,Defect<E>>,cont:Terminal<Oii,E>):Work{
+		return outcome.fold(
+			(ok) -> handle_rhs(ok,cont),
+			(no) -> cont.error(no).serve()
+		);
+	}
+	private inline function handle_rhs(i:Oi,cont:Terminal<Oii,E>):Work{
 		return switch(rhs.status){
 			case Problem 										 	: cont.error(rhs.defect).serve();
 			case Secured 										 	: cont.value(rhs.result).serve();

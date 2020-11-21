@@ -4,10 +4,10 @@ typedef PerformDef = ArrowletDef<Noise,Noise,Noise>;
 
 abstract Perform(PerformDef) from PerformDef to PerformDef{
   public inline function new(self) this = self;
-  static public function lift(self:PerformDef):Perform return new Perform(self);
+  static public inline function lift(self:PerformDef):Perform return new Perform(self);
   
   
-  public function toArrowlet():Arrowlet<Noise,Noise,Noise> return this;
+  public inline function toArrowlet():Arrowlet<Noise,Noise,Noise> return this;
   public function toCascade<E>():Cascade<Noise,Noise,E>{
     return Cascade.lift(
       Arrowlet.Anon(

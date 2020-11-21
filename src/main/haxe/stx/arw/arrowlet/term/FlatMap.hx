@@ -3,7 +3,7 @@ package stx.arw.arrowlet.term;
 import stx.log.Facade;
 
 class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
-  var self : Arrowlet<I,Oi,E>;
+  var self : Internal<I,Oi,E>;
   var func : Oi -> Arrowlet<I,Oii,E>;
 
 	public function new(self,func){
@@ -15,7 +15,7 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     return throw E_Arw_IncorrectCallingConvention;
   }
   override public function defer(i:I,cont:Terminal<Oii,E>):Work{
-		__.log().tag("stx.arw.test")("FlatMap.apply");
+		//__.log().tag("stx.arw.test")("FlatMap.apply");
 	
 		var future_response_trigger = Future.trigger();
 
@@ -23,8 +23,8 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 			(res:Outcome<Oi,Defect<E>>) -> {
 				future_response_trigger.trigger(
 					res.fold(
-						(oI:Oi) 			-> {
-							return func(oI).prepare(i,cont);
+						(oI:Oi) -> {
+							return func(oI).toInternal().defer(i,cont);
 						},
 						(e:Defect<E>)	-> {
 							return cont.error(e).serve();
@@ -33,6 +33,6 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 				);
 			}
 		);
-		return self.prepare(i,inner).seq(future_response_trigger);
+		return self.defer(i,inner).seq(future_response_trigger);
   }
 }

@@ -6,7 +6,7 @@ typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
   static public var _(default,never) = ArrangeLift;
 
   public inline function new(self) this = self;
-  @:noUsing static public function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         
+  @:noUsing static public inline function lift<I,S,O,E>(self:ArrangeDef<I,S,O,E>):Arrange<I,S,O,E>                         
     return new Arrange(self);
 
   @:noUsing static public function pure<I,S,O,E>(o:O):Arrange<I,S,O,E>{
@@ -99,7 +99,7 @@ typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
    public function split<Oi>(that:Arrange<I,S,Oi,E>):Arrange<I,S,Couple<O,Oi>,E>{
     return _.split(this,that);
    }
-   @:to public function toArrowlet():Arrowlet<Res<Couple<I,S>,E>,Res<O,E>,Noise>{
+   @:to public inline function toArrowlet():Arrowlet<Res<Couple<I,S>,E>,Res<O,E>,Noise>{
      return this;
    }
    @:to public function toCascade():Cascade<Couple<I,S>,O,E>{

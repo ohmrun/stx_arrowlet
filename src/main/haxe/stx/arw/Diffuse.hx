@@ -6,7 +6,7 @@ typedef DiffuseDef<I,O,E> = ArrowletDef<Chunk<I,E>,Chunk<O,E>,Noise>;
 abstract Diffuse<I,O,E>(DiffuseDef<I,O,E>) from DiffuseDef<I,O,E> to DiffuseDef<I,O,E>{
   static public var _(default,never) = DiffuseLift;
   public inline function new(self) this = self;
-  static public function lift<I,O,E>(self:DiffuseDef<I,O,E>):Diffuse<I,O,E> return new Diffuse(self);
+  static public inline function lift<I,O,E>(self:DiffuseDef<I,O,E>):Diffuse<I,O,E> return new Diffuse(self);
 
   
   @:from static public function fromFunIOptionR<I,O,E>(fn:I->Option<O>):Diffuse<I,O,E>{
@@ -42,7 +42,7 @@ abstract Diffuse<I,O,E>(DiffuseDef<I,O,E>) from DiffuseDef<I,O,E> to DiffuseDef<
   private var self(get,never):Diffuse<I,O,E>;
   private function get_self():Diffuse<I,O,E> return lift(this);
 
-  public function toArrowlet():Arrowlet<Chunk<I,E>,Chunk<O,E>,Noise>{
+  public inline function toArrowlet():Arrowlet<Chunk<I,E>,Chunk<O,E>,Noise>{
     return Arrowlet.lift(this);
   }
 }

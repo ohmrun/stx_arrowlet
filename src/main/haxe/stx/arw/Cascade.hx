@@ -6,10 +6,9 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 @:forward abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
 	static public var _(default, never) = CascadeLift;
 
-	public function new(self)
-		this = self;
+	public inline function new(self) this = self;
 
-	@:noUsing static public function lift<I, O, E>(self:ArrowletDef<Res<I, E>, Res<O, E>, Noise>):Cascade<I, O, E> {
+	@:noUsing static public inline function lift<I, O, E>(self:ArrowletDef<Res<I, E>, Res<O, E>, Noise>):Cascade<I, O, E> {
 		return new Cascade(self);
 	}
 
@@ -49,30 +48,15 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 		));
 	}
 	@:noUsing static public function fromArrowlet<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
-		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i : I) -> {
-			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, Defect<E>>) -> {
-				var outer_res = __.success(res.fold(__.accept, (e:Defect<E>) -> __.reject(Err.grow(e))));
-				defer.trigger(outer_res);
-			});
-			return cont.later(defer).after(arw.prepare(i, inner));
-		}, (e:Err<E>) -> {
-				return cont.value(__.reject(e)).serve();
-			})));
+		return lift(new stx.arw.cascade.term.ArrowletCascade(arw));
 	}
 
-	@:noUsing static public function fromAttempt<I, O, E>(arw:Arrowlet<I, O, E>):Cascade<I, O, E> {
-		return lift(Arrowlet.Anon((i:Res<I, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((i) -> {
-			var defer = Future.trigger();
-			var inner = cont.inner((res:Outcome<O, Defect<E>>) -> {
-				defer.trigger(Success(res.fold(__.accept, (e) -> __.reject(Err.grow(e)))));
-			});
-			return cont.later(defer).after(arw.prepare(i, inner));
-		}, typical_fail_handler(cont))));
+	@:noUsing static public function fromAttempt<I, O, E>(self:Attempt<I,O,E>):Cascade<I, O, E> {
+		return new stx.arw.cascade.term.AttemptCascade(self);
 	}
 
 	@:noUsing static public function fromProduce<O, E>(arw:Arrowlet<Noise, Res<O, E>, Noise>):Cascade<Noise, O, E> {
-		return lift(Arrowlet.Anon((i:Res<Noise, E>, cont:Terminal<Res<O, E>, Noise>) -> i.fold((_) -> arw.prepare(_, cont), typical_fail_handler(cont))));
+		return new stx.arw.cascade.term.ProduceCascade(arw);
 	}
 
 	@:from @:noUsing static public function fromFun1Produce<I, O, E>(arw:I->Produce<O, E>):Cascade<I, O, E> {
@@ -83,24 +67,24 @@ typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 		return (e:Err<E>) -> cont.value(__.reject(e)).serve();
 	}
 
-	@:to public function toArrowlet():Arrowlet<Res<I, E>, Res<O, E>, Noise> return this;
+	@:to public inline function toArrowlet():Arrowlet<Res<I, E>, Res<O, E>, Noise> return this;
 
-	public function environment(i:I, success:O->Void, failure:Err<E>->Void):Thread {
+	public inline function environment(i:I, success:O->Void, failure:Err<E>->Void):Fiber {
 		return _.environment(this, i, success, failure);
 	}
-	public function split<Oi>(that:Cascade<I, Oi, E>):Cascade<I, Couple<O, Oi>, E> {
+	public inline function split<Oi>(that:Cascade<I, Oi, E>):Cascade<I, Couple<O, Oi>, E> {
 		return _.split(this, that);
 	}
-	public function prefix<Ii>(fn:Ii->I):Cascade<Ii, O, E> {
+	public inline function prefix<Ii>(fn:Ii->I):Cascade<Ii, O, E> {
 		return _.prefix(this, fn);
   }
-  public function convert<Oi>(that:Convert<O, Oi>):Cascade<I, Oi, E> {
+  public inline function convert<Oi>(that:Convert<O, Oi>):Cascade<I, Oi, E> {
 		return _.convert(this, that);
   }
-  public function broach():Cascade<I, Couple<I,O>,E>{ 
+  public inline function broach():Cascade<I, Couple<I,O>,E>{ 
     return _.broach(this);
 	}
-	public function flat_map<Oi>(fn:O->Cascade<I,Oi,E>):Cascade<I,Oi,E>{
+	public inline function flat_map<Oi>(fn:O->Cascade<I,Oi,E>):Cascade<I,Oi,E>{
 		return _.flat_map(this,fn);
 	}
 }
@@ -132,15 +116,7 @@ class CascadeLift {
 	}
 
 	static public function reframe<I, O, E>(self:Cascade<I, O, E>):Reframe<I, O, E> {
-		return Reframe.lift(Arrowlet.Anon((ipt:Res<I, E>, cont:Terminal<Res<Couple<O, I>, E>, Noise>) -> {
-			// trace(ipt);
-			var defer = Future.trigger();
-			var inner = cont.inner((opt:Outcome<Res<O, E>, Array<Noise>>) -> {
-				// trace(opt);
-				defer.trigger(opt.map(res -> res.zip(ipt)));
-			});
-			return cont.later(defer).after(self.prepare(ipt, inner));
-		}));
+		return lift(new stx.arw.reframe.term.CascadeReframe(self));
 	}
 
 	static public function cascade<I, O, Oi, E>(self:Cascade<I, O, E>, that:Cascade<O, Oi, E>):Cascade<I, Oi, E> {
@@ -167,7 +143,7 @@ class CascadeLift {
 		return (e:Err<E>) ->  cont.value(__.reject(e)).serve();
 	}
 
-	@:noUsing static public function environment<I, O, E>(self:Cascade<I, O, E>, i:I, success:O->Void, failure:Err<E>->Void):Thread {
+	@:noUsing static public inline function environment<I, O, E>(self:Cascade<I, O, E>, i:I, success:O->Void, failure:Err<E>->Void):Fiber {
 		return Arrowlet._.environment(self, __.accept(i), (res) -> res.fold(success, failure), (err) -> throw err);
 	}
 

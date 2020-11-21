@@ -9,8 +9,8 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
   public inline function new(self) this = self;
 
-  @:noUsing static public function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
-  @:noUsing static public function pure<I,O,E>(o:O):Reframe<I,O,E>{
+  @:noUsing static public inline function lift<I,O,E>(wml:ReframeDef<I,O,E>):Reframe<I,O,E> return new Reframe(wml);
+  @:noUsing static public inline function pure<I,O,E>(o:O):Reframe<I,O,E>{
     return lift(Arrowlet._.postfix(
       Cascade.unit(),
       (oc:Res<I,E>) -> (oc.map(__.couple.bind(o)):Res<Couple<O,I>,E>)
@@ -26,7 +26,7 @@ typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
   @:to public function toCascade():Cascade<I,Couple<O,I>,E>{
     return Cascade.lift(this);
   }
-  @:to public function toArrowlet():Arrowlet<Res<I,E>,Res<Couple<O,I>,E>,Noise>{
+  @:to public inline function toArrowlet():Arrowlet<Res<I,E>,Res<Couple<O,I>,E>,Noise>{
     return Arrowlet.lift(this);
   }
   @:from static public function fromCascade<I,O,E>(self:Cascade<I,Couple<O,I>,E>):Reframe<I,O,E>{
@@ -194,7 +194,7 @@ class ReframeLift{
       )
     );
   }
-  static public function environment<I,O,E>(self:Reframe<I,O,E>,i:I,success:Couple<O,I>->Void,failure:Err<E>->Void):Thread{
+  static public inline function environment<I,O,E>(self:Reframe<I,O,E>,i:I,success:Couple<O,I>->Void,failure:Err<E>->Void):Fiber{
     return Cascade._.environment(
       self,
       i,

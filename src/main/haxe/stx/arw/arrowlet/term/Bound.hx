@@ -1,9 +1,10 @@
 package stx.arw.arrowlet.term;
 
 class Bound<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
-  var lhs : Arrowlet<I,Oi,E>;
-  var rhs : Arrowlet<Couple<I,Oi>,Oii,E>;
-  public function new(lhs:Arrowlet<I,Oi,E>,rhs:Arrowlet<Couple<I,Oi>,Oii,E>){
+  var lhs : Internal<I,Oi,E>;
+  var rhs : Internal<Couple<I,Oi>,Oii,E>;
+  
+  public function new(lhs:Internal<I,Oi,E>,rhs:Internal<Couple<I,Oi>,Oii,E>){
     super();
     this.lhs = lhs;
     this.rhs = rhs;
@@ -17,7 +18,7 @@ class Bound<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
   override public function defer(i:I,cont:Terminal<Oii,E>):Work{
     return new FlatMap(
       lhs,
-      (oI) -> Arrowlet.pure(__.couple(i,oI)).then(rhs)
+      (oI) -> Arrowlet.pure(__.couple(i,oI)).then(rhs.toArrowlet())
     ).defer(i,cont);
   }
 }
