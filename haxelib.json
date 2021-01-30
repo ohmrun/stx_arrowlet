@@ -8,17 +8,15 @@
     "releasenote": "see CHANGELOG.md",
     "contributors": ["0b1kn00b"],
     "dependencies": {
-        "tink_core": "2.0.0-rc.1",
+        "tink_core"     : "git:https://github.com/haxetink/tink_core.git",
 
-        "stx_fn": "1.0.0",
-        "stx_pico": "1.0.0",
-        "stx_nano": "0.1.5",
+        "stx_pico"      : "git:https://github.com/ohmrun/stx_pico.git",
+        "stx_nano"      : "git:https://github.com/ohmrun/stx_nano.git",
         
-        "stx_assert": "0.1.0",
-        "stx_async": "1.0.1",
-        "stx_log": "0.1.4",
-        
-        "stx_ext": "0.1.0"
+        "stx_fn"        : "git:https://github.com/ohmrun/stx_fn.git",
+        "stx_assert"    : "git:https://github.com/ohmrun/stx_assert.git",
+        "stx_async"     : "git:https://github.com/ohmrun/stx_async.git",
+        "stx_log"       : "git:https://github.com/ohmrun/stx_log.git"
     },
     "classPath": "src/main/haxe"
 }
