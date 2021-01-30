@@ -6,7 +6,7 @@ class Base<Ii,O,Iii,E> extends ArrowletCls<Either<Iii,Ii>,Either<Iii,O>,E>{
     super();
     this.delegate = delegate;
   }
-  override inline public function apply(i:Either<Iii,Ii>):Either<Iii,O>{
+  inline public function apply(i:Either<Iii,Ii>):Either<Iii,O>{
     return convention.fold(
       () -> throw E_Arw_IncorrectCallingConvention,
       () -> i.fold(
@@ -15,7 +15,7 @@ class Base<Ii,O,Iii,E> extends ArrowletCls<Either<Iii,Ii>,Either<Iii,O>,E>{
       )
     );
   }
-	override inline public function defer(i:Either<Iii,Ii>,cont:Terminal<Either<Iii,O>,E>):Work{
+	inline public function defer(i:Either<Iii,Ii>,cont:Terminal<Either<Iii,O>,E>):Work{
     return switch (i) {
       case Right(v) 	: Arrowlet.Applier().then(Right).prepare(__.couple(delegate.toArrowlet(),v),cont);
       case Left(v) 		: cont.value(Left(v)).serve();

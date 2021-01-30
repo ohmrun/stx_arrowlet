@@ -6,10 +6,10 @@ class ConvertProvide<P,O,E> extends ArrowletCls<P,O,Noise>{
     super();
     this.delegate = delegate;
   }
-  override inline public function apply(p:P):O{
+  inline public function apply(p:P):O{
     return Arrowlet.lift(Arrowlet.lift(delegate).toInternal().apply(p)).toInternal().apply(Noise);
   }
-  override inline public function defer(p:P,cont:Terminal<O,Noise>):Work{
+  inline public function defer(p:P,cont:Terminal<O,Noise>):Work{
     return Arrowlet.lift(delegate).toInternal()
       .defer(
         p,

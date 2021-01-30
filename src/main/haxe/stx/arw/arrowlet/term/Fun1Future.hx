@@ -8,10 +8,10 @@ class Fun1Future<I,O,E> extends ArrowletCls<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(i:I):O{
+  public function apply(i:I):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override inline public function defer(i:I,cont:Terminal<O,E>):Work{
+  inline public function defer(i:I,cont:Terminal<O,E>):Work{
     var later     = Future.trigger();
     var handler   = (o:O) ->later.trigger(Success(o));
     var canceller = delegate(i).handle(handler);

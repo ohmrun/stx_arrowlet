@@ -15,13 +15,13 @@ class ThenArw<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public inline function apply(i:I):Oii{
+  public inline function apply(i:I):Oii{
     return convention.fold(
      () -> return throw E_Arw_IncorrectCallingConvention,
      () -> return this.rhs.apply(this.lhs(i))
     );
   }
-  override public function defer(i:I,cont:Terminal<Oii,E>):Work{
+  public function defer(i:I,cont:Terminal<Oii,E>):Work{
     return rhs.defer(lhs(i),cont);
   }
   override public function get_convention(){

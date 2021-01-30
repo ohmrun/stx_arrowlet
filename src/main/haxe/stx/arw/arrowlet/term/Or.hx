@@ -9,10 +9,10 @@ class Or<Ii,Iii,O,E> extends ArrowletCls<Either<Ii,Iii>,O,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public inline function apply(i:Either<Ii,Iii>):O{
+  public inline function apply(i:Either<Ii,Iii>):O{
     return i.fold(lhs.apply,rhs.apply);
   }
-  override public inline function defer(i:Either<Ii,Iii>,cont:Terminal<O,E>):Work{
+  public inline function defer(i:Either<Ii,Iii>,cont:Terminal<O,E>):Work{
     return i.fold(
       (iI)  -> lhs.convention.fold(
         () -> lhs.defer(iI,cont),

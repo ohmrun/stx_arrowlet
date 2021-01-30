@@ -60,7 +60,7 @@ class AfterRewriteTest extends utest.Test{
   public function test_arrowlet_error(async:utest.Async){
     Arrowlet.Anon(
       (i,cont) -> {
-        return cont.issue(Failure(E_UnexpectedNullValueEncountered)).serve();
+        return cont.issue(Failure(__.fault().err(E_UnexpectedNullValueEncountered))).serve();
       }
     ).environment(
       1,

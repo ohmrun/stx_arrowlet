@@ -2,6 +2,7 @@ package stx.arw;
         
 typedef RecoverDef<I,E>                 = ArrowletDef<Err<E>,I,Noise>;
 
+@:using(stx.arw.arrowlet.Lift)
 @:forward abstract Recover<I,E>(RecoverDef<I,E>) from RecoverDef<I,E> to RecoverDef<I,E>{
   public inline function new(self) this = self;
   @:noUsing static public inline function lift<I,E>(self:RecoverDef<I,E>) return new Recover(self);
@@ -25,7 +26,7 @@ class RecoverRectify<I,E> extends ArrowletCls<Res<I,E>,I,Noise>{
     super();
     this.delegate = delegate;
   }
-  override public function defer(p:Res<I,E>,cont:Terminal<I,Noise>){
+  public function defer(p:Res<I,E>,cont:Terminal<I,Noise>){
     return p.fold(
       ok -> cont.value(ok).serve(),
       no -> delegate.prepare(
@@ -39,7 +40,7 @@ class RecoverRectify<I,E> extends ArrowletCls<Res<I,E>,I,Noise>{
       )
     );
   }
-  override public function apply(p:Res<I,E>):I{
+  public function apply(p:Res<I,E>):I{
     return p.fold(
       ok -> ok,
       no -> delegate.toArrowlet().toInternal().apply(no)
@@ -52,7 +53,7 @@ class RecoverCascade<I,E> extends ArrowletCls<Res<I,E>,Res<I,E>,Noise>{
     super();
     this.delegate = delegate;
   }
-  override public function defer(p:Res<I,E>,cont:Terminal<Res<I,E>,Noise>){
+  public function defer(p:Res<I,E>,cont:Terminal<Res<I,E>,Noise>){
     return p.fold(
       (i) -> {
         return cont.value(__.accept(i)).serve();
@@ -73,7 +74,7 @@ class RecoverCascade<I,E> extends ArrowletCls<Res<I,E>,Res<I,E>,Noise>{
       }
     );
   }
-  override public function apply(p:Res<I,E>){
+  public function apply(p:Res<I,E>){
     return p.fold(
       ok -> __.accept(ok),
       no -> __.accept(delegate.toArrowlet().toInternal().apply(no))

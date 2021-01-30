@@ -8,4 +8,8 @@ typedef ArrowletDef<P,O,E>       = TaskDef<O,E> & {
   public function get_convention():Convention;
 
   public function asArrowletDef():ArrowletDef<P,O,E>;
+
+
+  //toInternal // (apply // defer)
+  //toTask     // If exists 
 }

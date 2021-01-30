@@ -10,10 +10,10 @@ class SplitArw<I,Oi,Oii,E> extends ArrowletCls<I,Couple<Oi,Oii>,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function apply(p:I):Couple<Oi,Oii>{
+  public function apply(p:I):Couple<Oi,Oii>{
     return __.couple(lhs(p),rhs.apply(p));
   }
-  override public function defer(p:I,cont:Terminal<Couple<Oi,Oii>,E>):Work{
+  public function defer(p:I,cont:Terminal<Couple<Oi,Oii>,E>):Work{
     return ThenFun.make(rhs,__.couple.bind(lhs(p))).defer(p,cont);
   }
   override public function get_convention(){

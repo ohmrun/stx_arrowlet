@@ -9,7 +9,7 @@ package stx.arw.arrowlet.term;
   public inline function submit(?scheduler):Void{
     this.prepare(
       Noise,
-      @:privateAccess Terminal.ZERO
+      @:privateAccess new Terminal()
     ).submit(
       scheduler
     );
@@ -17,7 +17,7 @@ package stx.arw.arrowlet.term;
   public inline function crunch(?scheduler):Void{
     this.prepare(
       Noise,
-      @:privateAccess Terminal.ZERO
+      @:privateAccess new Terminal()
     ).crunch(
       scheduler
     );

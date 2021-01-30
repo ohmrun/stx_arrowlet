@@ -13,10 +13,10 @@ class Inform<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function apply(i:I):Oii{
+  public function apply(i:I):Oii{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public function defer(i:I,cont:Terminal<Oii,E>):Work{
+  public function defer(i:I,cont:Terminal<Oii,E>):Work{
     return lhs.toArrowlet().flat_map(
       (oI) -> Arrowlet.Anon(
         (_:I,contI:Terminal<Oii,E>) -> rhs.toArrowlet().flat_map(

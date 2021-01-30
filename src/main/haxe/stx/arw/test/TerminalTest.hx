@@ -3,12 +3,24 @@ package stx.arw.test;
 @:access(stx) class TerminalTest extends utest.Test{
 
 	public function test(async:utest.Async){
+		var out 					= None;
 		var term          = new Terminal();
 		var a 						= Arrowlet.unit();
-		var b 						= Arrowlet.unit();
+		var b 						= Arrowlet.Sync(
+			(x) -> {
+				out = Some(x);
+				return x;
+			}
+		);
 		var c 						= a.then(b);
-		c.prepare(1,term).crunch();
-    
+				c.environment(
+					1,
+					(x) -> {
+						same(Some(1),out);
+						async.done();
+					},
+					__.crack
+				).submit();
 	}
 	// public function test_reversed_call(async:utest.Async){
   //   var term          = new Terminal();
@@ -68,7 +80,7 @@ package stx.arw.test;
 	// 	next.issue(Success(2));
 	// }
 	//@Ignored
-  public function _test_composition(async:utest.Async){
+  public function test_composition(async:utest.Async){
     var t       = new Terminal();
     var r0      = @:privateAccess t.value(1).listen(
       (s) -> trace(s)

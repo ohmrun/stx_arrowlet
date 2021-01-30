@@ -3,7 +3,7 @@ package stx.arw;
 typedef ReframeDef<I,O,E>               = CascadeDef<I,Couple<O,I>,E>;
 
 @:using(stx.arw.Reframe.ReframeLift)
-@:using(stx.arw.arrowlet.ArrowletLift)
+@:using(stx.arw.arrowlet.Lift)
 @:forward abstract Reframe<I,O,E>(ReframeDef<I,O,E>) from ReframeDef<I,O,E> to ReframeDef<I,O,E>{
   static public var _(default,never) = ReframeLift;
 

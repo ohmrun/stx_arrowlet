@@ -10,13 +10,13 @@ class Split<I,Oi,Oii,E> extends ArrowletCls<I,Couple<Oi,Oii>,E>{
     this.lhs      = lhs;
     this.rhs      = rhs;
   }
-  override public function apply(i:I):Couple<Oi,Oii>{
+  public function apply(i:I):Couple<Oi,Oii>{
     return convention.fold(
       () -> throw E_Arw_IncorrectCallingConvention,
       () -> __.couple(lhs.apply(i),rhs.apply(i))
     );
   }
-  override public function defer(i:I,cont:Terminal<Couple<Oi,Oii>,E>):Work{
+  public function defer(i:I,cont:Terminal<Couple<Oi,Oii>,E>):Work{
     return Both.make(lhs,rhs).defer(__.couple(i,i),cont);
   }
   override public function get_convention(){

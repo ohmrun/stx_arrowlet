@@ -7,11 +7,11 @@ class Anon<I,O,E> extends ArrowletCls<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override inline public function defer(i:I,cont:Terminal<O,E>):Work{
+  inline public function defer(i:I,cont:Terminal<O,E>):Work{
     return delegate(i,cont);
   }
   //TODO, I could conceivably have this run in the thread if possible
-  override inline public function apply(i:I):O{
+  inline public function apply(i:I):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
   override public function toString(){

@@ -15,20 +15,20 @@ class Both<Ii,Oi,Iii,Oii,E> extends ArrowletCls<Couple<Ii,Iii>,Couple<Oi,Oii>,E>
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-	override public function apply(i:Couple<Ii,Iii>):Couple<Oi,Oii>{
+	public function apply(i:Couple<Ii,Iii>):Couple<Oi,Oii>{
 		return this.convention.fold(
 			() -> throw E_Arw_IncorrectCallingConvention,
 			() -> __.couple(this.lhs.apply(i.fst()),this.rhs.apply(i.snd()))
 		);
 	}
-	override public function defer(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
-		return switch([lhs.status,rhs.status]){
+	public function defer(i:Couple<Ii,Iii>,cont:Terminal<Couple<Oi,Oii>,E>):Work{
+		return switch([lhs.get_status(),rhs.get_status()]){
 			case [Applied,Applied] 	:	cont.value(__.couple(lhs.apply(i.fst()),rhs.apply(i.snd()))).serve();
-			case [Secured,Secured]	: cont.value(__.couple(lhs.result,rhs.result)).serve();
-			case [Applied,Secured]	: cont.value(__.couple(lhs.apply(i.fst()),rhs.result)).serve();
-			case [Secured,Applied]	: cont.value(__.couple(lhs.result,rhs.apply(i.snd()))).serve();
-			case [Problem,_]				: cont.error(lhs.defect).serve();
-			case [_,Problem]				: cont.error(rhs.defect).serve();
+			case [Secured,Secured]	: cont.value(__.couple(lhs.get_result(),rhs.get_result())).serve();
+			case [Applied,Secured]	: cont.value(__.couple(lhs.apply(i.fst()),rhs.get_result())).serve();
+			case [Secured,Applied]	: cont.value(__.couple(lhs.get_result(),rhs.apply(i.snd()))).serve();
+			case [Problem,_]				: cont.error(lhs.get_defect()).serve();
+			case [_,Problem]				: cont.error(rhs.get_defect()).serve();
 			default :
 				var fut_lhs  = Future.trigger();
 				var fut_rhs  = Future.trigger();

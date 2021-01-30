@@ -8,7 +8,7 @@ class AttemptArrange<P,O,Oi,E> extends ArrowletCls<P,Res<Oi,E>,Noise>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function defer(p:P,cont:Terminal<Res<Oi,E>,Noise>):Work{
+  public function defer(p:P,cont:Terminal<Res<Oi,E>,Noise>):Work{
     return lhs.prepare(p,cont.joint(
       (outcome:Outcome<Res<O,E>,Array<Noise>>) -> 
         outcome.fold(
@@ -20,7 +20,7 @@ class AttemptArrange<P,O,Oi,E> extends ArrowletCls<P,Res<Oi,E>,Noise>{
         )
     ));
   }
-  override public function apply(p:P):Res<Oi,E>{
+  public function apply(p:P):Res<Oi,E>{
     return this.convention.fold(
       () -> throw E_Arw_IncorrectCallingConvention,
       () -> lhs.apply(p).fold(
@@ -33,6 +33,6 @@ class AttemptArrange<P,O,Oi,E> extends ArrowletCls<P,Res<Oi,E>,Noise>{
     return this.lhs.convention || this.rhs.convention;
   }
   override public function toString(){
-    return '${this.name()}($lhs -> $rhs)';
+    return '${this.identifier().name}($lhs -> $rhs)';
   }
 }

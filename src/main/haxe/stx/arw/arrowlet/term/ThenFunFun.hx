@@ -8,10 +8,10 @@ class ThenFunFun<P,Oi,Oii,E> extends ArrowletCls<P,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override inline public function defer(p:P,cont:Terminal<Oii,E>){
+  public function defer(p:P,cont:Terminal<Oii,E>){
     return cont.value(apply(p)).serve();
   }
-  override inline public function apply(p:P):Oii{
+  inline public function apply(p:P):Oii{
     return rhs(lhs(p));
   }
   public function next<Oiii>(that:Oii->Oiii):ThenFunFun<P,Oii,Oiii,E>{

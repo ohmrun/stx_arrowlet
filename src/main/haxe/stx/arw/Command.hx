@@ -2,7 +2,7 @@ package stx.arw;
         
 typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
 
-@:using(stx.arw.arrowlet.ArrowletLift)
+@:using(stx.arw.arrowlet.Lift)
 @:using(stx.arw.Command.CommandLift)
 @:forward abstract Command<I,E>(CommandDef<I,E>) from CommandDef<I,E> to CommandDef<I,E>{
   static public var _(default,never) = CommandLift;
@@ -53,11 +53,15 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
   }
   public function provide(i:I):Execute<E>{
     return Execute.lift(
-      Arrowlet.Anon((_:Noise,cont:Terminal<Report<E>,Noise>) -> this.prepare(i,cont))
+      Arrowlet.Anon((_:Noise,cont:Terminal<Report<E>,Noise>) -> prepare(i,cont))
     );
   }
   private var self(get,never):Command<I,E>;
   private function get_self():Command<I,E> return this;
+
+  public inline function prepare(i:I,cont){
+    return Arrowlet._.prepare(this,i,cont);
+  }
 } 
 class CommandLift{
   static public function produce<I,O,E>(command:Command<I,E>,produce:Produce<O,E>):Attempt<I,O,E>{

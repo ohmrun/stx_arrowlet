@@ -11,10 +11,10 @@ class FlatMap<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
 		this.self = self;
 		this.func = func;
 	}
-	override public function apply(i:I):Oii{
+	public function apply(i:I):Oii{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public function defer(i:I,cont:Terminal<Oii,E>):Work{
+  public function defer(i:I,cont:Terminal<Oii,E>):Work{
 		//__.log().tag("stx.arw.test")("FlatMap.apply");
 	
 		var future_response_trigger = Future.trigger();

@@ -8,11 +8,6 @@ function $extend(from, fields) {
 	if( fields.toString !== Object.prototype.toString ) proto.toString = fields.toString;
 	return proto;
 }
-var _$Date_Date_$Impl_$ = function() { };
-_$Date_Date_$Impl_$.__name__ = "_Date.Date_Impl_";
-_$Date_Date_$Impl_$.now = function() {
-	return new Date();
-};
 var EReg = function(r,opt) {
 	this.r = new RegExp(r,opt.split("u").join(""));
 };
@@ -61,21 +56,24 @@ EReg.prototype = {
 			return b;
 		}
 	}
+	,replace: function(s,by) {
+		return s.replace(this.r,by);
+	}
 	,map: function(s,f) {
 		var offset = 0;
-		var buf_b = "";
+		var buf = new StringBuf();
 		while(true) {
 			if(offset >= s.length) {
 				break;
 			} else if(!this.matchSub(s,offset)) {
-				buf_b += Std.string(HxOverrides.substr(s,offset,null));
+				buf.add(HxOverrides.substr(s,offset,null));
 				break;
 			}
 			var p = this.matchedPos();
-			buf_b += Std.string(HxOverrides.substr(s,offset,p.pos - offset));
-			buf_b += Std.string(f(this));
+			buf.add(HxOverrides.substr(s,offset,p.pos - offset));
+			buf.add(f(this));
 			if(p.len == 0) {
-				buf_b += Std.string(HxOverrides.substr(s,p.pos,1));
+				buf.add(HxOverrides.substr(s,p.pos,1));
 				offset = p.pos + 1;
 			} else {
 				offset = p.pos + p.len;
@@ -85,9 +83,9 @@ EReg.prototype = {
 			}
 		}
 		if(!this.r.global && offset > 0 && offset < s.length) {
-			buf_b += Std.string(HxOverrides.substr(s,offset,null));
+			buf.add(HxOverrides.substr(s,offset,null));
 		}
-		return buf_b;
+		return buf.toString();
 	}
 	,__class__: EReg
 };
@@ -104,7 +102,7 @@ HxOverrides.dateStr = function(date) {
 HxOverrides.cca = function(s,index) {
 	var x = s.charCodeAt(index);
 	if(x != x) {
-		return undefined;
+		return js_Lib.get_undefined();
 	}
 	return x;
 };
@@ -130,6 +128,22 @@ HxOverrides.remove = function(a,obj) {
 };
 HxOverrides.now = function() {
 	return Date.now();
+};
+var IntIterator = function(min,max) {
+	this.min = min;
+	this.max = max;
+};
+IntIterator.__name__ = "IntIterator";
+IntIterator.prototype = {
+	min: null
+	,max: null
+	,hasNext: function() {
+		return this.min < this.max;
+	}
+	,next: function() {
+		return this.min++;
+	}
+	,__class__: IntIterator
 };
 var Lambda = function() { };
 Lambda.__name__ = "Lambda";
@@ -267,11 +281,14 @@ Main.main = function() {
 Math.__name__ = "Math";
 var Reflect = function() { };
 Reflect.__name__ = "Reflect";
+Reflect.hasField = function(o,field) {
+	return Object.prototype.hasOwnProperty.call(o,field);
+};
 Reflect.field = function(o,field) {
 	try {
 		return o[field];
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 		return null;
 	}
 };
@@ -294,6 +311,9 @@ Reflect.getProperty = function(o,field) {
 		}
 	}
 };
+Reflect.callMethod = function(o,func,args) {
+	return func.apply(o,args);
+};
 Reflect.fields = function(o) {
 	var a = [];
 	if(o != null) {
@@ -308,7 +328,7 @@ Reflect.fields = function(o) {
 };
 Reflect.isFunction = function(f) {
 	if(typeof(f) == "function") {
-		return !(f.__name__ || f.__ename__);
+		return !(js_Boot.isClass(f) || js_Boot.isEnum(f));
 	} else {
 		return false;
 	}
@@ -342,7 +362,7 @@ Reflect.isObject = function(v) {
 	var t = typeof(v);
 	if(!(t == "string" || t == "object" && v.__enum__ == null)) {
 		if(t == "function") {
-			return (v.__name__ || v.__ename__) != null;
+			return (js_Boot.isClass(v) || js_Boot.isEnum(v)) != null;
 		} else {
 			return false;
 		}
@@ -352,8 +372,21 @@ Reflect.isObject = function(v) {
 };
 var Std = function() { };
 Std.__name__ = "Std";
+Std.isOfType = function(v,t) {
+	return js_Boot.__instanceof(v,t);
+};
+Std.downcast = function(value,c) {
+	if(js_Boot.__downcastCheck(value,c)) {
+		return value;
+	} else {
+		return null;
+	}
+};
 Std.string = function(s) {
 	return js_Boot.__string_rec(s,"");
+};
+Std.int = function(x) {
+	return x | 0;
 };
 Std.parseInt = function(x) {
 	if(x != null) {
@@ -361,9 +394,9 @@ Std.parseInt = function(x) {
 		var _g1 = x.length;
 		while(_g < _g1) {
 			var i = _g++;
-			var c = x.charCodeAt(i);
+			var c = StringTools.fastCodeAt(x,i);
 			if(c <= 8 || c >= 14 && c != 32 && c != 45) {
-				var nc = x.charCodeAt(i + 1);
+				var nc = StringTools.fastCodeAt(x,i + 1);
 				var v = parseInt(x,nc == 120 || nc == 88 ? 16 : 10);
 				if(isNaN(v)) {
 					return null;
@@ -375,61 +408,66 @@ Std.parseInt = function(x) {
 	}
 	return null;
 };
+Std.parseFloat = function(x) {
+	return parseFloat(x);
+};
 var StringBuf = function() {
 	this.b = "";
 };
 StringBuf.__name__ = "StringBuf";
 StringBuf.prototype = {
 	b: null
+	,get_length: function() {
+		return this.b.length;
+	}
+	,add: function(x) {
+		this.b += Std.string(x);
+	}
+	,addChar: function(c) {
+		this.b += String.fromCodePoint(c);
+	}
+	,toString: function() {
+		return this.b;
+	}
 	,__class__: StringBuf
+	,__properties__: {get_length:"get_length"}
 };
 var StringTools = function() { };
 StringTools.__name__ = "StringTools";
 StringTools.htmlEscape = function(s,quotes) {
-	var buf_b = "";
-	var _g_offset = 0;
-	var _g_s = s;
-	while(_g_offset < _g_s.length) {
-		var s = _g_s;
-		var index = _g_offset++;
-		var c = s.charCodeAt(index);
-		if(c >= 55296 && c <= 56319) {
-			c = c - 55232 << 10 | s.charCodeAt(index + 1) & 1023;
-		}
-		var c1 = c;
-		if(c1 >= 65536) {
-			++_g_offset;
-		}
-		var code = c1;
+	var buf = new StringBuf();
+	var _g = new haxe_iterators_StringIteratorUnicode(s);
+	while(_g.hasNext()) {
+		var code = _g.next();
 		switch(code) {
 		case 34:
 			if(quotes) {
-				buf_b += "&quot;";
+				buf.add("&quot;");
 			} else {
-				buf_b += String.fromCodePoint(code);
+				buf.addChar(code);
 			}
 			break;
 		case 38:
-			buf_b += "&amp;";
+			buf.add("&amp;");
 			break;
 		case 39:
 			if(quotes) {
-				buf_b += "&#039;";
+				buf.add("&#039;");
 			} else {
-				buf_b += String.fromCodePoint(code);
+				buf.addChar(code);
 			}
 			break;
 		case 60:
-			buf_b += "&lt;";
+			buf.add("&lt;");
 			break;
 		case 62:
-			buf_b += "&gt;";
+			buf.add("&gt;");
 			break;
 		default:
-			buf_b += String.fromCodePoint(code);
+			buf.addChar(code);
 		}
 	}
-	return buf_b;
+	return buf.toString();
 };
 StringTools.startsWith = function(s,start) {
 	if(s.length >= start.length) {
@@ -473,20 +511,20 @@ StringTools.lpad = function(s,c,l) {
 	if(c.length <= 0) {
 		return s;
 	}
-	var buf_b = "";
+	var buf = new StringBuf();
 	l -= s.length;
-	while(buf_b.length < l) buf_b += c == null ? "null" : "" + c;
-	buf_b += s == null ? "null" : "" + s;
-	return buf_b;
+	while(buf.get_length() < l) buf.add(c);
+	buf.add(s);
+	return buf.toString();
 };
 StringTools.rpad = function(s,c,l) {
 	if(c.length <= 0) {
 		return s;
 	}
-	var buf_b = "";
-	buf_b = "" + (s == null ? "null" : "" + s);
-	while(buf_b.length < l) buf_b += c == null ? "null" : "" + c;
-	return buf_b;
+	var buf = new StringBuf();
+	buf.add(s);
+	while(buf.get_length() < l) buf.add(c);
+	return buf.toString();
 };
 StringTools.replace = function(s,sub,by) {
 	return s.split(sub).join(by);
@@ -505,6 +543,16 @@ StringTools.hex = function(n,digits) {
 	}
 	return s;
 };
+StringTools.fastCodeAt = function(s,index) {
+	return s.charCodeAt(index);
+};
+StringTools.utf16CodePointAt = function(s,index) {
+	var c = StringTools.fastCodeAt(s,index);
+	if(c >= 55296 && c <= 56319) {
+		c = c - 55232 << 10 | StringTools.fastCodeAt(s,index + 1) & 1023;
+	}
+	return c;
+};
 var ValueType = $hxEnums["ValueType"] = { __ename__:"ValueType",__constructs__:null
 	,TNull: {_hx_name:"TNull",_hx_index:0,__enum__:"ValueType",toString:$estr}
 	,TInt: {_hx_name:"TInt",_hx_index:1,__enum__:"ValueType",toString:$estr}
@@ -519,11 +567,20 @@ var ValueType = $hxEnums["ValueType"] = { __ename__:"ValueType",__constructs__:n
 ValueType.__constructs__ = [ValueType.TNull,ValueType.TInt,ValueType.TFloat,ValueType.TBool,ValueType.TObject,ValueType.TFunction,ValueType.TClass,ValueType.TEnum,ValueType.TUnknown];
 var Type = function() { };
 Type.__name__ = "Type";
+Type.getClass = function(o) {
+	return js_Boot.getClass(o);
+};
 Type.getEnum = function(o) {
 	if(o == null) {
 		return null;
 	}
 	return $hxEnums[o.__enum__];
+};
+Type.getClassName = function(c) {
+	return c.__name__;
+};
+Type.getEnumName = function(e) {
+	return e.__ename__;
 };
 Type.createEnum = function(e,constr,params) {
 	var f = Reflect.field(e,constr);
@@ -534,7 +591,7 @@ Type.createEnum = function(e,constr,params) {
 		if(params == null) {
 			throw haxe_Exception.thrown("Constructor " + constr + " need parameters");
 		}
-		return f.apply(e,params);
+		return Reflect.callMethod(e,f,params);
 	}
 	if(params != null && params.length != 0) {
 		throw haxe_Exception.thrown("Constructor " + constr + " does not need parameters");
@@ -562,12 +619,23 @@ Type.getInstanceFields = function(c) {
 	HxOverrides.remove(a,"__properties__");
 	return a;
 };
+Type.getEnumConstructs = function(e) {
+	var _this = e.__constructs__;
+	var result = new Array(_this.length);
+	var _g = 0;
+	var _g1 = _this.length;
+	while(_g < _g1) {
+		var i = _g++;
+		result[i] = _this[i]._hx_name;
+	}
+	return result;
+};
 Type.typeof = function(v) {
 	switch(typeof(v)) {
 	case "boolean":
 		return ValueType.TBool;
 	case "function":
-		if(v.__name__ || v.__ename__) {
+		if(js_Boot.isClass(v) || js_Boot.isEnum(v)) {
 			return ValueType.TObject;
 		}
 		return ValueType.TFunction;
@@ -597,6 +665,9 @@ Type.typeof = function(v) {
 		return ValueType.TUnknown;
 	}
 };
+Type.enumConstructor = function(e) {
+	return $hxEnums[e.__enum__].__constructs__[e._hx_index]._hx_name;
+};
 Type.enumParameters = function(e) {
 	var enm = $hxEnums[e.__enum__];
 	var params = enm.__constructs__[e._hx_index].__params__;
@@ -613,6 +684,9 @@ Type.enumParameters = function(e) {
 		return [];
 	}
 };
+Type.enumIndex = function(e) {
+	return e._hx_index;
+};
 var haxe_StackItem = $hxEnums["haxe.StackItem"] = { __ename__:"haxe.StackItem",__constructs__:null
 	,CFunction: {_hx_name:"CFunction",_hx_index:0,__enum__:"haxe.StackItem",toString:$estr}
 	,Module: ($_=function(m) { return {_hx_index:1,m:m,__enum__:"haxe.StackItem",toString:$estr}; },$_._hx_name="Module",$_.__params__ = ["m"],$_)
@@ -622,30 +696,38 @@ var haxe_StackItem = $hxEnums["haxe.StackItem"] = { __ename__:"haxe.StackItem",_
 };
 haxe_StackItem.__constructs__ = [haxe_StackItem.CFunction,haxe_StackItem.Module,haxe_StackItem.FilePos,haxe_StackItem.Method,haxe_StackItem.LocalFunction];
 var haxe_CallStack = {};
+haxe_CallStack.__properties__ = {get_length:"get_length"};
+haxe_CallStack.get_length = function(this1) {
+	return this1.length;
+};
 haxe_CallStack.callStack = function() {
 	return haxe_NativeStackTrace.toHaxe(haxe_NativeStackTrace.callStack());
 };
-haxe_CallStack.exceptionStack = function() {
-	return haxe_CallStack.subtract(haxe_NativeStackTrace.toHaxe(haxe_NativeStackTrace.exceptionStack()),haxe_CallStack.callStack());
+haxe_CallStack.exceptionStack = function(fullStack) {
+	if(fullStack == null) {
+		fullStack = false;
+	}
+	var eStack = haxe_NativeStackTrace.toHaxe(haxe_NativeStackTrace.exceptionStack());
+	return haxe_CallStack.asArray(fullStack ? eStack : haxe_CallStack.subtract(eStack,haxe_CallStack.callStack()));
 };
 haxe_CallStack.toString = function(stack) {
 	var b = new StringBuf();
 	var _g = 0;
-	var _g1 = stack;
+	var _g1 = haxe_CallStack.asArray(stack);
 	while(_g < _g1.length) {
 		var s = _g1[_g++];
-		b.b += "\nCalled from ";
+		b.add("\nCalled from ");
 		haxe_CallStack.itemToString(b,s);
 	}
-	return b.b;
+	return b.toString();
 };
 haxe_CallStack.subtract = function(this1,stack) {
 	var startIndex = -1;
 	var i = -1;
 	while(++i < this1.length) {
 		var _g = 0;
-		var _g1 = stack.length;
-		while(_g < _g1) if(haxe_CallStack.equalItems(this1[i],stack[_g++])) {
+		var _g1 = haxe_CallStack.get_length(stack);
+		while(_g < _g1) if(haxe_CallStack.equalItems(this1[i],haxe_CallStack.get(stack,_g++))) {
 			if(startIndex < 0) {
 				startIndex = i;
 			}
@@ -665,6 +747,12 @@ haxe_CallStack.subtract = function(this1,stack) {
 	} else {
 		return this1;
 	}
+};
+haxe_CallStack.get = function(this1,index) {
+	return this1[index];
+};
+haxe_CallStack.asArray = function(this1) {
+	return this1;
 };
 haxe_CallStack.equalItems = function(item1,item2) {
 	if(item1 == null) {
@@ -734,39 +822,39 @@ haxe_CallStack.equalItems = function(item1,item2) {
 haxe_CallStack.itemToString = function(b,s) {
 	switch(s._hx_index) {
 	case 0:
-		b.b += "a C function";
+		b.add("a C function");
 		break;
 	case 1:
-		var _g = s.m;
-		b.b = (b.b += "module ") + (_g == null ? "null" : "" + _g);
+		b.add("module ");
+		b.add(s.m);
 		break;
 	case 2:
-		var _g = s.column;
-		var _g1 = s.line;
-		var _g2 = s.file;
-		var _g3 = s.s;
-		if(_g3 != null) {
-			haxe_CallStack.itemToString(b,_g3);
-			b.b += " (";
-		}
-		b.b = (b.b += _g2 == null ? "null" : "" + _g2) + " line ";
-		b.b += _g1 == null ? "null" : "" + _g1;
+		var _g = s.s;
+		var _g1 = s.column;
 		if(_g != null) {
-			b.b = (b.b += " column ") + (_g == null ? "null" : "" + _g);
+			haxe_CallStack.itemToString(b,_g);
+			b.add(" (");
 		}
-		if(_g3 != null) {
-			b.b += ")";
+		b.add(s.file);
+		b.add(" line ");
+		b.add(s.line);
+		if(_g1 != null) {
+			b.add(" column ");
+			b.add(_g1);
+		}
+		if(_g != null) {
+			b.add(")");
 		}
 		break;
 	case 3:
-		var _g = s.method;
-		var _g1 = s.classname;
-		b.b = (b.b += Std.string(_g1 == null ? "<unknown>" : _g1)) + ".";
-		b.b += _g == null ? "null" : "" + _g;
+		var _g = s.classname;
+		b.add(_g == null ? "<unknown>" : _g);
+		b.add(".");
+		b.add(s.method);
 		break;
 	case 4:
-		var _g = s.v;
-		b.b = (b.b += "local function #") + (_g == null ? "null" : "" + _g);
+		b.add("local function #");
+		b.add(s.v);
 		break;
 	}
 };
@@ -780,6 +868,16 @@ haxe_IMap.prototype = {
 	,keys: null
 	,keyValueIterator: null
 	,__class__: haxe_IMap
+};
+var haxe_DynamicAccess = {};
+haxe_DynamicAccess.get = function(this1,key) {
+	return this1[key];
+};
+haxe_DynamicAccess.keys = function(this1) {
+	return Reflect.fields(this1);
+};
+haxe_DynamicAccess.keyValueIterator = function(this1) {
+	return new haxe_iterators_DynamicAccessKeyValueIterator(this1);
 };
 var haxe_EntryPoint = function() { };
 haxe_EntryPoint.__name__ = "haxe.EntryPoint";
@@ -845,6 +943,9 @@ haxe_Exception.prototype = $extend(Error.prototype,{
 	,unwrap: function() {
 		return this.__nativeException;
 	}
+	,__shiftStack: function() {
+		this.__skipStack++;
+	}
 	,get_native: function() {
 		return this.__nativeException;
 	}
@@ -887,7 +988,12 @@ haxe_MainEvent.prototype = {
 	,nextRun: null
 	,priority: null
 	,delay: function(t) {
-		this.nextRun = t == null ? -Infinity : HxOverrides.now() / 1000 + t;
+		this.nextRun = t == null ? -Infinity : haxe_Timer.stamp() + t;
+	}
+	,call: function() {
+		if(this.f != null) {
+			this.f();
+		}
 	}
 	,stop: function() {
 		if(this.f == null) {
@@ -1003,16 +1109,14 @@ haxe_MainLoop.sortEvents = function() {
 haxe_MainLoop.tick = function() {
 	haxe_MainLoop.sortEvents();
 	var e = haxe_MainLoop.pending;
-	var now = HxOverrides.now() / 1000;
+	var now = haxe_Timer.stamp();
 	var wait = 1e9;
 	while(e != null) {
 		var next = e.next;
 		var wt = e.nextRun - now;
 		if(wt <= 0) {
 			wait = 0;
-			if(e.f != null) {
-				e.f();
-			}
+			e.call();
 		} else if(wait > wt) {
 			wait = wt;
 		}
@@ -1208,6 +1312,9 @@ haxe_Timer.delay = function(f,time_ms) {
 	};
 	return t;
 };
+haxe_Timer.stamp = function() {
+	return HxOverrides.now() / 1000;
+};
 haxe_Timer.prototype = {
 	id: null
 	,stop: function() {
@@ -1224,6 +1331,7 @@ haxe_Timer.prototype = {
 var haxe_ValueException = function(value,previous,native) {
 	haxe_Exception.call(this,String(value),previous,native);
 	this.value = value;
+	this.__shiftStack();
 };
 haxe_ValueException.__name__ = "haxe.ValueException";
 haxe_ValueException.__super__ = haxe_Exception;
@@ -1242,6 +1350,9 @@ var haxe_io_Bytes = function(data) {
 	data.bytes = this.b;
 };
 haxe_io_Bytes.__name__ = "haxe.io.Bytes";
+haxe_io_Bytes.alloc = function(length) {
+	return new haxe_io_Bytes(new ArrayBuffer(length));
+};
 haxe_io_Bytes.ofString = function(s,encoding) {
 	if(encoding == haxe_io_Encoding.RawNative) {
 		var buf = new Uint8Array(s.length << 1);
@@ -1249,7 +1360,7 @@ haxe_io_Bytes.ofString = function(s,encoding) {
 		var _g1 = s.length;
 		while(_g < _g1) {
 			var i = _g++;
-			var c = s.charCodeAt(i);
+			var c = StringTools.fastCodeAt(s,i);
 			buf[i << 1] = c & 255;
 			buf[i << 1 | 1] = c >> 8;
 		}
@@ -1258,9 +1369,9 @@ haxe_io_Bytes.ofString = function(s,encoding) {
 	var a = [];
 	var i = 0;
 	while(i < s.length) {
-		var c = s.charCodeAt(i++);
+		var c = StringTools.fastCodeAt(s,i++);
 		if(55296 <= c && c <= 56319) {
-			c = c - 55232 << 10 | s.charCodeAt(i++) & 1023;
+			c = c - 55232 << 10 | StringTools.fastCodeAt(s,i++) & 1023;
 		}
 		if(c <= 127) {
 			a.push(c);
@@ -1283,6 +1394,12 @@ haxe_io_Bytes.ofString = function(s,encoding) {
 haxe_io_Bytes.prototype = {
 	length: null
 	,b: null
+	,get: function(pos) {
+		return this.b[pos];
+	}
+	,set: function(pos,v) {
+		this.b[pos] = v;
+	}
 	,getString: function(pos,len,encoding) {
 		if(pos < 0 || len < 0 || pos + len > this.length) {
 			throw haxe_Exception.thrown(haxe_io_Error.OutsideBounds);
@@ -1368,7 +1485,7 @@ haxe_crypto_BaseCode.prototype = {
 		var _g1 = this.base.length;
 		while(_g < _g1) {
 			var i = _g++;
-			tbl[this.base.b[i]] = i;
+			tbl[this.base.get(i)] = i;
 		}
 		this.tbl = tbl;
 	}
@@ -1379,7 +1496,7 @@ haxe_crypto_BaseCode.prototype = {
 		}
 		var tbl = this.tbl;
 		var size = b.length * nbits >> 3;
-		var out = new haxe_io_Bytes(new ArrayBuffer(size));
+		var out = haxe_io_Bytes.alloc(size);
 		var buf = 0;
 		var curbits = 0;
 		var pin = 0;
@@ -1388,14 +1505,14 @@ haxe_crypto_BaseCode.prototype = {
 			while(curbits < 8) {
 				curbits += nbits;
 				buf <<= nbits;
-				var i = tbl[b.b[pin++]];
+				var i = tbl[b.get(pin++)];
 				if(i == -1) {
 					throw haxe_Exception.thrown("BaseCode : invalid encoded char");
 				}
 				buf |= i;
 			}
 			curbits -= 8;
-			out.b[pout++] = buf >> curbits & 255;
+			out.set(pout++,buf >> curbits & 255);
 		}
 		return out;
 	}
@@ -1469,21 +1586,21 @@ haxe_ds_List.prototype = {
 		return new haxe_ds__$List_ListIterator(this.h);
 	}
 	,toString: function() {
-		var s_b = "";
+		var s = new StringBuf();
 		var first = true;
 		var l = this.h;
-		s_b = "{";
+		s.add("{");
 		while(l != null) {
 			if(first) {
 				first = false;
 			} else {
-				s_b += ", ";
+				s.add(", ");
 			}
-			s_b += Std.string(Std.string(l.item));
+			s.add(Std.string(l.item));
 			l = l.next;
 		}
-		s_b += "}";
-		return s_b;
+		s.add("}");
+		return s.toString();
 	}
 	,__class__: haxe_ds_List
 };
@@ -1513,26 +1630,51 @@ haxe_ds__$List_ListIterator.prototype = {
 	}
 	,__class__: haxe_ds__$List_ListIterator
 };
+var haxe_ds_Map = {};
+haxe_ds_Map.set = function(this1,key,value) {
+	this1.set(key,value);
+};
+haxe_ds_Map.get = function(this1,key) {
+	return this1.get(key);
+};
+haxe_ds_Map.exists = function(this1,key) {
+	return this1.exists(key);
+};
+haxe_ds_Map.keys = function(this1) {
+	return this1.keys();
+};
+haxe_ds_Map.keyValueIterator = function(this1) {
+	return this1.keyValueIterator();
+};
+haxe_ds_Map.toStringMap = function(t) {
+	return new haxe_ds_StringMap();
+};
 var haxe_ds_ObjectMap = function() {
 	this.h = { __keys__ : { }};
 };
 haxe_ds_ObjectMap.__name__ = "haxe.ds.ObjectMap";
 haxe_ds_ObjectMap.__interfaces__ = [haxe_IMap];
+haxe_ds_ObjectMap.assignId = function(obj) {
+	return (obj.__id__ = js_Lib.getNextHaxeUID());
+};
+haxe_ds_ObjectMap.getId = function(obj) {
+	return obj.__id__;
+};
 haxe_ds_ObjectMap.prototype = {
 	h: null
 	,set: function(key,value) {
-		var id = key.__id__;
+		var id = haxe_ds_ObjectMap.getId(key);
 		if(id == null) {
-			id = (key.__id__ = $global.$haxeUID++);
+			id = haxe_ds_ObjectMap.assignId(key);
 		}
 		this.h[id] = value;
 		this.h.__keys__[id] = key;
 	}
 	,get: function(key) {
-		return this.h[key.__id__];
+		return this.h[haxe_ds_ObjectMap.getId(key)];
 	}
 	,exists: function(key) {
-		return this.h.__keys__[key.__id__] != null;
+		return this.h.__keys__[haxe_ds_ObjectMap.getId(key)] != null;
 	}
 	,keys: function() {
 		var a = [];
@@ -1618,6 +1760,16 @@ haxe_ds__$StringMap_StringMapKeyValueIterator.prototype = {
 	}
 	,__class__: haxe_ds__$StringMap_StringMapKeyValueIterator
 };
+var haxe_ds_Vector = {};
+haxe_ds_Vector._new = function(length) {
+	return new Array(length);
+};
+haxe_ds_Vector.get = function(this1,index) {
+	return this1[index];
+};
+haxe_ds_Vector.set = function(this1,index,val) {
+	return this1[index] = val;
+};
 var haxe_io_Error = $hxEnums["haxe.io.Error"] = { __ename__:"haxe.io.Error",__constructs__:null
 	,Blocked: {_hx_name:"Blocked",_hx_index:0,__enum__:"haxe.io.Error",toString:$estr}
 	,Overflow: {_hx_name:"Overflow",_hx_index:1,__enum__:"haxe.io.Error",toString:$estr}
@@ -1680,6 +1832,25 @@ haxe_iterators_ArrayIterator.prototype = {
 	}
 	,__class__: haxe_iterators_ArrayIterator
 };
+var haxe_iterators_DynamicAccessKeyValueIterator = function(access) {
+	this.access = access;
+	this.keys = haxe_DynamicAccess.keys(access);
+	this.index = 0;
+};
+haxe_iterators_DynamicAccessKeyValueIterator.__name__ = "haxe.iterators.DynamicAccessKeyValueIterator";
+haxe_iterators_DynamicAccessKeyValueIterator.prototype = {
+	access: null
+	,keys: null
+	,index: null
+	,hasNext: function() {
+		return this.index < this.keys.length;
+	}
+	,next: function() {
+		var key = this.keys[this.index++];
+		return { value : haxe_DynamicAccess.get(this.access,key), key : key};
+	}
+	,__class__: haxe_iterators_DynamicAccessKeyValueIterator
+};
 var haxe_iterators_MapKeyValueIterator = function(map) {
 	this.map = map;
 	this.keys = map.keys();
@@ -1696,6 +1867,26 @@ haxe_iterators_MapKeyValueIterator.prototype = {
 		return { value : this.map.get(key), key : key};
 	}
 	,__class__: haxe_iterators_MapKeyValueIterator
+};
+var haxe_iterators_StringIteratorUnicode = function(s) {
+	this.offset = 0;
+	this.s = s;
+};
+haxe_iterators_StringIteratorUnicode.__name__ = "haxe.iterators.StringIteratorUnicode";
+haxe_iterators_StringIteratorUnicode.prototype = {
+	offset: null
+	,s: null
+	,hasNext: function() {
+		return this.offset < this.s.length;
+	}
+	,next: function() {
+		var c = StringTools.utf16CodePointAt(this.s,this.offset++);
+		if(c >= 65536) {
+			this.offset++;
+		}
+		return c;
+	}
+	,__class__: haxe_iterators_StringIteratorUnicode
 };
 var haxe_rtti_Meta = function() { };
 haxe_rtti_Meta.__name__ = "haxe.rtti.Meta";
@@ -1766,54 +1957,53 @@ haxe_unit_TestResult.prototype = {
 		}
 	}
 	,toString: function() {
-		var buf_b = "";
+		var buf = new StringBuf();
 		var failures = 0;
-		var _g_head = this.m_tests.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			if(val.success == false) {
-				buf_b += "* ";
-				buf_b += Std.string(val.classname);
-				buf_b += "::";
-				buf_b += Std.string(val.method);
-				buf_b += "()";
-				buf_b += "\n";
-				buf_b += "ERR: ";
-				if(val.posInfos != null) {
-					buf_b += Std.string(val.posInfos.fileName);
-					buf_b += ":";
-					buf_b += Std.string(val.posInfos.lineNumber);
-					buf_b += "(";
-					buf_b += Std.string(val.posInfos.className);
-					buf_b += ".";
-					buf_b += Std.string(val.posInfos.methodName);
-					buf_b += ") - ";
+		var _g = this.m_tests.iterator();
+		while(_g.hasNext()) {
+			var test = _g.next();
+			if(test.success == false) {
+				buf.add("* ");
+				buf.add(test.classname);
+				buf.add("::");
+				buf.add(test.method);
+				buf.add("()");
+				buf.add("\n");
+				buf.add("ERR: ");
+				if(test.posInfos != null) {
+					buf.add(test.posInfos.fileName);
+					buf.add(":");
+					buf.add(test.posInfos.lineNumber);
+					buf.add("(");
+					buf.add(test.posInfos.className);
+					buf.add(".");
+					buf.add(test.posInfos.methodName);
+					buf.add(") - ");
 				}
-				buf_b += Std.string(val.error);
-				buf_b += "\n";
-				if(val.backtrace != null) {
-					buf_b += Std.string(val.backtrace);
-					buf_b += "\n";
+				buf.add(test.error);
+				buf.add("\n");
+				if(test.backtrace != null) {
+					buf.add(test.backtrace);
+					buf.add("\n");
 				}
-				buf_b += "\n";
+				buf.add("\n");
 				++failures;
 			}
 		}
-		buf_b += "\n";
+		buf.add("\n");
 		if(failures == 0) {
-			buf_b += "OK ";
+			buf.add("OK ");
 		} else {
-			buf_b += "FAILED ";
+			buf.add("FAILED ");
 		}
-		buf_b += Std.string(this.m_tests.length);
-		buf_b += " tests, ";
-		buf_b += failures == null ? "null" : "" + failures;
-		buf_b += " failed, ";
-		buf_b += Std.string(this.m_tests.length - failures);
-		buf_b += " success";
-		buf_b += "\n";
-		return buf_b;
+		buf.add(this.m_tests.length);
+		buf.add(" tests, ");
+		buf.add(failures);
+		buf.add(" failed, ");
+		buf.add(this.m_tests.length - failures);
+		buf.add(" success");
+		buf.add("\n");
+		return buf.toString();
 	}
 	,__class__: haxe_unit_TestResult
 };
@@ -1852,34 +2042,29 @@ haxe_unit_TestRunner.prototype = {
 	}
 	,run: function() {
 		this.result = new haxe_unit_TestResult();
-		var _g_head = this.cases.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			this.runCase(val);
-		}
+		var _g = this.cases.iterator();
+		while(_g.hasNext()) this.runCase(_g.next());
 		haxe_unit_TestRunner.print(this.result.toString());
 		return this.result.success;
 	}
 	,runCase: function(t) {
 		var old = haxe_Log.trace;
 		haxe_Log.trace = haxe_unit_TestRunner.customTrace;
-		var cl = js_Boot.getClass(t);
+		var cl = Type.getClass(t);
 		var fields = Type.getInstanceFields(cl);
-		haxe_unit_TestRunner.print("Class: " + cl.__name__ + " ");
+		haxe_unit_TestRunner.print("Class: " + Type.getClassName(cl) + " ");
 		var _g = 0;
 		while(_g < fields.length) {
 			var f = fields[_g];
 			++_g;
-			var fname = f;
 			var field = Reflect.field(t,f);
-			if(StringTools.startsWith(fname,"test") && Reflect.isFunction(field)) {
+			if(StringTools.startsWith(f,"test") && Reflect.isFunction(field)) {
 				t.currentTest = new haxe_unit_TestStatus();
-				t.currentTest.classname = cl.__name__;
-				t.currentTest.method = fname;
+				t.currentTest.classname = Type.getClassName(cl);
+				t.currentTest.method = f;
 				t.setup();
 				try {
-					field.apply(t,[]);
+					Reflect.callMethod(t,field,[]);
 					if(t.currentTest.done) {
 						t.currentTest.success = true;
 						haxe_unit_TestRunner.print(".");
@@ -1889,19 +2074,18 @@ haxe_unit_TestRunner.prototype = {
 						haxe_unit_TestRunner.print("W");
 					}
 				} catch( _g1 ) {
-					haxe_NativeStackTrace.lastError = _g1;
+					haxe_NativeStackTrace.saveStack(_g1);
 					var _g2 = haxe_Exception.caught(_g1).unwrap();
-					if(((_g2) instanceof haxe_unit_TestStatus)) {
+					if(Std.isOfType(_g2,haxe_unit_TestStatus)) {
 						haxe_unit_TestRunner.print("F");
 						var tmp = haxe_CallStack.exceptionStack();
 						t.currentTest.backtrace = haxe_CallStack.toString(tmp);
 					} else {
-						var e = _g2;
 						haxe_unit_TestRunner.print("E");
-						if(e.message != null) {
-							t.currentTest.error = "exception thrown : " + Std.string(e) + " [" + Std.string(e.message) + "]";
+						if(_g2.message != null) {
+							t.currentTest.error = "exception thrown : " + Std.string(_g2) + " [" + Std.string(_g2.message) + "]";
 						} else {
-							t.currentTest.error = "exception thrown : " + Std.string(e);
+							t.currentTest.error = "exception thrown : " + Std.string(_g2);
 						}
 						var tmp1 = haxe_CallStack.exceptionStack();
 						t.currentTest.backtrace = haxe_CallStack.toString(tmp1);
@@ -3051,7 +3235,7 @@ hre_RegExpParser.prototype = {
 		case 7:
 			return hre_ast_CharacterClassAtom.NotSeparator;
 		default:
-			throw haxe_Exception.thrown(new hre_RegExpSyntaxError("Unexpected escape in character class: " + $hxEnums[$escape.__enum__].__constructs__[$escape._hx_index]._hx_name,this.currentIndex,this.source));
+			throw haxe_Exception.thrown(new hre_RegExpSyntaxError("Unexpected escape in character class: " + Type.enumConstructor($escape),this.currentIndex,this.source));
 		}
 	}
 	,isGreedyQuantifier: function() {
@@ -3336,6 +3520,15 @@ var hre_tokens_Symbol = $hxEnums["hre.tokens.Symbol"] = { __ename__:"hre.tokens.
 hre_tokens_Symbol.__constructs__ = [hre_tokens_Symbol.EndOfText,hre_tokens_Symbol.Character];
 var js_Boot = function() { };
 js_Boot.__name__ = "js.Boot";
+js_Boot.isClass = function(o) {
+	return o.__name__;
+};
+js_Boot.isInterface = function(o) {
+	return o.__isInterface__;
+};
+js_Boot.isEnum = function(e) {
+	return e.__ename__;
+};
 js_Boot.getClass = function(o) {
 	if(o == null) {
 		return null;
@@ -3361,7 +3554,7 @@ js_Boot.__string_rec = function(o,s) {
 		return "<...>";
 	}
 	var t = typeof(o);
-	if(t == "function" && (o.__name__ || o.__ename__)) {
+	if(t == "function" && (js_Boot.isClass(o) || js_Boot.isEnum(o))) {
 		t = "object";
 	}
 	switch(t) {
@@ -3412,7 +3605,7 @@ js_Boot.__string_rec = function(o,s) {
 		try {
 			tostr = o.toString;
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			return "???";
 		}
 		if(tostr != null && tostr != Object.toString && typeof(tostr) == "function") {
@@ -3515,7 +3708,7 @@ js_Boot.__instanceof = function(o,cl) {
 };
 js_Boot.__downcastCheck = function(o,cl) {
 	if(!((o) instanceof cl)) {
-		if(cl.__isInterface__) {
+		if(js_Boot.isInterface(cl)) {
 			return js_Boot.__interfLoop(js_Boot.getClass(o),cl);
 		} else {
 			return false;
@@ -3547,16 +3740,22 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
+var js_Lib = function() { };
+js_Lib.__name__ = "js.Lib";
+js_Lib.__properties__ = {get_undefined:"get_undefined"};
+js_Lib.get_undefined = function() {
+	return undefined;
+};
+js_Lib.getNextHaxeUID = function() {
+	return $global.$haxeUID++;
+};
 var stx_Arw = function() { };
 stx_Arw.__name__ = "stx.Arw";
 stx_Arw.ctx = function(wildcard,p) {
 	return stx_arw_Contextualize.pure(p);
 };
 stx_Arw.Fun = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(fn);
-};
-stx_Arw.$name = function(arw) {
-	return stx_nano_Identifier.$name(stx_nano_lift_LiftNano.identifier(stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,arw)));
+	return stx_arw_Arrowlet.Sync(fn);
 };
 var stx_LiftArrowletToCascade = function() { };
 stx_LiftArrowletToCascade.__name__ = "stx.LiftArrowletToCascade";
@@ -3566,19 +3765,19 @@ stx_LiftArrowletToCascade.toCascade = function(arw) {
 var stx_LiftRectifyToCascade = function() { };
 stx_LiftRectifyToCascade.__name__ = "stx.LiftRectifyToCascade";
 stx_LiftRectifyToCascade.toCascade = function(arw) {
-	return stx_arw_Rectify.toCascade(arw);
+	return stx_arw_Rectify.toCascade(stx_arw_Rectify.lift(arw));
 };
 var stx_LiftAttemptToCascade = function() { };
 stx_LiftAttemptToCascade.__name__ = "stx.LiftAttemptToCascade";
 stx_LiftAttemptToCascade.toCascade = function(arw) {
-	return stx_arw_Attempt.toCascade(arw);
+	return stx_arw_Attempt.toCascade(stx_arw_Attempt.lift(arw));
 };
 var stx_LiftRecoverToCascade = function() { };
 stx_LiftRecoverToCascade.__name__ = "stx.LiftRecoverToCascade";
 var stx_LiftExecuteToCascade = function() { };
 stx_LiftExecuteToCascade.__name__ = "stx.LiftExecuteToCascade";
 stx_LiftExecuteToCascade.toCascade = function(arw) {
-	return stx_arw_Command.toCascade(stx_arw_Command._new(arw));
+	return stx_arw_Command.toCascade(stx_arw_Command.lift(arw));
 };
 var stx_LiftAttemptFunctionToAttempt = function() { };
 stx_LiftAttemptFunctionToAttempt.__name__ = "stx.LiftAttemptFunctionToAttempt";
@@ -3618,7 +3817,7 @@ stx_Stat.prototype = {
 var stx_LiftDefectNoiseToErr = function() { };
 stx_LiftDefectNoiseToErr.__name__ = "stx.LiftDefectNoiseToErr";
 stx_LiftDefectNoiseToErr.toErr = function(e,pos) {
-	return new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_UndefinedError")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/Async.hx", lineNumber : 45, className : "stx.LiftDefectNoiseToErr", methodName : "toErr"}));
+	return stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/Async.hx", lineNumber : 50, className : "stx.LiftDefectNoiseToErr", methodName : "toErr"}),"E_UndefinedError");
 };
 var stx_LiftString = function() { };
 stx_LiftString.__name__ = "stx.LiftString";
@@ -3690,6 +3889,18 @@ stx_Ext.cell = function(_,v) {
 };
 var stx_Fn = function() { };
 stx_Fn.__name__ = "stx.Fn";
+stx_Fn.fn = function(wildcard) {
+	return new stx_fn_Module();
+};
+stx_Fn._0x = function(fn) {
+	return stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,fn),stx_fn_Block.lift),stx_fn_Block.unit);
+};
+stx_Fn._1x = function(fn) {
+	return stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,fn),stx_fn_Sink.lift),stx_fn_Sink.unit);
+};
+stx_Fn._1r = function() {
+	return stx_fn_Unary.unit();
+};
 var stx_LiftCurriedBinary = function() { };
 stx_LiftCurriedBinary.__name__ = "stx.LiftCurriedBinary";
 stx_LiftCurriedBinary.uncurry = function(f) {
@@ -3854,17 +4065,13 @@ stx_log_LoggerApi.prototype = {
 	,__class__: stx_log_LoggerApi
 };
 var stx_log_Logger = function(logic,format) {
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,logic);
-	this.logic = stx_log_Logic.fromFilter(self._hx_index == 0 ? self.v : stx_log_Filter.Unit());
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,format);
-	var v = stx_log_Format.unit();
-	this.format = self._hx_index == 0 ? self.v : v;
+	this.logic = stx_log_Logic.fromFilter(stx_pico_OptionLift.def(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,logic),stx_log_Filter.Unit));
+	this.format = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,format),stx_log_Format.unit());
 };
 stx_log_Logger.__name__ = "stx.log.Logger";
 stx_log_Logger.__interfaces__ = [stx_log_LoggerApi];
 stx_log_Logger.spur = function(value) {
-	var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logger.hx", lineNumber : 6, className : "stx.log.Logger", methodName : "spur"});
-	return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_Zero)),haxe_ds_Option.None,this1));
+	return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logger.hx", lineNumber : 6, className : "stx.log.Logger", methodName : "spur"}),stx_fail_LogFailure.E_Log_Zero));
 };
 stx_log_Logger.__super__ = stx_log_output_term_Full;
 stx_log_Logger.prototype = $extend(stx_log_output_term_Full.prototype,{
@@ -3873,21 +4080,11 @@ stx_log_Logger.prototype = $extend(stx_log_output_term_Full.prototype,{
 	,apply: function(value) {
 		var _gthis = this;
 		return stx_fp_ContinuationLift.mod(this.do_apply(value),function(res) {
-			var fn = stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,function(string) {
+			return stx_nano_ResLift.map(res,stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,function(string) {
 				if(!value.get_stamp().hidden) {
 					_gthis.render(string,value.source);
 				}
-			});
-			var self;
-			switch(res._hx_index) {
-			case 0:
-				self = stx_nano_ResSum.Accept(fn(res.t));
-				break;
-			case 1:
-				self = stx_nano_ResSum.Reject(res.e);
-				break;
-			}
-			return stx_nano_Res._new(self);
+			}));
 		});
 	}
 	,do_apply: function(value) {
@@ -3916,25 +4113,16 @@ stx_log_logger_Default.prototype = $extend(stx_log_Logger.prototype,{
 	,verbose: null
 	,do_apply: function(value) {
 		var _gthis = this;
-		var parent;
-		switch((stx_log_Logger.prototype.do_apply.call(this,value))(function(_) {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/logger/Default.hx", lineNumber : 17, className : "stx.log.logger.Default", methodName : "do_apply"});
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_Zero)),haxe_ds_Option.None,this1));
-		})._hx_index) {
-		case 0:
-			parent = true;
-			break;
-		case 1:
-			parent = false;
-			break;
-		}
+		var parent = stx_nano_ResLift.ok((stx_log_Logger.prototype.do_apply.call(this,value))(function(_) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/logger/Default.hx", lineNumber : 17, className : "stx.log.logger.Default", methodName : "do_apply"}),stx_fail_LogFailure.E_Log_Zero));
+		}));
 		var is_custom = stx_log_Signal.is_custom;
 		var level = stx_log_Level.asInt(value.get_stamp().level) >= stx_log_Level.asInt(this.level);
-		var include_tag = this.includes.length > 0 ? stx_lift_ArrayLift.any(this.includes,function(x) {
+		var include_tag = stx_lift_ArrayLift.is_defined(this.includes) ? stx_lift_ArrayLift.any(this.includes,function(x) {
 			return stx_pico_OptionLift.is_defined(stx_lift_ArrayLift.search(value.get_stamp().tags,function(y) {
 				return x == y;
 			}));
-		}) : value.get_stamp().tags.length <= 0;
+		}) : !stx_lift_ArrayLift.is_defined(value.get_stamp().tags);
 		var res = stx_nano_lift_LiftNano.if_else(is_custom,function() {
 			return _gthis.reinstate;
 		},function() {
@@ -3957,15 +4145,14 @@ stx_log_logger_Default.prototype = $extend(stx_log_Logger.prototype,{
 			return stx_nano_lift_LiftNano.if_else(res,function() {
 				return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_log_Format.print(_gthis.format,value));
 			},function() {
-				var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/logger/Default.hx", lineNumber : 49, className : "stx.log.logger.Default", methodName : "do_apply"});
-				return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_Default({ is_custom : is_custom, parent : parent, level : level, includes : _gthis.includes, include_tag : include_tag, stamp_tag : value.get_stamp().tags, verbose : _gthis.verbose}))),haxe_ds_Option.None,this1));
+				return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/logger/Default.hx", lineNumber : 49, className : "stx.log.logger.Default", methodName : "do_apply"}),stx_fail_LogFailure.E_Log_Default({ is_custom : is_custom, parent : parent, level : level, includes : _gthis.includes, include_tag : include_tag, stamp_tag : value.get_stamp().tags, verbose : _gthis.verbose})));
 			});
 		};
 	}
 	,reset: function() {
 		stx_log_Includes.clear(this.includes);
 		this.level = 0;
-		this.logic = stx_log_Logic._.make().always();
+		this.logic = stx_Log._.Logic().always();
 	}
 	,__class__: stx_log_logger_Default
 });
@@ -4019,13 +4206,11 @@ stx_log_Logic.apply = function(this1,value) {
 			return fst;
 		});
 	case 2:
-		switch(stx_log_Logic.apply(this1.l,value)._hx_index) {
-		case 0:
+		return stx_pico_OptionLift.fold(stx_log_Logic.apply(this1.l,value),function(e) {
 			return stx_nano_Report.unit();
-		case 1:
+		},function() {
 			return stx_nano_Report.make(stx_fail_LogFailure.E_Log_Not,{ fileName : "stx/log/Logic.hx", lineNumber : 58, className : "stx.log._Logic.Logic_Impl_", methodName : "apply"});
-		}
-		break;
+		});
 	case 3:
 		return this1.v.applyI(value);
 	}
@@ -4048,8 +4233,7 @@ stx_log_Logic.pack = function(pack) {
 		return stx_nano_lift_LiftNano.if_else(new hre_RegExp("" + canonical + ".*","g").test(stx_log_LogFileName.get_pack(stx_log_LogPosition.get_fileName(value)).join(".")),function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 82, className : "stx.log._Logic.Logic_Impl_", methodName : "pack"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_SourceNotInPackage(stx_log_LogPosition.get_fileName(value),canonical))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 82, className : "stx.log._Logic.Logic_Impl_", methodName : "pack"}),stx_fail_LogFailure.E_Log_SourceNotInPackage(stx_log_LogPosition.get_fileName(value),canonical)));
 		});
 	});
 };
@@ -4058,8 +4242,7 @@ stx_log_Logic.type = function(type) {
 		return stx_nano_lift_LiftNano.if_else(type == stx_log_LogFileName.get_canonical(stx_log_LogPosition.get_fileName(value)),function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 91, className : "stx.log._Logic.Logic_Impl_", methodName : "type"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_SourceNotInPackage(stx_log_LogPosition.get_fileName(value),stx_log_LogFileName.get_canonical(stx_log_LogPosition.get_fileName(value))))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 91, className : "stx.log._Logic.Logic_Impl_", methodName : "type"}),stx_fail_LogFailure.E_Log_SourceNotInPackage(stx_log_LogPosition.get_fileName(value),stx_log_LogFileName.get_canonical(stx_log_LogPosition.get_fileName(value)))));
 		});
 	});
 };
@@ -4068,8 +4251,7 @@ stx_log_Logic.line = function(n) {
 		return stx_nano_lift_LiftNano.if_else(stx_log_LogPosition.get_lineNumber(value) == n,function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 100, className : "stx.log._Logic.Logic_Impl_", methodName : "line"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_NotLine(n))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 100, className : "stx.log._Logic.Logic_Impl_", methodName : "line"}),stx_fail_LogFailure.E_Log_NotLine(n)));
 		});
 	});
 };
@@ -4078,8 +4260,7 @@ stx_log_Logic.lines = function(l,h) {
 		return stx_nano_lift_LiftNano.if_else(stx_log_LogPosition.get_lineNumber(value) >= l && stx_log_LogPosition.get_lineNumber(value) <= h,function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 109, className : "stx.log._Logic.Logic_Impl_", methodName : "lines"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_NotOfRange(l,h))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 109, className : "stx.log._Logic.Logic_Impl_", methodName : "lines"}),stx_fail_LogFailure.E_Log_NotOfRange(l,h)));
 		});
 	});
 };
@@ -4090,8 +4271,7 @@ stx_log_Logic.tag = function(str) {
 		})),function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 119, className : "stx.log._Logic.Logic_Impl_", methodName : "tag"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_DoesNotContainTag(str))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 119, className : "stx.log._Logic.Logic_Impl_", methodName : "tag"}),stx_fail_LogFailure.E_Log_DoesNotContainTag(str)));
 		});
 	});
 };
@@ -4100,8 +4280,7 @@ stx_log_Logic.method = function(str) {
 		return stx_nano_lift_LiftNano.if_else(stx_log_LogPosition.get_methodName(value) == str,function() {
 			return stx_nano_Report.unit();
 		},function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 127, className : "stx.log._Logic.Logic_Impl_", methodName : "method"});
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_NotInMethod(str))),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/Logic.hx", lineNumber : 127, className : "stx.log._Logic.Logic_Impl_", methodName : "method"}),stx_fail_LogFailure.E_Log_NotInMethod(str)));
 		});
 	});
 };
@@ -4122,6 +4301,117 @@ var stx_log_LogicSum = $hxEnums["stx.log.LogicSum"] = { __ename__:"stx.log.Logic
 	,LV: ($_=function(v) { return {_hx_index:3,v:v,__enum__:"stx.log.LogicSum",toString:$estr}; },$_._hx_name="LV",$_.__params__ = ["v"],$_)
 };
 stx_log_LogicSum.__constructs__ = [stx_log_LogicSum.LAnd,stx_log_LogicSum.LOr,stx_log_LogicSum.LNot,stx_log_LogicSum.LV];
+var stx_pico_OptionLift = function() { };
+stx_pico_OptionLift.__name__ = "stx.pico.OptionLift";
+stx_pico_OptionLift.fold = function(self,ok,no) {
+	switch(self._hx_index) {
+	case 0:
+		return ok(self.v);
+	case 1:
+		return no();
+	}
+};
+stx_pico_OptionLift.map = function(self,f) {
+	return stx_pico_OptionLift.fold(self,function(t) {
+		return haxe_ds_Option.Some(f(t));
+	},function() {
+		return haxe_ds_Option.None;
+	});
+};
+stx_pico_OptionLift.flat_map = function(self,f) {
+	return stx_pico_Option.flatten(stx_pico_OptionLift.map(self,f));
+};
+stx_pico_OptionLift.or = function(self,thunk) {
+	return stx_pico_OptionLift.fold(self,haxe_ds_Option.Some,thunk);
+};
+stx_pico_OptionLift.filter = function(self,fn) {
+	return stx_pico_OptionLift.flat_map(self,function(v) {
+		if(fn(v)) {
+			return haxe_ds_Option.Some(v);
+		} else {
+			return haxe_ds_Option.None;
+		}
+	});
+};
+stx_pico_OptionLift.def = function(self,thunk) {
+	if(self._hx_index == 0) {
+		return self.v;
+	} else {
+		return thunk();
+	}
+};
+stx_pico_OptionLift.defv = function(self,v) {
+	if(self._hx_index == 0) {
+		return self.v;
+	} else {
+		return v;
+	}
+};
+stx_pico_OptionLift.is_defined = function(self) {
+	return stx_pico_OptionLift.fold(self,function(_) {
+		return true;
+	},function() {
+		return false;
+	});
+};
+stx_pico_OptionLift.iterator = function(self) {
+	var done = false;
+	return { hasNext : function() {
+		if(!done) {
+			return stx_pico_OptionLift.is_defined(self);
+		} else {
+			return false;
+		}
+	}, next : function() {
+		done = true;
+		return stx_pico_OptionLift.defv(self,null);
+	}};
+};
+stx_pico_OptionLift.merge = function(self,that,fn) {
+	switch(self._hx_index) {
+	case 0:
+		var _g = self.v;
+		switch(that._hx_index) {
+		case 0:
+			return haxe_ds_Option.Some(fn(_g,that.v));
+		case 1:
+			return haxe_ds_Option.Some(_g);
+		}
+		break;
+	case 1:
+		if(that._hx_index == 0) {
+			return haxe_ds_Option.Some(that.v);
+		} else {
+			return haxe_ds_Option.None;
+		}
+		break;
+	}
+};
+stx_pico_OptionLift.toArray = function(self) {
+	switch(self._hx_index) {
+	case 0:
+		return [self.v];
+	case 1:
+		return [];
+	}
+};
+stx_pico_OptionLift.fudge = function(self) {
+	return stx_pico_OptionLift.fold(self,function(x) {
+		return x;
+	},function() {
+		throw haxe_Exception.thrown("empty Option");
+	});
+};
+stx_pico_OptionLift.toString = function(self) {
+	return stx_pico_OptionLift.fold(self,function(x) {
+		return "" + Std.string(x);
+	},function() {
+		return "<undefined>";
+	});
+};
+stx_pico_OptionLift.prj = function(self) {
+	return self;
+};
 var stx_nano_lift_LiftNano = function() { };
 stx_nano_lift_LiftNano.__name__ = "stx.nano.lift.LiftNano";
 stx_nano_lift_LiftNano.arrd = function(wildcard,arr) {
@@ -4148,7 +4438,7 @@ stx_nano_lift_LiftNano.uuid = function(v,value) {
 		value = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
 	}
 	return new EReg("[xy]","g").map(value,function(reg) {
-		var r = Math.random() * 16 | 0 | 0;
+		var r = Std.int(Math.random() * 16) | 0;
 		return StringTools.hex(reg.matched(0) == "x" ? r : r & 3 | 8);
 	}).toLowerCase();
 };
@@ -4202,42 +4492,32 @@ stx_nano_lift_LiftNano.toCouple = function(self) {
 };
 stx_nano_lift_LiftNano.lbump = function(wildcard,tp) {
 	return stx_nano_CoupleLift.decouple(tp,function(lhs,rhs) {
-		var tmp;
-		switch(lhs._hx_index) {
-		case 0:
-			tmp = haxe_ds_Option.Some(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs.v,rhs));
-			break;
-		case 1:
-			tmp = haxe_ds_Option.None;
-			break;
-		}
-		return tmp;
+		return stx_pico_OptionLift.fold(lhs,function(l) {
+			return haxe_ds_Option.Some(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,l,rhs));
+		},function() {
+			return haxe_ds_Option.None;
+		});
 	});
 };
 stx_nano_lift_LiftNano.rbump = function(wildcard,tp) {
 	return stx_nano_CoupleLift.decouple(tp,function(lhs,rhs) {
-		var tmp;
-		switch(rhs._hx_index) {
-		case 0:
-			tmp = haxe_ds_Option.Some(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,rhs.v));
-			break;
-		case 1:
-			tmp = haxe_ds_Option.None;
-			break;
-		}
-		return tmp;
+		return stx_pico_OptionLift.fold(rhs,function(r) {
+			return haxe_ds_Option.Some(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,r));
+		},function() {
+			return haxe_ds_Option.None;
+		});
 	});
 };
 stx_nano_lift_LiftNano.fromPos = function(pos) {
 	return stx_nano_Position.fromPos(pos);
 };
 stx_nano_lift_LiftNano.future = function(wildcard) {
-	var trigger = new tink_core_FutureTrigger();
-	return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,trigger,trigger);
+	var trigger = tink_core_Future.trigger();
+	return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,trigger,trigger.asFuture());
 };
 stx_nano_lift_LiftNano.tracer = function(v,pos) {
 	return function(t) {
-		haxe_Log.trace(t,{ fileName : "stx/nano/lift/LiftNano.hx", lineNumber : 145, className : "stx.nano.lift.LiftNano", methodName : "tracer", customParams : [pos]});
+		haxe_Log.trace(t,pos);
 		return t;
 	};
 };
@@ -4283,7 +4563,7 @@ stx_nano_lift_LiftNano.right = function(__,tII) {
 stx_nano_lift_LiftNano.value = function(future) {
 	var result = haxe_ds_Option.None;
 	var cancelled = false;
-	future.handle(function(x) {
+	tink_core_Future.handle(future,function(x) {
 		cancelled = true;
 		result = haxe_ds_Option.Some(x);
 	});
@@ -4293,15 +4573,13 @@ stx_nano_lift_LiftNano.crack = function(wildcard,e) {
 	throw haxe_Exception.thrown(e);
 };
 stx_nano_lift_LiftNano.report = function(wildcard,report) {
-	if(report._hx_index == 0) {
-		throw haxe_Exception.thrown(report.v);
-	}
+	stx_nano_Report.crunch(report);
 };
 stx_nano_lift_LiftNano.definition = function(wildcard,t) {
-	return js_Boot.getClass(t);
+	return Type.getClass(t);
 };
 stx_nano_lift_LiftNano.identifier = function(self) {
-	return stx_nano_Identifier._new(self.__name__);
+	return stx_pico_Identifier._new(Type.getClassName(self));
 };
 stx_nano_lift_LiftNano.vblock = function(wildcard,t) {
 	return function() {
@@ -4326,7 +4604,7 @@ stx_nano_lift_LiftNano.not = function(bool) {
 	return !bool;
 };
 stx_nano_lift_LiftNano.toPosition = function(pos) {
-	return stx_nano_Position.fromPos(pos);
+	return stx_nano_Position.lift(pos);
 };
 var stx_nano_Wildcard = $hxEnums["stx.nano.Wildcard"] = { __ename__:"stx.nano.Wildcard",__constructs__:null
 	,__: {_hx_name:"__",_hx_index:0,__enum__:"stx.nano.Wildcard",toString:$estr}
@@ -4374,13 +4652,13 @@ stx_log_filter_term_Unit.prototype = $extend(stx_log_Filter.prototype,{
 var stx_log_Format = {};
 stx_log_Format.__properties__ = {get_self:"get_self",get_DEFAULT:"get_DEFAULT"};
 stx_log_Format.unit = function() {
-	return stx_log_Format.get_DEFAULT();
+	return stx_log_Format.lift(stx_log_Format.get_DEFAULT());
 };
 stx_log_Format._new = function(self) {
 	return self;
 };
 stx_log_Format.lift = function(self) {
-	return self;
+	return stx_log_Format._new(self);
 };
 stx_log_Format.get_DEFAULT = function() {
 	if(stx_log_Format.DEFAULT == null) {
@@ -4393,11 +4671,10 @@ stx_log_Format.prj = function(this1) {
 	return this1;
 };
 stx_log_Format.get_self = function(this1) {
-	return this1;
+	return stx_log_Format.lift(this1);
 };
 stx_log_Format.has = function(this1,v) {
-	var index = this1.indexOf(v);
-	return stx_pico_OptionLift.is_defined(index == -1 ? haxe_ds_Option.None : haxe_ds_Option.Some(index));
+	return stx_pico_OptionLift.is_defined(stx_lift_ArrayLift.has(this1,v));
 };
 stx_log_Format.print = function(this1,value) {
 	var p = value.source;
@@ -4515,16 +4792,7 @@ stx_log_LogPosition.restamp = function(this1,fn) {
 	return stx_log_LogPosition.lift(stx_log_LogPosition.copy(this1,null,null,null,null,stx_log_LogCustomParameters.restamp(stx_log_LogPosition.get_customParams(this1),fn)));
 };
 stx_log_LogPosition.copy = function(this1,fileName,className,methodName,lineNumber,customParams) {
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,fileName);
-	var tmp = self._hx_index == 0 ? self.v : this1.fileName;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,className);
-	var tmp1 = self._hx_index == 0 ? self.v : this1.className;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,methodName);
-	var tmp2 = self._hx_index == 0 ? self.v : this1.methodName;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,lineNumber);
-	var tmp3 = self._hx_index == 0 ? self.v : this1.lineNumber;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,customParams);
-	return stx_log_LogPosition.lift({ fileName : tmp, className : tmp1, methodName : tmp2, lineNumber : tmp3, customParams : self._hx_index == 0 ? self.v : this1.customParams});
+	return stx_log_LogPosition.lift({ fileName : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,fileName),this1.fileName), className : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,className),this1.className), methodName : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,methodName),this1.methodName), lineNumber : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,lineNumber),this1.lineNumber), customParams : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,customParams),this1.customParams)});
 };
 stx_log_LogPosition.get_customParams = function(this1) {
 	return stx_nano_lift_LiftNano.if_else(stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this1.customParams)),function() {
@@ -4603,7 +4871,7 @@ stx_Log.LOG = function(value,pos) {
 	stx_log_Signal.transmit(stx_Log.enlog(value,pos));
 };
 stx_Log.unit = function() {
-	return stx_Log.LOG;
+	return stx_Log._new();
 };
 stx_Log.enlog = function(value,pos) {
 	return new stx_log_Value(value,stx_log_LogPosition.pure(pos));
@@ -4617,81 +4885,29 @@ stx_Log._new = function() {
 	return stx_Log.LOG;
 };
 stx_Log.level = function(this1,level) {
-	var this2 = this1;
-	var fn = function(pos) {
+	return stx_Log.mod(this1,function(pos) {
 		return stx_log_LogPosition.restamp(pos,function(stamp) {
 			return stamp.relevel(level);
 		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
+	});
 };
 stx_Log.trace = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(1);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,1))(v,pos);
 };
 stx_Log.debug = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,2))(v,pos);
 };
 stx_Log.info = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(3);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,3))(v,pos);
 };
 stx_Log.warn = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(4);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,4))(v,pos);
 };
 stx_Log.error = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(5);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,5))(v,pos);
 };
 stx_Log.fatal = function(this1,v,pos) {
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(6);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(v,pos);
+	(stx_Log.level(this1,6))(v,pos);
 };
 stx_Log.mod = function(this1,fn) {
 	return function(value,pos) {
@@ -4699,26 +4915,18 @@ stx_Log.mod = function(this1,fn) {
 	};
 };
 stx_Log.tag = function(this1,tag) {
-	var this2 = this1;
-	var fn = function(pos) {
+	return stx_Log.mod(this1,function(pos) {
 		return stx_log_LogPosition.restamp(pos,function(stamp) {
 			return stamp.tag(tag);
 		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
+	});
 };
 stx_Log.close = function(this1) {
-	var this2 = this1;
-	var fn = function(pos) {
+	return stx_Log.mod(this1,function(pos) {
 		return stx_log_LogPosition.restamp(pos,function(stamp) {
 			return stamp.hide();
 		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
+	});
 };
 stx_Log.through = function(this1,pos) {
 	return function(v) {
@@ -4752,22 +4960,12 @@ stx_LiftFutureToSlot.toSlot = function(ft,pos) {
 var stx_LiftLazyFutureToSlot = function() { };
 stx_LiftLazyFutureToSlot.__name__ = "stx.LiftLazyFutureToSlot";
 stx_LiftLazyFutureToSlot.toSlot = function(fn) {
-	return stx_nano_Slot.Guard(fn(),{ fileName : "stx/Nano.hx", lineNumber : 87, className : "stx.LiftLazyFutureToSlot", methodName : "toSlot"});
-};
-var stx_LiftStringableToString = function() { };
-stx_LiftStringableToString.__name__ = "stx.LiftStringableToString";
-stx_LiftStringableToString.toString = function(str) {
-	return str.toString();
-};
-var stx_LiftTToString = function() { };
-stx_LiftTToString.__name__ = "stx.LiftTToString";
-stx_LiftTToString.toString = function(self) {
-	return Std.string(self);
+	return stx_nano_Slot.Guard(fn(),{ fileName : "stx/Nano.hx", lineNumber : 86, className : "stx.LiftLazyFutureToSlot", methodName : "toSlot"});
 };
 var stx_Test = function() { };
 stx_Test.__name__ = "stx.Test";
 stx_Test.poke = function(wildcard,arr) {
-	var this1 = stx_test_Log.log(stx_nano_Wildcard.__);
+	var tmp = stx_test_Log.log(stx_nano_Wildcard.__);
 	var result = new Array(arr.length);
 	var _g = 0;
 	var _g1 = arr.length;
@@ -4775,16 +4973,8 @@ stx_Test.poke = function(wildcard,arr) {
 		var i = _g++;
 		result[i] = stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,arr[i]);
 	}
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn(pos));
-	})(result,{ fileName : "stx/Test.hx", lineNumber : 14, className : "stx.Test", methodName : "poke"});
-	var f = ($_=new stx_assert_Module({ fileName : "stx/Test.hx", lineNumber : 15, className : "stx.Test", methodName : "poke"}),$bind($_,$_.iz));
+	stx_Log.debug(tmp,result,{ fileName : "stx/Test.hx", lineNumber : 14, className : "stx.Test", methodName : "poke"});
+	var f = ($_=stx_LiftAssert.that(stx_nano_Wildcard.__,{ fileName : "stx/Test.hx", lineNumber : 15, className : "stx.Test", methodName : "poke"}),$bind($_,$_.iz));
 	var result = new Array(arr.length);
 	var _g = 0;
 	var _g1 = arr.length;
@@ -4792,29 +4982,11 @@ stx_Test.poke = function(wildcard,arr) {
 		var i = _g++;
 		result[i] = f(arr[i]);
 	}
-	var self = stx_lift_ArrayLift.lfold1(result,($_=new stx_assert_Module({ fileName : "stx/Test.hx", lineNumber : 16, className : "stx.Test", methodName : "poke"}),$bind($_,$_.or)));
-	var v = new stx_assert_Module({ fileName : "stx/Test.hx", lineNumber : 17, className : "stx.Test", methodName : "poke"}).never();
-	return stx_assert_Predicate.check(self._hx_index == 0 ? self.v : v);
+	return stx_assert_Predicate.check(stx_pico_OptionLift.defv(stx_lift_ArrayLift.lfold1(result,($_=stx_LiftAssert.that(stx_nano_Wildcard.__,{ fileName : "stx/Test.hx", lineNumber : 16, className : "stx.Test", methodName : "poke"}),$bind($_,$_.or))),stx_LiftAssert.that(stx_nano_Wildcard.__,{ fileName : "stx/Test.hx", lineNumber : 17, className : "stx.Test", methodName : "poke"}).never()));
 };
 stx_Test.test = function(test,only) {
-	var this1 = stx_test_Log.log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(3);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("utest:" + stx_Test.pokey,{ fileName : "stx/Test.hx", lineNumber : 24, className : "stx.Test", methodName : "test"});
-	var this2 = stx_test_Log.log(stx_nano_Wildcard.__);
-	var fn1 = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn1(pos));
-	})(test,{ fileName : "stx/Test.hx", lineNumber : 25, className : "stx.Test", methodName : "test"});
+	stx_Log.info(stx_test_Log.log(stx_nano_Wildcard.__),"utest:" + stx_Test.pokey,{ fileName : "stx/Test.hx", lineNumber : 24, className : "stx.Test", methodName : "test"});
+	stx_Log.debug(stx_test_Log.log(stx_nano_Wildcard.__),test,{ fileName : "stx/Test.hx", lineNumber : 25, className : "stx.Test", methodName : "test"});
 	var f = stx_Test.poke(stx_nano_Wildcard.__,only);
 	var _g = [];
 	var _g1 = 0;
@@ -4827,15 +4999,7 @@ stx_Test.test = function(test,only) {
 		}
 	}
 	test = _g;
-	var this3 = stx_test_Log.log(stx_nano_Wildcard.__);
-	var fn2 = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(3);
-		});
-	};
-	(function(value,pos) {
-		this3(value,fn2(pos));
-	})(_g,{ fileName : "stx/Test.hx", lineNumber : 29, className : "stx.Test", methodName : "test"});
+	stx_Log.info(stx_test_Log.log(stx_nano_Wildcard.__),_g,{ fileName : "stx/Test.hx", lineNumber : 29, className : "stx.Test", methodName : "test"});
 	utest_UTest.run(_g);
 };
 var utest_ITest = function() { };
@@ -4914,7 +5078,7 @@ var stx_arw_ArchCls = function() {
 stx_arw_ArchCls.__name__ = "stx.arw.ArchCls";
 stx_arw_ArchCls.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(self);
+		return stx_arw_Cascade.lift(stx_arw_Arrowlet.Sync(self));
 	}
 	,defer: function() {
 		return new stx_arw_ArchDefer();
@@ -4938,11 +5102,10 @@ var stx_pico_Clazz = $hx_exports["stx"]["Clazz"] = function() {
 stx_pico_Clazz.__name__ = "stx.pico.Clazz";
 stx_pico_Clazz.prototype = {
 	definition: function() {
-		return js_Boot.getClass(this);
+		return Type.getClass(this);
 	}
 	,identifier: function() {
-		var c = js_Boot.getClass(this);
-		return c.__name__;
+		return stx_pico_Identifier._new(Type.getClassName(this.definition()));
 	}
 	,__class__: stx_pico_Clazz
 };
@@ -4959,9 +5122,9 @@ var stx_arw_ArchClose = function() {
 stx_arw_ArchClose.__name__ = "stx.arw.ArchClose";
 stx_arw_ArchClose.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(function(_) {
+		return stx_arw_Produce.lift(stx_arw_Arrowlet.Sync(function(_) {
 			return self();
-		});
+		}));
 	}
 	,value: function() {
 		return new stx_arw_ArchCloseValue();
@@ -4982,19 +5145,14 @@ stx_arw_ArchCloseDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = function(_,cont) {
+		return stx_arw_Produce.lift(stx_arw_Arrowlet.fromFunSink(function(_,cont) {
 			self(cont);
-		};
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		}));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(function(_) {
+		return stx_arw_Produce.lift(stx_arw_Arrowlet.Fun1Future(function(_) {
 			return self;
-		});
+		}));
 	}
 	,__class__: stx_arw_ArchCloseDefer
 };
@@ -5003,24 +5161,19 @@ var stx_arw_ArchCloseError = function() {
 stx_arw_ArchCloseError.__name__ = "stx.arw.ArchCloseError";
 stx_arw_ArchCloseError.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(function(_) {
+		return stx_arw_Execute.lift(stx_arw_Arrowlet.Sync(function(_) {
 			return self();
-		});
+		}));
 	}
 	,cont: function(self) {
-		var fn = function(_,cont) {
+		return stx_arw_Execute.lift(stx_arw_Arrowlet.fromFunSink(function(_,cont) {
 			self(cont);
-		};
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		}));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(function(_) {
+		return stx_arw_Execute.lift(stx_arw_Arrowlet.Fun1Future(function(_) {
 			return self;
-		});
+		}));
 	}
 	,__class__: stx_arw_ArchCloseError
 };
@@ -5029,9 +5182,9 @@ var stx_arw_ArchCloseValue = function() {
 stx_arw_ArchCloseValue.__name__ = "stx.arw.ArchCloseValue";
 stx_arw_ArchCloseValue.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(function(_) {
+		return stx_arw_Provide.lift(stx_arw_Arrowlet.Sync(function(_) {
 			return self;
-		});
+		}));
 	}
 	,defer: function() {
 		return new stx_arw_ArchCloseValueDefer();
@@ -5046,19 +5199,14 @@ stx_arw_ArchCloseValueDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = function(_,cont) {
+		return stx_arw_Provide.lift(stx_arw_Arrowlet.fromFunSink(function(_,cont) {
 			self(cont);
-		};
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		}));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(function(_) {
+		return stx_arw_Provide.lift(stx_arw_Arrowlet.Fun1Future(function(_) {
 			return self;
-		});
+		}));
 	}
 	,__class__: stx_arw_ArchCloseValueDefer
 };
@@ -5067,7 +5215,7 @@ var stx_arw_ArchLeave = function() {
 stx_arw_ArchLeave.__name__ = "stx.arw.ArchLeave";
 stx_arw_ArchLeave.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(self);
+		return stx_arw_Cascade.lift(stx_arw_Arrowlet.Sync(self));
 	}
 	,value: function() {
 		return new stx_arw_ArchLeaveValue();
@@ -5079,7 +5227,7 @@ var stx_arw_ArchLeaveValue = function() {
 stx_arw_ArchLeaveValue.__name__ = "stx.arw.ArchLeaveValue";
 stx_arw_ArchLeaveValue.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(self);
+		return stx_arw_Rectify.lift(stx_arw_Arrowlet.Sync(self));
 	}
 	,__class__: stx_arw_ArchLeaveValue
 };
@@ -5091,15 +5239,10 @@ stx_arw_ArchLeaveValueDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = self;
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		return stx_arw_Rectify.lift(stx_arw_Arrowlet.fromFunSink(self));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(self);
+		return stx_arw_Rectify.lift(stx_arw_Arrowlet.Fun1Future(self));
 	}
 	,__class__: stx_arw_ArchLeaveValueDefer
 };
@@ -5123,7 +5266,7 @@ var stx_arw_ArchErrorValue = function() {
 stx_arw_ArchErrorValue.__name__ = "stx.arw.ArchErrorValue";
 stx_arw_ArchErrorValue.prototype = {
 	get: function(self) {
-		return new stx_arw_arrowlet_term_Sync(self);
+		return stx_arw_Rectify.lift(stx_arw_Arrowlet.Sync(self));
 	}
 	,__class__: stx_arw_ArchErrorValue
 };
@@ -5144,15 +5287,10 @@ stx_arw_ArchErrorDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = self;
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		return stx_arw_Resolve.lift(stx_arw_Arrowlet.fromFunSink(self));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(self);
+		return stx_arw_Resolve.lift(stx_arw_Arrowlet.Fun1Future(self));
 	}
 	,__class__: stx_arw_ArchErrorDefer
 };
@@ -5164,15 +5302,10 @@ stx_arw_ArchDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = self;
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		return stx_arw_Cascade.lift(stx_arw_Arrowlet.fromFunSink(self));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(self);
+		return stx_arw_Cascade.lift(stx_arw_Arrowlet.Fun1Future(self));
 	}
 	,__class__: stx_arw_ArchDefer
 };
@@ -5184,15 +5317,10 @@ stx_arw_ArchValueDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = self;
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		return stx_arw_Attempt.lift(stx_arw_Arrowlet.fromFunSink(self));
 	}
 	,future: function(self) {
-		return new stx_arw_arrowlet_term_Fun1Future(self);
+		return stx_arw_Attempt.lift(stx_arw_Arrowlet.Fun1Future(self));
 	}
 	,__class__: stx_arw_ArchValueDefer
 };
@@ -5219,7 +5347,7 @@ var stx_arw_ArchValueError = function() {
 stx_arw_ArchValueError.__name__ = "stx.arw.ArchValueError";
 stx_arw_ArchValueError.prototype = {
 	get: function(self) {
-		return stx_arw_Command._new(new stx_arw_arrowlet_term_Sync(self));
+		return stx_arw_Command.lift(stx_arw_Arrowlet.Sync(self));
 	}
 	,defer: function() {
 		return new stx_arw_ArchValueErrorDefer();
@@ -5234,15 +5362,10 @@ stx_arw_ArchValueErrorDefer.prototype = {
 		return self;
 	}
 	,cont: function(self) {
-		var fn = self;
-		return stx_arw_Command._new(new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		}));
+		return stx_arw_Command.lift(stx_arw_Arrowlet.fromFunSink(self));
 	}
 	,future: function(self) {
-		return stx_arw_Command._new(new stx_arw_arrowlet_term_Fun1Future(self));
+		return stx_arw_Command.lift(stx_arw_Arrowlet.Fun1Future(self));
 	}
 	,__class__: stx_arw_ArchValueErrorDefer
 };
@@ -5266,15 +5389,10 @@ stx_arw_ArchValueValueDefer.prototype = {
 		return self;
 	}
 	,cont: function(fn) {
-		var fn1 = fn;
-		return new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn1(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
-		});
+		return stx_arw_Convert.lift(stx_arw_Arrowlet.fromFunSink(fn));
 	}
 	,future: function(fn) {
-		return new stx_arw_arrowlet_term_Fun1Future(fn);
+		return stx_arw_Convert.lift(stx_arw_Arrowlet.Fun1Future(fn));
 	}
 	,__class__: stx_arw_ArchValueValueDefer
 };
@@ -5290,7 +5408,7 @@ stx_arw_ArchTest.prototype = {
 			c(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,b));
 		});
 		stx_arw_Arch.execute().get(function() {
-			return stx_nano_Report.pure(new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_AbstractMethod")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Arch.hx", lineNumber : 280, className : "stx.arw.ArchTest", methodName : "test_arch"})));
+			return stx_nano_Report.pure(stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Arch.hx", lineNumber : 280, className : "stx.arw.ArchTest", methodName : "test_arch"}),"E_AbstractMethod"));
 		});
 	}
 	,__class__: stx_arw_ArchTest
@@ -5298,315 +5416,153 @@ stx_arw_ArchTest.prototype = {
 var stx_arw_ArrangeLift = function() { };
 stx_arw_ArrangeLift.__name__ = "stx.arw.ArrangeLift";
 stx_arw_ArrangeLift.state = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_arrowlet_ArrowletLift.broach(self),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(tp,chk) {
-		var fn = function(_) {
+	return stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(stx_arw_arrowlet_Lift.broach(self),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(tp,chk) {
+		return stx_nano_ResLift.map(stx_nano_ResLift.zip(stx_nano_ResLift.map(tp,function(_) {
 			return stx_nano_CoupleLift.snd(_);
-		};
-		var self;
-		switch(tp._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(tp.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(tp.e);
-			break;
-		}
-		var self1 = stx_nano_Res._new(self);
-		var self;
-		switch(self1._hx_index) {
-		case 0:
-			var _g = self1.t;
-			switch(chk._hx_index) {
-			case 0:
-				self = stx_nano_ResSum.Accept(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g,chk.t));
-				break;
-			case 1:
-				self = stx_nano_ResSum.Reject(chk.e);
-				break;
-			}
-			break;
-		case 1:
-			var _g = self1.e;
-			self = chk._hx_index == 1 ? stx_nano_ResSum.Reject(_g.next(chk.e)) : stx_nano_ResSum.Reject(_g);
-			break;
-		}
-		var fn = function(tp) {
+		}),chk),function(tp) {
 			return stx_nano_CoupleLift.swap(tp);
-		};
-		var self1;
-		switch(self._hx_index) {
-		case 0:
-			self1 = stx_nano_ResSum.Accept(fn(self.t));
-			break;
-		case 1:
-			self1 = stx_nano_ResSum.Reject(self.e);
-			break;
-		}
-		return stx_nano_Res._new(self1);
-	}));
+		});
+	})));
 };
 stx_arw_ArrangeLift.attempt = function(self,attempt) {
-	return stx_arw_arrowlet_ArrowletLift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Attempt.toCascade(attempt)));
+	return stx_arw_Arrange.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Attempt.toCascade(attempt))));
 };
 stx_arw_ArrangeLift.errata = function(self,fn) {
-	return new stx_arw_arrowlet_term_Anon(function(res,cont) {
-		switch(res._hx_index) {
-		case 0:
-			var self1 = new stx_arw_arrowlet_term_Sync(function(res) {
-				var self;
-				switch(res._hx_index) {
-				case 0:
-					self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,res.t);
-					break;
-				case 1:
-					self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(res.e));
-					break;
-				}
-				return stx_nano_Res._new(self);
-			});
-			var self2 = stx_arw_arrowlet_ArrowletLift.then(self,self1);
-			var i = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,res.t);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self2.get_convention(),function() {
-				return self2.defer(i,cont1);
-			},function() {
-				return cont1.value(self2.apply(i)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(res,cont) {
+		return stx_nano_ResLift.fold(res,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.fromFun1R(function(res) {
+				return stx_nano_ResLift.errata(res,fn);
+			})),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 135, className : "stx.arw.ArrangeLift", methodName : "errata"}));
+		});
+	}));
 };
 stx_arw_ArrangeLift.errate = function(self,fn) {
-	return stx_arw_ArrangeLift.errata(self,function(oc) {
+	return stx_arw_Arrange.lift(stx_arw_ArrangeLift.errata(self,function(oc) {
 		return oc.map(fn);
-	});
+	}));
 };
 stx_arw_ArrangeLift.convert = function(self,that) {
-	return stx_arw_Cascade._.convert(stx_arw_Arrange.toCascade(self),that);
+	return stx_arw_Arrange.lift(stx_arw_Cascade._.convert(stx_arw_Arrange.toCascade(self),that));
 };
 stx_arw_ArrangeLift.cover = function(self,i) {
-	return new stx_arw_arrowlet_term_Anon(function(res,cont) {
-		switch(res._hx_index) {
-		case 0:
-			var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,res.t));
-			var self1 = stx_arw_Cascade.toArrowlet(self);
-			var i2 = i1;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i2,cont1);
-			},function() {
-				return cont1.value(self1.apply(i2)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e)).toWork();
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Anon(function(res,cont) {
+		return stx_nano_ResLift.fold(res,function(v) {
+			return stx_arw_Arrange.prepare(self,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,v),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 153, className : "stx.arw.ArrangeLift", methodName : "cover"}));
+		});
+	}));
 };
 stx_arw_ArrangeLift.split = function(self,that) {
-	var a = stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_Arrowlet._.broach(stx_arw_Arrange.toArrowlet(self)),function(tp) {
+	var a = stx_arw_arrowlet_Lift.postfix(stx_arw_Arrowlet._.broach(self),function(tp) {
 		return stx_nano_CoupleLift.decouple(tp,function(resInput,resOutput) {
-			var self;
-			switch(resOutput._hx_index) {
-			case 0:
-				var o = resOutput.t;
-				var fn = function(couple) {
+			return stx_nano_ResLift.flat_map(resOutput,function(o) {
+				return stx_nano_ResLift.map(resInput,function(couple) {
 					return stx_nano_lift_LiftNano.triple(stx_nano_Wildcard.__,stx_nano_CoupleLift.fst(couple),o,stx_nano_CoupleLift.snd(couple));
-				};
-				var self1;
-				switch(resInput._hx_index) {
-				case 0:
-					self1 = stx_nano_ResSum.Accept(fn(resInput.t));
-					break;
-				case 1:
-					self1 = stx_nano_ResSum.Reject(resInput.e);
-					break;
-				}
-				self = stx_nano_Res._new(self1);
-				break;
-			case 1:
-				self = stx_nano_ResSum.Reject(resOutput.e);
-				break;
-			}
-			return stx_nano_Res._new(self);
+				});
+			});
 		});
 	});
-	return stx_arw_Cascade.convert(stx_arw_Cascade.split(stx_arw_CascadeLift.cascade(stx_arw_arrowlet_ArrowletLift.postfix(a,function(res) {
-		var fn = function(tr) {
+	return stx_arw_Arrange.lift(stx_arw_Cascade.convert(stx_arw_Cascade.split(stx_arw_CascadeLift.cascade(stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(a,function(res) {
+		return stx_nano_ResLift.map(res,function(tr) {
 			return stx_nano_TripleLift.detriple(tr,function(a,b,c) {
 				return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,a,c);
 			});
-		};
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(res.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(res.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	}),stx_arw_Arrange.toCascade(that)),stx_arw_arrowlet_ArrowletLift.postfix(a,function(res) {
-		var fn = function(tr) {
+		});
+	})),stx_arw_Arrange.toCascade(that)),stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(a,function(res) {
+		return stx_nano_ResLift.map(res,function(tr) {
 			return stx_nano_TripleLift.detriple(tr,function(a,b,c) {
 				return b;
 			});
-		};
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(res.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(res.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	})),stx_arw_Convert.fromFun1R(function(tp) {
+		});
+	}))),stx_arw_Convert.fromFun1R(function(tp) {
 		return stx_nano_CoupleLift.swap(tp);
-	}));
+	})));
 };
 var stx_arw_Arrange = {};
 stx_arw_Arrange._new = function(self) {
 	return self;
 };
 stx_arw_Arrange.lift = function(self) {
-	return self;
+	return stx_arw_Arrange._new(self);
 };
 stx_arw_Arrange.pure = function(o) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o)).toWork();
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 18, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "pure"}));
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 19, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "pure"}));
+		});
+	}));
 };
 stx_arw_Arrange.fromRes = function(res) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			return cont.value(res).toWork();
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_async_terminal_Receiver.serve(cont.value(res,{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 27, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromRes"}));
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 28, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromRes"}));
+		});
+	}));
 };
 stx_arw_Arrange.fromFun1Attempt = function(f) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var _g = i.t;
-			var self = f(stx_nano_CoupleLift.fst(_g));
-			var i1 = stx_nano_CoupleLift.snd(_g);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(f(stx_nano_CoupleLift.fst(i)),stx_nano_CoupleLift.snd(i),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 37, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromFun1Attempt"}));
+		});
+	}));
 };
 stx_arw_Arrange.fromFunResAttempt = function(f) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var _g = i.t;
-			var self = f(stx_nano_CoupleLift.fst(_g));
-			var i1 = stx_nano_CoupleLift.snd(_g);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(f(stx_nano_CoupleLift.fst(i)),stx_nano_CoupleLift.snd(i),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 46, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromFunResAttempt"}));
+		});
+	}));
 };
 stx_arw_Arrange.fromFun1Cascade = function(f) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var _g = i.t;
-			var self = f(stx_nano_CoupleLift.fst(_g));
-			var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(_g));
-			var self1 = stx_arw_Cascade.toArrowlet(self);
-			var i2 = i1;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i2,cont1);
-			},function() {
-				return cont1.value(self1.apply(i2)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(f(stx_nano_CoupleLift.fst(i)),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(i)),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 55, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromFun1Cascade"}));
+		});
+	}));
 };
 stx_arw_Arrange.fromFunResCascade = function(f) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var _g = i.t;
-			var self = f(stx_nano_CoupleLift.fst(_g));
-			var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(_g));
-			var self1 = stx_arw_Cascade.toArrowlet(self);
-			var i2 = i1;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i2,cont1);
-			},function() {
-				return cont1.value(self1.apply(i2)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(f(stx_nano_CoupleLift.fst(i)),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(i)),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 64, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "fromFunResCascade"}));
+		});
+	}));
 };
 stx_arw_Arrange.bind_fold = function(fn,iterable) {
 	return stx_nano_IterLift.lfold1(stx_nano_IterLift.map(stx_nano_IterLift.map(stx_ext_lift_LiftIterableToIter.toIter(iterable),function(t) {
-		var _g = fn;
-		var a1 = t;
-		return function(a2) {
-			return _g(a1,a2);
-		};
+		return stx_LiftBinary.bind1(fn,t);
 	}),stx_arw_Arrange.fromFun1Cascade),function(next,memo) {
-		return stx_arw_arrowlet_ArrowletLift.then(stx_arw_Arrange._.state(memo),stx_arw_Arrange.toArrowlet(next));
+		return stx_arw_Arrange.lift(stx_arw_arrowlet_Lift.then(stx_arw_Arrange._.state(memo),stx_arw_Arrange.toArrowlet(next)));
 	});
 };
 stx_arw_Arrange.fromFun2R = function(fn) {
 	return stx_arw_Arrange.modifier(fn);
 };
 stx_arw_Arrange.modifier = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(res,cont) {
-		var fn1 = stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(i,s) {
-			return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(i,s))).toWork();
+	return stx_arw_Arrange.lift(stx_arw_Arrowlet.Anon(function(res,cont) {
+		return stx_nano_ResLift.fold(res,stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(i,s) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(i,s)),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 87, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "modifier"}));
+		}),function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Arrange.hx", lineNumber : 88, className : "stx.arw._Arrange.Arrange_Impl_", methodName : "modifier"}));
 		});
-		switch(res._hx_index) {
-		case 0:
-			return fn1(res.t);
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e)).toWork();
-		}
-	});
+	}));
 };
 stx_arw_Arrange.prepare = function(this1,i,cont) {
-	var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i);
-	var self = stx_arw_Cascade.toArrowlet(this1);
-	var i = i1;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self.get_convention(),function() {
-		return self.defer(i,cont1);
-	},function() {
-		return cont1.value(self.apply(i)).toWork();
-	});
+	return stx_arw_Cascade._.prepare(this1,stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),cont);
 };
 stx_arw_Arrange.split = function(this1,that) {
 	return stx_arw_Arrange._.split(this1,that);
@@ -5617,203 +5573,154 @@ stx_arw_Arrange.toArrowlet = function(this1) {
 stx_arw_Arrange.toCascade = function(this1) {
 	return this1;
 };
-var stx_arw_arrowlet_ArrowletLift = function() { };
-stx_arw_arrowlet_ArrowletLift.__name__ = "stx.arw.arrowlet.ArrowletLift";
-stx_arw_arrowlet_ArrowletLift.lift = function(t) {
-	return t.asArrowletDef();
+var stx_arw_arrowlet_Lift = function() { };
+stx_arw_arrowlet_Lift.__name__ = "stx.arw.arrowlet.Lift";
+stx_arw_arrowlet_Lift.lift = function(t) {
+	return stx_arw_Arrowlet.lift(t.asArrowletDef());
 };
-stx_arw_arrowlet_ArrowletLift.inject = function(self,v) {
-	return stx_arw_arrowlet_ArrowletLift.then(self,new stx_arw_arrowlet_term_Sync(function(b) {
+stx_arw_arrowlet_Lift.inject = function(self,v) {
+	return stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.fromFun1R(function(b) {
 		return v;
 	}));
 };
-stx_arw_arrowlet_ArrowletLift.then = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Then(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.then = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(stx_arw_Arrowlet.Then(lhs,rhs));
 };
-stx_arw_arrowlet_ArrowletLift.next = function(lhs,rhs) {
-	return stx_LiftIf.if_else(lhs.get_convention(),function() {
-		return new stx_arw_arrowlet_term_ThenFun(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.next = function(lhs,rhs) {
+	return stx_arw_Convention.fold(stx_arw_arrowlet_Lift.toInternal(lhs).get_convention(),function() {
+		return stx_arw_arrowlet_Lift.lift(stx_arw_Arrowlet.ThenFun(lhs,rhs));
 	},function() {
-		return new stx_arw_arrowlet_term_ThenFunFun(($_=lhs,$bind($_,$_.apply)),rhs);
+		return stx_arw_Arrowlet.ThenFunFun(($_=stx_arw_arrowlet_Lift.toInternal(lhs),$bind($_,$_.apply)),rhs);
 	});
 };
-stx_arw_arrowlet_ArrowletLift.first = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.both(self,stx_arw_Arrowlet.unit());
+stx_arw_arrowlet_Lift.first = function(self) {
+	return stx_arw_arrowlet_Lift.both(self,stx_arw_Arrowlet.unit());
 };
-stx_arw_arrowlet_ArrowletLift.second = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.both(stx_arw_Arrowlet.unit(),self);
+stx_arw_arrowlet_Lift.second = function(self) {
+	return stx_arw_arrowlet_Lift.both(stx_arw_Arrowlet.unit(),self);
 };
-stx_arw_arrowlet_ArrowletLift.split = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Split(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.split = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Split(lhs,stx_arw_Arrowlet.toInternal(rhs)));
 };
-stx_arw_arrowlet_ArrowletLift.both = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Both(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.both = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Both(lhs,stx_arw_Arrowlet.toInternal(rhs)));
 };
-stx_arw_arrowlet_ArrowletLift.swap = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.then(self,new stx_arw_arrowlet_term_Sync(function(tp) {
+stx_arw_arrowlet_Lift.swap = function(self) {
+	return stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.fromFun1R(function(tp) {
 		return stx_nano_CoupleLift.swap(tp);
 	}));
 };
-stx_arw_arrowlet_ArrowletLift.fan = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(self,function(v) {
+stx_arw_arrowlet_Lift.fan = function(self) {
+	return stx_arw_arrowlet_Lift.postfix(self,function(v) {
 		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,v,v);
 	});
 };
-stx_arw_arrowlet_ArrowletLift.joint = function(lhs,rhs) {
-	return stx_arw_arrowlet_ArrowletLift.then(lhs,stx_arw_arrowlet_ArrowletLift.split(stx_arw_Arrowlet.unit(),rhs));
+stx_arw_arrowlet_Lift.joint = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.then(lhs,stx_arw_arrowlet_Lift.split(stx_arw_Arrowlet.unit(),rhs));
 };
-stx_arw_arrowlet_ArrowletLift.bound = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Bound(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.bound = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Bound(lhs,stx_arw_Arrowlet.toInternal(rhs)));
 };
-stx_arw_arrowlet_ArrowletLift.or = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Or(lhs,rhs).asArrowletDef().asArrowletDef();
+stx_arw_arrowlet_Lift.or = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Or(lhs,stx_arw_Arrowlet.toInternal(rhs)).asArrowletDef());
 };
-stx_arw_arrowlet_ArrowletLift.left = function(self) {
+stx_arw_arrowlet_Lift.left = function(self) {
 	return stx_arw_lift_LiftToLeftChoice.toLeftChoice(self);
 };
-stx_arw_arrowlet_ArrowletLift.right = function(self) {
+stx_arw_arrowlet_Lift.right = function(self) {
 	return stx_arw_lift_LiftToRightChoice.toRightChoice(self);
 };
-stx_arw_arrowlet_ArrowletLift.prefix = function(self,fn) {
-	return stx_arw_arrowlet_ArrowletLift.then(new stx_arw_arrowlet_term_Sync(fn).asArrowletDef(),self);
+stx_arw_arrowlet_Lift.prefix = function(self,fn) {
+	return stx_arw_arrowlet_Lift.then(stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Sync(fn)),self);
 };
-stx_arw_arrowlet_ArrowletLift.postfix = function(self,fn) {
-	var lhs = self;
-	var rhs = fn;
-	return stx_LiftIf.if_else(lhs.get_convention(),function() {
-		return new stx_arw_arrowlet_term_ThenFun(lhs,rhs).asArrowletDef();
-	},function() {
-		return new stx_arw_arrowlet_term_ThenFunFun(($_=lhs,$bind($_,$_.apply)),rhs);
-	});
+stx_arw_arrowlet_Lift.postfix = function(self,fn) {
+	return stx_arw_arrowlet_Lift.next(self,fn);
 };
-stx_arw_arrowlet_ArrowletLift.inform = function(lhs,rhs) {
-	return new stx_arw_arrowlet_term_Inform(lhs,rhs).asArrowletDef();
+stx_arw_arrowlet_Lift.inform = function(lhs,rhs) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_Inform(lhs,stx_arw_Arrowlet.toInternal(rhs)));
 };
-stx_arw_arrowlet_ArrowletLift.broach = function(self) {
+stx_arw_arrowlet_Lift.broach = function(self) {
 	return new stx_arw_arrowlet_term_Broach(self);
 };
-stx_arw_arrowlet_ArrowletLift.state = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.bound(self,new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,stx_fn_BinaryLift.then(stx_fn_Binary._new(function(tI,tII) {
+stx_arw_arrowlet_Lift.state = function(self) {
+	return stx_arw_arrowlet_Lift.bound(self,stx_arw_Arrowlet.fromFun2R(stx_fn_BinaryLift.then(stx_LiftBinary.fn(function(tI,tII) {
 		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 	}),function(tp) {
 		return stx_nano_CoupleLift.swap(tp);
-	}))));
+	})));
 };
-stx_arw_arrowlet_ArrowletLift.fulfill = function(self,i) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self1 = self;
-		var i1 = i;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i1,cont1);
-		},function() {
-			return cont1.value(self1.apply(i1)).toWork();
-		});
-	}).asArrowletDef();
+stx_arw_arrowlet_Lift.fulfill = function(self,i) {
+	return stx_arw_arrowlet_Lift.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_arrowlet_Lift.prepare(self,i,cont);
+	}));
 };
-stx_arw_arrowlet_ArrowletLift.deliver = function(self,cb) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(function(o) {
+stx_arw_arrowlet_Lift.deliver = function(self,cb) {
+	return stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(function(o) {
 		cb(o);
 		return null;
 	}));
 };
-stx_arw_arrowlet_ArrowletLift.prepare = function(self,i,cont) {
-	return stx_LiftIf.if_else(self.get_convention(),function() {
-		return self.defer(i,cont);
+stx_arw_arrowlet_Lift.prepare = function(self,i,cont) {
+	return stx_arw_Convention.fold(stx_arw_arrowlet_Lift.toInternal(self).get_convention(),function() {
+		return stx_arw_arrowlet_Lift.toInternal(self).defer(i,cont);
 	},function() {
-		return cont.value(self.apply(i)).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(stx_arw_arrowlet_Lift.toInternal(self).apply(i),{ fileName : "src/main/haxe/stx/arw/arrowlet/Lift.hx", lineNumber : 125, className : "stx.arw.arrowlet.Lift", methodName : "prepare"}));
 	});
 };
-stx_arw_arrowlet_ArrowletLift.environment = function(self,i,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(self,i),success,failure);
+stx_arw_arrowlet_Lift.environment = function(self,i,success,failure) {
+	return stx_arw_arrowlet_term_Fiber.lift(stx_arw_Arrowlet.Deliver(stx_arw_Arrowlet.Fulfill(self,i),success,failure));
 };
-stx_arw_arrowlet_ArrowletLift.fudge = function(self,i) {
+stx_arw_arrowlet_Lift.fudge = function(self,i) {
 	var v = null;
-	var fn = function(x) {
+	stx_arw_arrowlet_term_Fiber.crunch(stx_arw_arrowlet_Lift.environment(self,i,function(x) {
 		v = x;
-	};
-	var scheduler = null;
-	var self1 = new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(self,i),fn,function(e) {
-		throw haxe_Exception.thrown(e);
-	});
-	var i = null;
-	var cont = stx_async_Terminal.ZERO;
-	var this1 = stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont);
-	},function() {
-		return cont.value(self1.apply(i)).toWork();
-	});
-	var loop = scheduler;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-	loop = self._hx_index == 0 ? self.v : stx_async_Loop.ZERO;
-	var cont1 = true;
-	var suspended = false;
-	var backoff = 0.2;
-	while(true == cont1) {
-		if(this1.get_defect().length > 0) {
-			loop.fail(this1.get_defect());
-			cont1 = false;
-		}
-		if(!suspended) {
-			this1.pursue();
-			if(this1.get_loaded()) {
-				cont1 = false;
-			} else {
-				switch(this1.get_status()) {
-				case -1:
-					loop.fail(this1.get_defect());
-					break;
-				case 1:case 4:
-					cont1 = false;
-					break;
-				case 0:case 2:
-					break;
-				case 3:
-					suspended = true;
-					tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-						backoff = 1.22;
-						suspended = false;
-					});
-					break;
-				}
-			}
-		}
-	}
+	},function(e) {
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+	}));
 	return v;
 };
-stx_arw_arrowlet_ArrowletLift.flat_map = function(self,fn) {
-	return new stx_arw_arrowlet_term_FlatMap(self,fn).asArrowletDef();
+stx_arw_arrowlet_Lift.flat_map = function(self,fn) {
+	return stx_arw_arrowlet_Lift.lift(new stx_arw_arrowlet_term_FlatMap(self,fn));
 };
-stx_arw_arrowlet_ArrowletLift.pinch = function(a) {
-	return stx_arw_arrowlet_ArrowletLift.then(stx_arw_arrowlet_ArrowletLift.fan(stx_arw_Arrowlet.unit()),a);
+stx_arw_arrowlet_Lift.pinch = function(a) {
+	return stx_arw_arrowlet_Lift.then(stx_arw_arrowlet_Lift.fan(stx_arw_Arrowlet.unit()),a);
+};
+stx_arw_arrowlet_Lift.toInternal = function(self) {
+	return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(self));
+};
+stx_arw_arrowlet_Lift.prototype = {
+	contextualize: function(self,i,success,failure) {
+		return stx_arw_Contextualize.load(stx_arw_Contextualize.make(i,success,failure),self);
+	}
+	,__class__: stx_arw_arrowlet_Lift
 };
 var stx_arw_Arrowlet = {};
 stx_arw_Arrowlet._new = function(self) {
 	return self;
 };
 stx_arw_Arrowlet.lift = function(self) {
-	return self;
+	return stx_arw_Arrowlet._new(self);
 };
 stx_arw_Arrowlet.unit = function() {
-	return new stx_arw_arrowlet_term_Unit();
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Unit());
 };
 stx_arw_Arrowlet.pure = function(o) {
-	return new stx_arw_arrowlet_term_Pure(o);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Pure(o,{ fileName : "src/main/haxe/stx/arw/Arrowlet.hx", lineNumber : 18, className : "stx.arw._Arrowlet.Arrowlet_Impl_", methodName : "pure"}));
 };
 stx_arw_Arrowlet.Sync = function(self) {
-	return new stx_arw_arrowlet_term_Sync(self);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Sync(self));
 };
 stx_arw_Arrowlet.Then = function(self,that) {
 	return new stx_arw_arrowlet_term_Then(self,that);
 };
 stx_arw_Arrowlet.Anon = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(fn);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Anon(fn));
 };
 stx_arw_Arrowlet.Applier = function() {
-	return stx_arw_arrowlet_term_Applier._new();
+	return stx_arw_Arrowlet.lift(stx_arw_arrowlet_term_Applier._new());
 };
 stx_arw_Arrowlet.FlatMap = function(self,func) {
-	return new stx_arw_arrowlet_term_FlatMap(self,func);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_FlatMap(stx_arw_Arrowlet.toInternal(self),func));
 };
 stx_arw_Arrowlet.Delay = function(milliseconds) {
 	return new stx_arw_arrowlet_term_Delay(milliseconds);
@@ -5822,92 +5729,115 @@ stx_arw_Arrowlet.SplitFun = function(lhs,rhs) {
 	return new stx_arw_arrowlet_term_SplitFun(lhs,rhs);
 };
 stx_arw_Arrowlet.Fulfill = function(self,input) {
-	return new stx_arw_arrowlet_term_Fulfill(self,input);
+	return new stx_arw_arrowlet_term_Fulfill(stx_arw_Arrowlet.toInternal(self),input,{ fileName : "src/main/haxe/stx/arw/Arrowlet.hx", lineNumber : 42, className : "stx.arw._Arrowlet.Arrowlet_Impl_", methodName : "Fulfill"});
 };
 stx_arw_Arrowlet.Deliver = function(self,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(self,success,failure);
+	return new stx_arw_arrowlet_term_Deliver(stx_arw_Arrowlet.toInternal(self),success,failure,{ fileName : "src/main/haxe/stx/arw/Arrowlet.hx", lineNumber : 45, className : "stx.arw._Arrowlet.Arrowlet_Impl_", methodName : "Deliver"});
 };
 stx_arw_Arrowlet.ThenArw = function(self,fn) {
-	var lhs = self;
-	var rhs = fn;
-	return stx_LiftIf.if_else(rhs.get_convention(),function() {
-		return new stx_arw_arrowlet_term_ThenArw(lhs,rhs).asArrowletDef();
-	},function() {
-		return new stx_arw_arrowlet_term_ThenFunFun(lhs,($_=rhs,$bind($_,$_.apply))).asArrowletDef();
-	});
+	return stx_arw_arrowlet_term_ThenArw.make(self,fn);
 };
 stx_arw_Arrowlet.ThenFun = function(self,fn) {
-	return new stx_arw_arrowlet_term_ThenFun(self,fn);
+	return new stx_arw_arrowlet_term_ThenFun(stx_arw_Arrowlet.toInternal(self),fn);
 };
 stx_arw_Arrowlet.ThenFunFun = function(self,fn) {
 	return new stx_arw_arrowlet_term_ThenFunFun(self,fn);
 };
 stx_arw_Arrowlet.Fun1Future = function(self) {
-	return new stx_arw_arrowlet_term_Fun1Future(self);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Fun1Future(self));
 };
 stx_arw_Arrowlet.Future = function(ft) {
-	return new stx_arw_arrowlet_term_Future(ft);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Future(ft));
 };
 stx_arw_Arrowlet.fromFunXR = function(f) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Sync(function(_) {
 		return f();
-	});
+	}));
 };
 stx_arw_Arrowlet.fromFun1R = function(f) {
-	return new stx_arw_arrowlet_term_Sync(f);
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Sync(f));
 };
 stx_arw_Arrowlet.fromFun2R = function(f) {
-	return new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,f));
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,f)));
 };
 stx_arw_Arrowlet.fromFunSink = function(fn) {
-	return new stx_arw_arrowlet_term_Raw(function(i,cont) {
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Raw(function(i,cont) {
 		fn(i,function(o) {
 			cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
 		});
-	});
+	}));
 };
 stx_arw_Arrowlet.environment = function(this1,i,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(this1,i),success,failure);
+	return stx_arw_Arrowlet._.environment(this1,i,success,failure);
 };
 stx_arw_Arrowlet.toInternal = function(this1) {
-	return this1;
+	return stx_arw_Internal.lift(this1);
 };
-var stx_async_GoalApi = function() { };
-stx_async_GoalApi.__name__ = "stx.async.GoalApi";
-stx_async_GoalApi.__isInterface__ = true;
-stx_async_GoalApi.prototype = {
-	pursue: null
-	,escape: null
-	,loaded: null
-	,get_loaded: null
-	,defect: null
-	,get_defect: null
-	,status: null
-	,get_status: null
-	,__class__: stx_async_GoalApi
-	,__properties__: {get_status:"get_status",get_defect:"get_defect",get_loaded:"get_loaded"}
-};
-var stx_async_TaskApi = function() { };
-stx_async_TaskApi.__name__ = "stx.async.TaskApi";
-stx_async_TaskApi.__isInterface__ = true;
-stx_async_TaskApi.__interfaces__ = [stx_async_GoalApi];
-stx_async_TaskApi.prototype = {
-	id: null
+var stx_async_declared_Api = function() { };
+stx_async_declared_Api.__name__ = "stx.async.declared.Api";
+stx_async_declared_Api.__isInterface__ = true;
+stx_async_declared_Api.prototype = {
+	pos: null
+	,id: null
 	,get_id: null
-	,result: null
-	,get_result: null
+	,equals: null
+	,__class__: stx_async_declared_Api
+	,__properties__: {get_id:"get_id"}
+};
+var stx_async_transmit_Api = function() { };
+stx_async_transmit_Api.__name__ = "stx.async.transmit.Api";
+stx_async_transmit_Api.__isInterface__ = true;
+stx_async_transmit_Api.__interfaces__ = [stx_async_declared_Api];
+stx_async_transmit_Api.prototype = {
+	transmission_enabled: null
 	,signal: null
 	,get_signal: null
+	,trigger: null
+	,get_trigger: null
+	,__class__: stx_async_transmit_Api
+	,__properties__: {get_trigger:"get_trigger",get_signal:"get_signal"}
+};
+var stx_async_tick_Api = function() { };
+stx_async_tick_Api.__name__ = "stx.async.tick.Api";
+stx_async_tick_Api.__isInterface__ = true;
+stx_async_tick_Api.__interfaces__ = [stx_async_transmit_Api];
+stx_async_tick_Api.prototype = {
+	pursue: null
+	,escape: null
+	,update: null
+	,__class__: stx_async_tick_Api
+};
+var stx_async_goal_Api = function() { };
+stx_async_goal_Api.__name__ = "stx.async.goal.Api";
+stx_async_goal_Api.__isInterface__ = true;
+stx_async_goal_Api.__interfaces__ = [stx_async_tick_Api];
+stx_async_goal_Api.prototype = {
+	loaded: null
+	,get_loaded: null
+	,get_status: null
+	,signal: null
+	,get_signal: null
+	,toGoalApi: null
+	,toString: null
+	,__class__: stx_async_goal_Api
+	,__properties__: {get_signal:"get_signal",get_loaded:"get_loaded"}
+};
+var stx_async_task_Api = function() { };
+stx_async_task_Api.__name__ = "stx.async.task.Api";
+stx_async_task_Api.__isInterface__ = true;
+stx_async_task_Api.__interfaces__ = [stx_async_goal_Api];
+stx_async_task_Api.prototype = {
+	get_defect: null
+	,get_result: null
 	,toWork: null
 	,toTaskApi: null
-	,equals: null
-	,__class__: stx_async_TaskApi
-	,__properties__: {get_signal:"get_signal",get_result:"get_result",get_id:"get_id"}
+	,toString: null
+	,__class__: stx_async_task_Api
 };
 var stx_arw_ArrowletApi = function() { };
 stx_arw_ArrowletApi.__name__ = "stx.arw.ArrowletApi";
 stx_arw_ArrowletApi.__isInterface__ = true;
-stx_arw_ArrowletApi.__interfaces__ = [stx_async_TaskApi];
+stx_arw_ArrowletApi.__interfaces__ = [stx_async_task_Api];
 stx_arw_ArrowletApi.prototype = {
 	apply: null
 	,defer: null
@@ -5917,96 +5847,175 @@ stx_arw_ArrowletApi.prototype = {
 	,__class__: stx_arw_ArrowletApi
 	,__properties__: {get_convention:"get_convention"}
 };
-var stx_async_TaskCls = function() {
+var stx_async_declared_Cls = function(pos) {
 	stx_pico_Clazz.call(this);
-	this.status = 0;
+	this.pos = pos;
+	this.id = stx_async_Counter.next();
 };
-stx_async_TaskCls.__name__ = "stx.async.TaskCls";
-stx_async_TaskCls.__interfaces__ = [stx_async_TaskApi];
-stx_async_TaskCls.__super__ = stx_pico_Clazz;
-stx_async_TaskCls.prototype = $extend(stx_pico_Clazz.prototype,{
-	id: null
+stx_async_declared_Cls.__name__ = "stx.async.declared.Cls";
+stx_async_declared_Cls.__interfaces__ = [stx_async_declared_Api];
+stx_async_declared_Cls.__super__ = stx_pico_Clazz;
+stx_async_declared_Cls.prototype = $extend(stx_pico_Clazz.prototype,{
+	pos: null
+	,id: null
 	,get_id: function() {
-		if(this.id == null) {
-			return this.id = stx_async_Task.counter++;
+		return this.id;
+	}
+	,equals: function(that) {
+		return this.get_id() == that.get_id();
+	}
+	,__class__: stx_async_declared_Cls
+	,__properties__: {get_id:"get_id"}
+});
+var stx_async_transmit_Cls = function(pos) {
+	stx_async_declared_Cls.call(this,pos);
+	this.transmission_enabled = false;
+};
+stx_async_transmit_Cls.__name__ = "stx.async.transmit.Cls";
+stx_async_transmit_Cls.__super__ = stx_async_declared_Cls;
+stx_async_transmit_Cls.prototype = $extend(stx_async_declared_Cls.prototype,{
+	transmission_enabled: null
+	,signal: null
+	,get_signal: function() {
+		if(this.transmission_enabled) {
+			return this.signal;
 		} else {
-			return this.id;
+			this.transmission_enabled = true;
+			this.trigger = tink_core_Signal.trigger();
+			this.signal = this.get_trigger().asSignal();
+			return this.signal;
 		}
 	}
-	,pursue: function() {
+	,trigger: null
+	,get_trigger: function() {
+		if(this.transmission_enabled) {
+			return this.trigger;
+		} else {
+			this.transmission_enabled = true;
+			this.trigger = tink_core_Signal.trigger();
+			this.signal = this.trigger.asSignal();
+			return this.trigger;
+		}
+	}
+	,__class__: stx_async_transmit_Cls
+	,__properties__: $extend(stx_async_declared_Cls.prototype.__properties__,{get_trigger:"get_trigger",get_signal:"get_signal"})
+});
+var stx_async_tick_Abs = function(pos) {
+	stx_async_transmit_Cls.call(this,pos);
+};
+stx_async_tick_Abs.__name__ = "stx.async.tick.Abs";
+stx_async_tick_Abs.__interfaces__ = [stx_async_tick_Api];
+stx_async_tick_Abs.__super__ = stx_async_transmit_Cls;
+stx_async_tick_Abs.prototype = $extend(stx_async_transmit_Cls.prototype,{
+	pursue: null
+	,escape: null
+	,update: null
+	,__class__: stx_async_tick_Abs
+});
+var stx_async_tick_Cls = function(pos) {
+	stx_async_tick_Abs.call(this,pos);
+};
+stx_async_tick_Cls.__name__ = "stx.async.tick.Cls";
+stx_async_tick_Cls.__super__ = stx_async_tick_Abs;
+stx_async_tick_Cls.prototype = $extend(stx_async_tick_Abs.prototype,{
+	pursue: function() {
 	}
 	,escape: function() {
 	}
+	,update: function() {
+	}
+	,__class__: stx_async_tick_Cls
+});
+var stx_async_goal_term_Direct = function(pos) {
+	stx_async_tick_Cls.call(this,pos);
+	this.__status = 0;
+};
+stx_async_goal_term_Direct.__name__ = "stx.async.goal.term.Direct";
+stx_async_goal_term_Direct.__interfaces__ = [stx_async_goal_Api];
+stx_async_goal_term_Direct.__super__ = stx_async_tick_Cls;
+stx_async_goal_term_Direct.prototype = $extend(stx_async_tick_Cls.prototype,{
+	toString: null
+	,__status: null
+	,pursue: null
+	,escape: null
+	,loaded: null
+	,get_loaded: function() {
+		return this.__status == 4;
+	}
+	,get_status: function() {
+		return this.__status;
+	}
+	,set_status: function(status) {
+		return this.__status = status;
+	}
+	,toGoalApi: function() {
+		return this;
+	}
+	,__class__: stx_async_goal_term_Direct
+	,__properties__: $extend(stx_async_tick_Cls.prototype.__properties__,{get_loaded:"get_loaded"})
+});
+var stx_async_task_Direct = function(pos) {
+	stx_async_goal_term_Direct.call(this,pos);
+};
+stx_async_task_Direct.__name__ = "stx.async.task.Direct";
+stx_async_task_Direct.__interfaces__ = [stx_async_task_Api];
+stx_async_task_Direct.__super__ = stx_async_goal_term_Direct;
+stx_async_task_Direct.prototype = $extend(stx_async_goal_term_Direct.prototype,{
+	status: null
 	,defect: null
 	,get_defect: function() {
 		if(this.defect == null) {
-			return this.defect = stx_nano_Defect.unit();
+			return this.set_defect(stx_nano_Defect.unit());
 		} else {
 			return this.defect;
 		}
 	}
-	,status: null
-	,get_status: function() {
-		return this.status;
+	,set_defect: function(v) {
+		return this.defect = v;
 	}
 	,result: null
 	,get_result: function() {
 		return this.result;
 	}
-	,signal: null
-	,get_signal: function() {
-		if(this.signal == null) {
-			if(this.trigger == null) {
-				this.trigger = tink_core_Signal.trigger();
-				this.signal = this.trigger;
-			}
-		}
-		return this.signal;
+	,set_result: function(v) {
+		return this.result = v;
 	}
-	,trigger: null
-	,init_signal: function() {
-		if(this.trigger == null) {
-			this.trigger = tink_core_Signal.trigger();
-			this.signal = this.trigger;
-		}
+	,pursue: function() {
+	}
+	,escape: function() {
+	}
+	,update: function() {
+	}
+	,toGoalApi: function() {
+		return this;
+	}
+	,toWork: function(pos) {
+		return this;
 	}
 	,toTaskApi: function() {
 		return this;
 	}
-	,toWork: function() {
-		return this;
-	}
-	,loaded: null
-	,get_loaded: function() {
-		return this.get_status() == 4;
-	}
-	,partial: null
-	,get_partial: function() {
-		switch(this.get_status()) {
-		case 0:case 2:case 3:
-			return true;
-		default:
-			return false;
-		}
-	}
 	,toString: function() {
-		var c = js_Boot.getClass(this);
-		var self = stx_lift_ArrayLift.last(c.__name__.split("."));
-		return "" + (self._hx_index == 0 ? self.v : "Task") + ":" + this.get_id() + "(" + stx_async_GoalStatusLift.toString(this.get_status()) + ")";
+		return stx_async_task_Util.toString(this);
 	}
-	,equals: function(that) {
-		return this.get_id() == that.id;
-	}
-	,__class__: stx_async_TaskCls
-	,__properties__: {get_partial:"get_partial",get_loaded:"get_loaded",get_signal:"get_signal",get_result:"get_result",get_status:"get_status",get_defect:"get_defect",get_id:"get_id"}
+	,__class__: stx_async_task_Direct
+	,__properties__: $extend(stx_async_goal_term_Direct.prototype.__properties__,{set_result:"set_result",get_result:"get_result",set_defect:"set_defect",get_defect:"get_defect",get_status:"get_status"})
+});
+var stx_arw_Task = function(pos) {
+	stx_async_task_Direct.call(this,pos);
+};
+stx_arw_Task.__name__ = "stx.arw.Task";
+stx_arw_Task.__super__ = stx_async_task_Direct;
+stx_arw_Task.prototype = $extend(stx_async_task_Direct.prototype,{
+	__class__: stx_arw_Task
 });
 var stx_arw_ArrowletCls = function() {
-	stx_async_TaskCls.call(this);
+	stx_arw_Task.call(this,{ fileName : "src/main/haxe/stx/arw/ArrowletCls.hx", lineNumber : 5, className : "stx.arw.ArrowletCls", methodName : "new"});
 };
 stx_arw_ArrowletCls.__name__ = "stx.arw.ArrowletCls";
 stx_arw_ArrowletCls.__interfaces__ = [stx_arw_ArrowletApi];
-stx_arw_ArrowletCls.__super__ = stx_async_TaskCls;
-stx_arw_ArrowletCls.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_arw_ArrowletCls.__super__ = stx_arw_Task;
+stx_arw_ArrowletCls.prototype = $extend(stx_arw_Task.prototype,{
 	apply: null
 	,defer: null
 	,convention: null
@@ -6017,80 +6026,47 @@ stx_arw_ArrowletCls.prototype = $extend(stx_async_TaskCls.prototype,{
 		return this;
 	}
 	,toString: function() {
-		var c = stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,this);
-		var self = stx_lift_ArrayLift.last(c.__name__.split("."));
-		if(self._hx_index == 0) {
-			return self.v;
-		} else {
-			return "";
-		}
+		return stx_pico_OptionLift.defv(stx_lift_ArrayLift.last(Type.getClassName(stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,this)).split(".")),"");
 	}
 	,pursue: function() {
 		this.status = 4;
 	}
 	,__class__: stx_arw_ArrowletCls
-	,__properties__: $extend(stx_async_TaskCls.prototype.__properties__,{get_convention:"get_convention"})
+	,__properties__: $extend(stx_arw_Task.prototype.__properties__,{get_convention:"get_convention"})
 });
 var stx_arw_AttemptLift = function() { };
 stx_arw_AttemptLift.__name__ = "stx.arw.AttemptLift";
 stx_arw_AttemptLift.lift = function(self) {
-	return self;
+	return stx_arw_Attempt._new(self);
 };
 stx_arw_AttemptLift.then = function(self,that) {
-	return stx_arw_AttemptLift.lift(new stx_arw_arrowlet_term_Then(self,that));
+	return stx_arw_AttemptLift.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_AttemptLift.rectify = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(stx_arw_Attempt.toArrowlet(self),stx_arw_Rectify.toArrowlet(next));
+	return stx_arw_Arrowlet.lift(stx_arw_Arrowlet.Then(stx_arw_Attempt.toArrowlet(self),stx_arw_Rectify.toArrowlet(next)));
 };
 stx_arw_AttemptLift.resolve = function(self,next) {
-	return stx_arw_AttemptLift.lift(stx_arw_AttemptLift.then(self,stx_arw_ResolveLift.toCascade(next)));
+	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_ResolveLift.toCascade(next))));
 };
 stx_arw_AttemptLift.reclaim = function(self,next) {
-	var tmp = stx_arw_AttemptLift.lift(new stx_arw_arrowlet_term_Anon(function(prd,cont) {
-		var self = stx_arw_Produce.toArrowlet(prd);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	}));
-	return stx_arw_AttemptLift.lift(stx_arw_AttemptLift.attempt(stx_arw_AttemptLift.then(self,stx_arw_Convert.toCascade(next)),tmp));
+	return stx_arw_AttemptLift.lift(stx_arw_AttemptLift.attempt(stx_arw_AttemptLift.then(self,stx_arw_Convert.toCascade(next)),stx_arw_AttemptLift.lift(stx_arw_Arrowlet.Anon(function(prd,cont) {
+		return stx_arw_Produce.prepare(prd,cont);
+	}))));
 };
 stx_arw_AttemptLift.recover = function(self,next) {
-	return stx_arw_AttemptLift.lift(stx_arw_AttemptLift.then(self,stx_arw_Recover.toCascade(next)));
+	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Recover.toCascade(next))));
 };
 stx_arw_AttemptLift.convert = function(self,next) {
 	return stx_arw_AttemptLift.then(self,stx_arw_Convert.toCascade(next));
 };
 stx_arw_AttemptLift.errata = function(self,fn) {
-	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_ArrowletLift.postfix(self,function(oc) {
-		var self;
-		switch(oc._hx_index) {
-		case 0:
-			self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,oc.t);
-			break;
-		case 1:
-			self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(oc.e));
-			break;
-		}
-		return stx_nano_Res._new(self);
+	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_Lift.postfix(self,function(oc) {
+		return stx_nano_ResLift.errata(oc,fn);
 	}));
 };
 stx_arw_AttemptLift.errate = function(self,fn) {
-	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_ArrowletLift.postfix(self,function(oc) {
-		var fn1 = fn;
-		var self;
-		switch(oc._hx_index) {
-		case 0:
-			self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,oc.t);
-			break;
-		case 1:
-			self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,oc.e.map(fn1));
-			break;
-		}
-		return stx_nano_Res._new(self);
+	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_Lift.postfix(self,function(oc) {
+		return stx_nano_ResLift.errate(oc,fn);
 	}));
 };
 stx_arw_AttemptLift.attempt = function(self,next) {
@@ -6100,30 +6076,16 @@ stx_arw_AttemptLift.reframe = function(self) {
 	return stx_arw_CascadeLift.reframe(stx_arw_Attempt.toCascade(self));
 };
 stx_arw_AttemptLift.broach = function(self) {
-	return new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		var self1 = stx_arw_AttemptLift.convert(self,stx_arw_Convert.fromFun1R(function(o) {
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_arw_arrowlet_Lift.prepare(stx_arw_AttemptLift.convert(self,stx_arw_Convert.fromFun1R(function(o) {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,ipt,o);
-		}));
-		var i = ipt;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-	});
+		})),ipt,cont);
+	}));
 };
 stx_arw_AttemptLift.provide = function(self,i) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self1 = self;
-		var i1 = i;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i1,cont1);
-		},function() {
-			return cont1.value(self1.apply(i1)).toWork();
-		});
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_arrowlet_Lift.prepare(self,i,cont);
+	}));
 };
 stx_arw_AttemptLift.arrange = function(self,then) {
 	return stx_arw_AttemptLift.lift(new stx_arw_attempt_AttemptArrange(self,then));
@@ -6132,121 +6094,82 @@ stx_arw_AttemptLift.prefix = function(self,that) {
 	return stx_arw_AttemptLift.lift(stx_arw_Arrowlet._.prefix(stx_arw_Attempt.toArrowlet(self),that));
 };
 stx_arw_AttemptLift.cascade = function(self,that) {
-	return stx_arw_AttemptLift.lift(stx_arw_AttemptLift.then(self,that));
+	return stx_arw_AttemptLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(that)));
 };
 stx_arw_AttemptLift.execute = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			var self = stx_arw_Produce.toArrowlet(stx_arw_ExecuteLift.produce(that,stx_arw_Produce.pure(ipt.t)));
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.e)).toWork();
-		}
-	}));
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_nano_ResLift.fold(ipt,function(o) {
+			return stx_arw_Produce.prepare(stx_arw_ExecuteLift.produce(that,stx_arw_Produce.pure(o)),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 170, className : "stx.arw.AttemptLift", methodName : "execute"}));
+		});
+	})));
 };
 stx_arw_AttemptLift.command = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			var _g = ipt.t;
-			var self = stx_arw_CommandLift.produce(that,stx_arw_Produce.pure(_g));
-			var i = _g;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.e)).toWork();
-		}
-	}));
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_nano_ResLift.fold(ipt,function(o) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_CommandLift.produce(that,stx_arw_Produce.pure(o)),o,cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 183, className : "stx.arw.AttemptLift", methodName : "command"}));
+		});
+	})));
 };
 var stx_arw_Attempt = {};
 stx_arw_Attempt._new = function(self) {
 	return self;
 };
 stx_arw_Attempt.lift = function(self) {
-	return self;
+	return stx_arw_Attempt._new(self);
 };
 stx_arw_Attempt.unit = function() {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i)).toWork();
-	});
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 19, className : "stx.arw._Attempt.Attempt_Impl_", methodName : "unit"}));
+	}));
 };
 stx_arw_Attempt.pure = function(o) {
 	return stx_arw_Attempt.fromRes(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o));
 };
 stx_arw_Attempt.fromRes = function(res) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		return cont.value(res).toWork();
-	});
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(res,{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 31, className : "stx.arw._Attempt.Attempt_Impl_", methodName : "fromRes"}));
+	}));
 };
 stx_arw_Attempt.fromFun1Res = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(pI,cont) {
-		return cont.value(fn(pI)).toWork();
-	});
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(pI,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(fn(pI),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 40, className : "stx.arw._Attempt.Attempt_Impl_", methodName : "fromFun1Res"}));
+	}));
 };
 stx_arw_Attempt.fromFun1Produce = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(pI,cont) {
-		var self = stx_arw_Produce.toArrowlet(fn(pI));
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(pI,cont) {
+		return stx_arw_Produce.prepare(fn(pI),cont);
+	}));
 };
 stx_arw_Attempt.fromUnary1Produce = function(fn) {
 	return stx_arw_Attempt.fromFun1Produce(fn);
 };
 stx_arw_Attempt.fromFun1Provide = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(pI,cont) {
-		var self = stx_arw_Produce.toArrowlet(stx_arw_ProvideLift.convert(fn(pI),stx_arw_Convert.fromFun1R(function(t) {
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(pI,cont) {
+		return stx_arw_Produce.prepare(stx_arw_Produce.lift(stx_arw_ProvideLift.convert(fn(pI),stx_arw_Convert.fromFun1R(function(t) {
 			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
-		})));
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
+		}))),cont);
+	}));
 };
 stx_arw_Attempt.fromFun1R = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(i))).toWork();
-	});
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(i)),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 63, className : "stx.arw._Attempt.Attempt_Impl_", methodName : "fromFun1R"}));
+	}));
 };
 stx_arw_Attempt.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Attempt.toCascade = function(this1) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var self = this1;
-			var i1 = i.t;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(v) {
+			return stx_arw_Arrowlet._.prepare(this1,v,cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Attempt.hx", lineNumber : 74, className : "stx.arw._Attempt.Attempt_Impl_", methodName : "toCascade"}));
+		});
+	}));
 };
 stx_arw_Attempt.environment = function(this1,i,success,failure) {
 	return stx_arw_Cascade._.environment(stx_LiftAttemptToCascade.toCascade(this1),i,success,failure);
@@ -6257,42 +6180,21 @@ stx_arw_Attempt.prefix = function(this1,that) {
 var stx_arw_CascadeLift = function() { };
 stx_arw_CascadeLift.__name__ = "stx.arw.CascadeLift";
 stx_arw_CascadeLift.prepare = function(self,i,cont) {
-	var self1 = stx_arw_Cascade.toArrowlet(self);
-	var i1 = i;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i1,cont1);
-	},function() {
-		return cont1.value(self1.apply(i1)).toWork();
-	});
+	return stx_arw_Arrowlet._.prepare(self,i,cont);
 };
 stx_arw_CascadeLift.lift = function(self) {
-	return self;
+	return stx_arw_Cascade._new(self);
 };
 stx_arw_CascadeLift.or = function(self,that) {
-	return stx_arw_CascadeLift.lift(new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_CascadeLift.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		switch(ipt._hx_index) {
 		case 0:
 			var _g = ipt.t;
 			switch(_g._hx_index) {
 			case 0:
-				var self1 = stx_arw_Cascade.toArrowlet(self);
-				var i = stx_nano_ResSum.Accept(_g.v);
-				var cont1 = cont;
-				return stx_LiftIf.if_else(self1.get_convention(),function() {
-					return self1.defer(i,cont1);
-				},function() {
-					return cont1.value(self1.apply(i)).toWork();
-				});
+				return stx_arw_arrowlet_Lift.prepare(self,stx_nano_ResSum.Accept(_g.v),cont);
 			case 1:
-				var self2 = stx_arw_Cascade.toArrowlet(that);
-				var i1 = stx_nano_ResSum.Accept(_g.v);
-				var cont2 = cont;
-				return stx_LiftIf.if_else(self2.get_convention(),function() {
-					return self2.defer(i1,cont2);
-				},function() {
-					return cont2.value(self2.apply(i1)).toWork();
-				});
+				return stx_arw_arrowlet_Lift.prepare(that,stx_nano_ResSum.Accept(_g.v),cont);
 			}
 			break;
 		case 1:
@@ -6301,32 +6203,12 @@ stx_arw_CascadeLift.or = function(self,that) {
 	}));
 };
 stx_arw_CascadeLift.errata = function(self,fn) {
-	return stx_arw_CascadeLift.lift(new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var er = stx_arw_CascadeLift.typical_fail_handler(cont);
-		switch(i._hx_index) {
-		case 0:
-			var self1 = stx_arw_Arrowlet._.postfix(stx_arw_Cascade.toArrowlet(self),function(o) {
-				var self;
-				switch(o._hx_index) {
-				case 0:
-					self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o.t);
-					break;
-				case 1:
-					self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(o.e));
-					break;
-				}
-				return stx_nano_Res._new(self);
-			});
-			var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i.t);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i1,cont1);
-			},function() {
-				return cont1.value(self1.apply(i1)).toWork();
-			});
-		case 1:
-			return er(i.e);
-		}
+	return stx_arw_CascadeLift.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_Arrowlet._.postfix(self,function(o) {
+				return stx_nano_ResLift.errata(o,fn);
+			}),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),cont);
+		},stx_arw_CascadeLift.typical_fail_handler(cont));
 	}));
 };
 stx_arw_CascadeLift.errate = function(self,fn) {
@@ -6338,7 +6220,7 @@ stx_arw_CascadeLift.reframe = function(self) {
 	return stx_arw_Reframe.fromCascade(stx_arw_CascadeLift.lift(new stx_arw_reframe_term_CascadeReframe(self)));
 };
 stx_arw_CascadeLift.cascade = function(self,that) {
-	return stx_arw_CascadeLift.lift(new stx_arw_arrowlet_term_Then(self,that));
+	return stx_arw_CascadeLift.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_CascadeLift.attempt = function(self,that) {
 	return stx_arw_CascadeLift.cascade(self,stx_arw_Attempt.toCascade(that));
@@ -6350,182 +6232,91 @@ stx_arw_CascadeLift.postfix = function(self,fn) {
 	return stx_arw_CascadeLift.convert(self,stx_arw_Convert.fromFun1R(fn));
 };
 stx_arw_CascadeLift.prefix = function(self,fn) {
-	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_ArrowletLift.then(stx_arw_Cascade.fromArrowlet(new stx_arw_arrowlet_term_Sync(fn)),stx_arw_Cascade.toArrowlet(self)));
+	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_Lift.then(stx_arw_Cascade.fromArrowlet(stx_arw_Arrowlet.fromFun1R(fn)),stx_arw_Cascade.toArrowlet(self)));
 };
 stx_arw_CascadeLift.typical_fail_handler = function(cont) {
 	return function(e) {
-		return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e)).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 144, className : "stx.arw.CascadeLift", methodName : "typical_fail_handler"}));
 	};
 };
 stx_arw_CascadeLift.environment = function(self,i,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_Cascade.toArrowlet(self),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i)),function(res) {
-		switch(res._hx_index) {
-		case 0:
-			success(res.t);
-			break;
-		case 1:
-			failure(res.e);
-			break;
-		}
+	return stx_arw_Arrowlet._.environment(self,stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),function(res) {
+		stx_nano_ResLift.fold(res,success,failure);
 	},function(err) {
 		throw haxe_Exception.thrown(err);
 	});
 };
 stx_arw_CascadeLift.provide = function(self,i) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i);
-		var self1 = stx_arw_Cascade.toArrowlet(self);
-		var i2 = i1;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i2,cont1);
-		},function() {
-			return cont1.value(self1.apply(i2)).toWork();
-		});
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_arrowlet_Lift.prepare(self,stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),cont);
+	}));
 };
 stx_arw_CascadeLift.reclaim = function(self,that) {
-	var tmp = new stx_arw_arrowlet_term_Anon(function(prd,cont) {
-		var self = stx_arw_Produce.toArrowlet(prd);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
-	return stx_arw_CascadeLift.lift(stx_arw_CascadeLift.attempt(stx_arw_CascadeLift.cascade(self,stx_arw_Convert.toCascade(that)),tmp));
+	return stx_arw_CascadeLift.lift(stx_arw_CascadeLift.attempt(stx_arw_CascadeLift.cascade(self,stx_arw_Convert.toCascade(that)),stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(prd,cont) {
+		return stx_arw_Produce.prepare(prd,cont);
+	}))));
 };
 stx_arw_CascadeLift.arrange = function(self,then) {
-	return stx_arw_CascadeLift.lift(new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var bound = new tink_core_FutureTrigger();
+	return stx_arw_CascadeLift.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		var bound = tink_core_Future.trigger();
 		var inner = cont.inner(function(outcome) {
-			var input;
-			switch(outcome._hx_index) {
-			case 0:
-				var _g = outcome.t;
-				switch(_g._hx_index) {
-				case 0:
-					var _g1 = _g.t;
-					switch(i._hx_index) {
-					case 0:
-						var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g1,i.t));
-						var self = stx_arw_Cascade.toArrowlet(then);
-						var i2 = i1;
-						var cont1 = cont;
-						input = stx_LiftIf.if_else(self.get_convention(),function() {
-							return self.defer(i2,cont1);
-						},function() {
-							return cont1.value(self.apply(i2)).toWork();
-						});
-						break;
-					case 1:
-						input = cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-						break;
-					}
-					break;
-				case 1:
-					input = cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e)).toWork();
-					break;
-				}
-				break;
-			case 1:
-				input = cont.error([null]).toWork();
-				break;
-			}
+			var input = stx_pico_OutcomeLift.fold(outcome,function(res) {
+				return stx_nano_ResLift.fold(res,function(lhs) {
+					return stx_nano_ResLift.fold(i,function(i) {
+						return stx_arw_Arrange.prepare(then,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,i),cont);
+					},function(e) {
+						return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 165, className : "stx.arw.CascadeLift", methodName : "arrange"}));
+					});
+				},function(e) {
+					return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 166, className : "stx.arw.CascadeLift", methodName : "arrange"}));
+				});
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 167, className : "stx.arw.CascadeLift", methodName : "arrange"}));
+			});
 			bound.trigger(input);
-		});
-		var self1 = stx_arw_Cascade.toArrowlet(self);
-		var i1 = i;
-		var cont1 = inner;
-		var lhs = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i1,cont1);
-		},function() {
-			return cont1.value(self1.apply(i1)).toWork();
-		});
-		var that = stx_async_Work.fromFutureWork(bound);
-		if(lhs == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(lhs.toTaskApi(),that.toTaskApi()).toWork();
-		}
+		},{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 163, className : "stx.arw.CascadeLift", methodName : "arrange"});
+		return stx_async_WorkLift.seq(stx_arw_arrowlet_Lift.prepare(self,i,inner),stx_async_Work.fromFutureWork(bound));
 	}));
 };
 stx_arw_CascadeLift.split = function(self,that) {
-	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_Arrowlet._.split(stx_arw_Cascade.toArrowlet(self),stx_arw_Cascade.toArrowlet(that)),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,stx_nano_Res._.zip)));
+	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_Lift.postfix(stx_arw_Arrowlet._.split(self,stx_arw_Cascade.toArrowlet(that)),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,stx_nano_Res._.zip)));
 };
 stx_arw_CascadeLift.broach = function(self) {
-	var tmp = new stx_arw_arrowlet_term_Sync(function(tp) {
+	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet._.broach(self),stx_arw_Arrowlet.Sync(function(tp) {
 		return stx_nano_CoupleLift.decouple(tp,function(lhs,rhs) {
-			switch(lhs._hx_index) {
-			case 0:
-				var _g = lhs.t;
-				switch(rhs._hx_index) {
-				case 0:
-					return stx_nano_ResSum.Accept(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g,rhs.t));
-				case 1:
-					return stx_nano_ResSum.Reject(rhs.e);
-				}
-				break;
-			case 1:
-				var _g = lhs.e;
-				if(rhs._hx_index == 1) {
-					return stx_nano_ResSum.Reject(_g.next(rhs.e));
-				} else {
-					return stx_nano_ResSum.Reject(_g);
-				}
-				break;
-			}
+			return stx_nano_ResLift.zip(lhs,rhs);
 		});
-	});
-	return stx_arw_CascadeLift.lift(stx_arw_arrowlet_ArrowletLift.then(stx_arw_Arrowlet._.broach(stx_arw_Cascade.toArrowlet(self)),tmp));
+	})));
 };
 stx_arw_CascadeLift.flat_map = function(self,fn) {
-	return stx_arw_CascadeLift.lift(new stx_arw_arrowlet_term_FlatMap(stx_arw_Cascade.toArrowlet(self),function(res) {
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			self = fn(res.t);
-			break;
-		case 1:
-			self = stx_arw_Cascade.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e));
-			break;
-		}
-		return stx_arw_Cascade.toArrowlet(self);
+	return stx_arw_CascadeLift.lift(stx_arw_Arrowlet.FlatMap(stx_arw_Cascade.toArrowlet(self),function(res) {
+		return stx_arw_Cascade.toArrowlet(stx_nano_ResLift.fold(res,function(ok) {
+			return fn(ok);
+		},function(no) {
+			return stx_arw_Cascade.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no));
+		}));
 	}));
 };
 stx_arw_CascadeLift.command = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			var _g = ipt.t;
-			var self = stx_arw_CommandLift.produce(that,stx_arw_Produce.pure(_g));
-			var i = _g;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.e)).toWork();
-		}
-	}));
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_nano_ResLift.fold(ipt,function(o) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_CommandLift.produce(that,stx_arw_Produce.pure(o)),o,cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 206, className : "stx.arw.CascadeLift", methodName : "command"}));
+		});
+	})));
 };
 var stx_arw_Cascade = {};
 stx_arw_Cascade._new = function(self) {
 	return self;
 };
 stx_arw_Cascade.lift = function(self) {
-	return self;
+	return stx_arw_Cascade._new(self);
 };
 stx_arw_Cascade.unit = function() {
-	return new stx_arw_arrowlet_term_Sync(function(oc) {
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.fromFun1R(function(oc) {
 		return oc;
-	});
+	}));
 };
 stx_arw_Cascade.pure = function(o) {
 	return stx_arw_Cascade.fromRes(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o));
@@ -6534,57 +6325,52 @@ stx_arw_Cascade.Fun = function(fn) {
 	return stx_arw_Cascade.fromFun1R(fn);
 };
 stx_arw_Cascade.fromFun1Res = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(ocI) {
-		switch(ocI._hx_index) {
-		case 0:
-			return fn(ocI.t);
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ocI.e);
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.fromFun1R(function(ocI) {
+		return stx_nano_ResLift.fold(ocI,function(i) {
+			return fn(i);
+		},function(e) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+		});
+	}));
 };
 stx_arw_Cascade.fromFun1R = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(ocI) {
-		switch(ocI._hx_index) {
-		case 0:
-			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(ocI.t));
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ocI.e);
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.fromFun1R(function(ocI) {
+		return stx_nano_ResLift.fold(ocI,function(i) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(i));
+		},function(e) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+		});
+	}));
 };
 stx_arw_Cascade.fromRes = function(ocO) {
-	return new stx_arw_arrowlet_term_Sync(function(ocI) {
-		switch(ocI._hx_index) {
-		case 0:
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.fromFun1R(function(ocI) {
+		return stx_nano_ResLift.fold(ocI,function(i) {
 			return ocO;
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ocI.e);
-		}
-	});
+		},function(e) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+		});
+	}));
 };
 stx_arw_Cascade.fromFunResRes0 = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(res) {
-		switch(res._hx_index) {
-		case 0:
-			return fn(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,res.t));
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e);
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Sync(function(res) {
+		return stx_nano_ResLift.fold(res,function(ok) {
+			return fn(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok));
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
+	}));
 };
 stx_arw_Cascade.fromFunResRes = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(res) {
-		switch(res._hx_index) {
-		case 0:
-			return fn(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,res.t));
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e);
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Sync(function(res) {
+		return stx_nano_ResLift.fold(res,function(ok) {
+			return fn(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok));
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
+	}));
 };
 stx_arw_Cascade.fromArrowlet = function(arw) {
-	return new stx_arw_cascade_term_ArrowletCascade(arw);
+	return stx_arw_Cascade.lift(new stx_arw_cascade_term_ArrowletCascade(stx_arw_Arrowlet.toInternal(arw)));
 };
 stx_arw_Cascade.fromAttempt = function(self) {
 	return new stx_arw_cascade_term_AttemptCascade(self);
@@ -6593,26 +6379,15 @@ stx_arw_Cascade.fromProduce = function(arw) {
 	return new stx_arw_cascade_term_ProduceCascade(arw);
 };
 stx_arw_Cascade.fromFun1Produce = function(arw) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var er = stx_arw_Cascade.typical_fail_handler(cont);
-		switch(i._hx_index) {
-		case 0:
-			var self = stx_arw_Produce.toArrowlet(arw(i.t));
-			var i1 = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
-		case 1:
-			return er(i.e);
-		}
-	});
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_Produce.prepare(arw(i),cont);
+		},stx_arw_Cascade.typical_fail_handler(cont));
+	}));
 };
 stx_arw_Cascade.typical_fail_handler = function(cont) {
 	return function(e) {
-		return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e)).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Cascade.hx", lineNumber : 68, className : "stx.arw._Cascade.Cascade_Impl_", methodName : "typical_fail_handler"}));
 	};
 };
 stx_arw_Cascade.toArrowlet = function(this1) {
@@ -6639,22 +6414,13 @@ stx_arw_Cascade.flat_map = function(this1,fn) {
 var stx_arw_CommandLift = function() { };
 stx_arw_CommandLift.__name__ = "stx.arw.CommandLift";
 stx_arw_CommandLift.produce = function(command,produce) {
-	var self = new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.v)).toWork();
-		case 1:
-			var self = stx_arw_Produce.toArrowlet(produce);
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
-	});
-	return new stx_arw_arrowlet_term_Then(stx_arw_Command.toArrowlet(command),self);
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Then(stx_arw_Command.toArrowlet(command),stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_pico_OptionLift.fold(ipt,function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Command.hx", lineNumber : 73, className : "stx.arw.CommandLift", methodName : "produce"}));
+		},function() {
+			return stx_arw_Produce.prepare(produce,cont);
+		});
+	})));
 };
 var stx_arw_Command = {};
 stx_arw_Command.__properties__ = {get_self:"get_self"};
@@ -6662,7 +6428,7 @@ stx_arw_Command._new = function(self) {
 	return self;
 };
 stx_arw_Command.unit = function() {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Sync(function(i) {
+	return stx_arw_Command.lift(stx_arw_Arrowlet.Sync(function(i) {
 		return stx_nano_Report.unit();
 	}));
 };
@@ -6670,37 +6436,30 @@ stx_arw_Command.lift = function(self) {
 	return stx_arw_Command._new(self);
 };
 stx_arw_Command.fromFun1Void = function(fn) {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Sync(stx_fn_UnaryLift.then(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,fn),function(_) {
+	return stx_arw_Command.lift(stx_arw_Arrowlet.Sync(stx_fn_UnaryLift.then(stx_LiftUnary.fn(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,fn)),function(_) {
 		return stx_nano_Report.unit();
 	})));
 };
 stx_arw_Command.fromFun1Report = function(fn) {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Sync(function(i) {
+	return stx_arw_Command.lift(stx_arw_Arrowlet.fromFun1R(function(i) {
 		return fn(i);
 	}));
 };
 stx_arw_Command.fromFun1Option = function(fn) {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Sync(function(i) {
+	return stx_arw_Command.lift(stx_arw_Arrowlet.fromFun1R(function(i) {
 		return stx_nano_Report._new(fn(i));
 	}));
 };
 stx_arw_Command.fromArrowlet = function(self) {
-	return stx_arw_Command._new(new stx_arw_command_term_ArrowletCommand(self));
+	return stx_arw_Command.lift(new stx_arw_command_term_ArrowletCommand(self));
 };
 stx_arw_Command.fromFun1Execute = function(fn) {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var self = stx_arw_Execute.toArrowlet(fn(i));
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
+	return stx_arw_Command.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_arw_ExecuteLift.prepare(fn(i),cont);
 	}));
 };
 stx_arw_Command.toCascade = function(this1) {
-	return new stx_arw_cascade_term_CommandCascade(this1);
+	return stx_arw_Cascade.lift(new stx_arw_cascade_term_CommandCascade(this1));
 };
 stx_arw_Command.prj = function(this1) {
 	return this1;
@@ -6709,29 +6468,25 @@ stx_arw_Command.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Command.and = function(this1,that) {
-	return stx_arw_Command._new(stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_arrowlet_ArrowletLift.split(stx_arw_Command.get_self(this1),stx_arw_Command.toArrowlet(that)),function(tp) {
+	return stx_arw_Command.lift(stx_arw_arrowlet_Lift.postfix(stx_arw_arrowlet_Lift.split(stx_arw_Command.get_self(this1),stx_arw_Command.toArrowlet(that)),function(tp) {
 		return stx_nano_Report.merge(stx_nano_CoupleLift.fst(tp),stx_nano_CoupleLift.snd(tp));
 	}));
 };
 stx_arw_Command.errata = function(this1,fn) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_Command.get_self(this1),function(report) {
+	return stx_arw_arrowlet_Lift.postfix(stx_arw_Command.get_self(this1),function(report) {
 		return stx_nano_Report.errata(report,fn);
 	});
 };
 stx_arw_Command.provide = function(this1,i) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self = this1;
-		var i1 = i;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i1,cont1);
-		},function() {
-			return cont1.value(self.apply(i1)).toWork();
-		});
-	});
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_Command.prepare(this1,i,cont);
+	}));
 };
 stx_arw_Command.get_self = function(this1) {
 	return this1;
+};
+stx_arw_Command.prepare = function(this1,i,cont) {
+	return stx_arw_Arrowlet._.prepare(this1,i,cont);
 };
 var stx_arw_ContextualizeCls = function(environment) {
 	this.environment = environment;
@@ -6740,9 +6495,10 @@ stx_arw_ContextualizeCls.__name__ = "stx.arw.ContextualizeCls";
 stx_arw_ContextualizeCls.prototype = {
 	environment: null
 	,on_error: function(e) {
-		throw haxe_Exception.thrown(e);
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
 	}
 	,on_value: function(r) {
+		stx_Log.debug(stx_arw_Log.log(stx_nano_Wildcard.__),r,{ fileName : "src/main/haxe/stx/arw/Contextualize.hx", lineNumber : 12, className : "stx.arw.ContextualizeCls", methodName : "on_value"});
 	}
 	,__class__: stx_arw_ContextualizeCls
 };
@@ -6764,7 +6520,7 @@ stx_arw_Contextualize.fromInput = function(environment) {
 	return stx_arw_Contextualize.make(environment);
 };
 stx_arw_Contextualize.load = function(this1,arrowlet) {
-	return new stx_arw_arrowlet_term_Completion(this1,arrowlet);
+	return stx_arw_arrowlet_term_Fiber.lift(new stx_arw_arrowlet_term_Completion(this1,stx_arw_Arrowlet.lift(arrowlet)));
 };
 var stx_arw_ConventionSum = {};
 stx_arw_ConventionSum._new = function(self) {
@@ -6785,52 +6541,38 @@ stx_arw_Convention.lift = function(self) {
 	return stx_arw_Convention._new(self);
 };
 stx_arw_Convention.or = function(this1,that) {
-	return stx_arw_Convention._new(this1 || that);
+	return stx_arw_Convention.lift(stx_arw_ConventionSum.prj(this1) || stx_arw_ConventionSum.prj(stx_arw_Convention.prj(that)));
 };
 stx_arw_Convention.fold = function(this1,is_async,is_sync) {
-	return stx_LiftIf.if_else(this1,is_async,is_sync);
+	return stx_LiftIf.if_else(stx_arw_ConventionSum.prj(this1),is_async,is_sync);
 };
 stx_arw_Convention.prj = function(this1) {
 	return this1;
 };
 stx_arw_Convention.get_self = function(this1) {
-	return stx_arw_Convention._new(this1);
+	return stx_arw_Convention.lift(this1);
 };
 var stx_arw_ConvertLift = function() { };
 stx_arw_ConvertLift.__name__ = "stx.arw.ConvertLift";
 stx_arw_ConvertLift.then = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,that);
+	return stx_arw_Convert.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_ConvertLift.provide = function(self,i) {
-	return stx_arw_Arrowlet._.fulfill(self,i);
+	return stx_arw_Provide.lift(stx_arw_Arrowlet._.fulfill(self,i));
 };
 stx_arw_ConvertLift.convert = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,that);
+	return stx_arw_Convert.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_ConvertLift.first = function(self) {
-	return stx_arw_Arrowlet._.first(stx_arw_Convert.toArrowlet(self));
+	return stx_arw_Convert.lift(stx_arw_Arrowlet._.first(stx_arw_Convert.toArrowlet(self)));
 };
 stx_arw_ConvertLift.guess = function(self) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self1 = stx_arw_Convert.toArrowlet(self);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-	});
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_Arrowlet._.prepare(stx_arw_Convert.toArrowlet(self),null,cont);
+	}));
 };
 stx_arw_ConvertLift.prepare = function(self,ipt,cont) {
-	var self1 = stx_arw_Convert.toArrowlet(self);
-	var i = ipt;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont1);
-	},function() {
-		return cont1.value(self1.apply(i)).toWork();
-	});
+	return stx_arw_Arrowlet._.prepare(stx_arw_Convert.toArrowlet(self),ipt,cont);
 };
 var stx_arw_Convert = {};
 stx_arw_Convert.__properties__ = {get_self:"get_self"};
@@ -6838,43 +6580,43 @@ stx_arw_Convert._new = function(self) {
 	return self;
 };
 stx_arw_Convert.lift = function(self) {
-	return self;
+	return stx_arw_Convert._new(self);
 };
 stx_arw_Convert.unit = function() {
-	return new stx_arw_arrowlet_term_Sync(function(i) {
+	return stx_arw_Convert.lift(stx_arw_Arrowlet.Sync(function(i) {
 		return i;
-	});
+	}));
 };
 stx_arw_Convert.fromFun1Provide = function(self) {
 	return stx_arw_Convert.fromConvertProvide(stx_arw_Convert.fromFun1R(self));
 };
 stx_arw_Convert.fromConvertProvide = function(self) {
-	return new stx_arw_convert_term_ConvertProvide(self);
+	return stx_arw_Convert.lift(new stx_arw_convert_term_ConvertProvide(self));
 };
 stx_arw_Convert.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Convert.get_self = function(this1) {
-	return this1;
+	return stx_arw_Convert.lift(this1);
 };
 stx_arw_Convert.toCascade = function(this1) {
-	return new stx_arw_cascade_term_ConvertCascade(this1);
+	return stx_arw_Cascade.lift(new stx_arw_cascade_term_ConvertCascade(this1));
 };
 stx_arw_Convert.fromFun1R = function(fn) {
-	return new stx_arw_convert_term_Fun1R(fn);
+	return stx_arw_Convert.lift(new stx_arw_convert_term_Fun1R(fn));
 };
 stx_arw_Convert.fromArrowlet = function(arw) {
-	return arw;
+	return stx_arw_Convert.lift(arw);
 };
 stx_arw_Convert.environment = function(this1,i,success) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(this1,i),success,function(e) {
-		throw haxe_Exception.thrown(e);
+	return stx_arw_Arrowlet._.environment(this1,i,success,function(e) {
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
 	});
 };
 var stx_arw_DiffuseLift = function() { };
 stx_arw_DiffuseLift.__name__ = "stx.arw.DiffuseLift";
 stx_arw_DiffuseLift.lift = function(self) {
-	return self;
+	return stx_arw_Diffuse.lift(self);
 };
 var stx_arw_Diffuse = {};
 stx_arw_Diffuse.__properties__ = {get_self:"get_self"};
@@ -6882,49 +6624,42 @@ stx_arw_Diffuse._new = function(self) {
 	return self;
 };
 stx_arw_Diffuse.lift = function(self) {
-	return self;
+	return stx_arw_Diffuse._new(self);
 };
 stx_arw_Diffuse.fromFunIOptionR = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Diffuse.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
-			var cont1 = cont;
-			var self = fn(o);
-			var this1;
-			switch(self._hx_index) {
-			case 0:
-				this1 = stx_ext_ChunkSum.Val(self.v);
-				break;
-			case 1:
-				this1 = stx_ext_ChunkSum.Tap;
-				break;
-			}
-			return cont1.value(this1).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_pico_OptionLift.fold(fn(o),function(o) {
+				return stx_ext_ChunkSum.Val(o);
+			},function() {
+				return stx_ext_ChunkSum.Tap;
+			}),{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 17, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromFunIOptionR"}));
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 21, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromFunIOptionR"}));
 		},function() {
-			return cont.value(stx_ext_ChunkSum.Tap).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Tap,{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 22, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromFunIOptionR"}));
 		});
-	});
+	}));
 };
 stx_arw_Diffuse.fromOptionIR = function(fn) {
-	return new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Diffuse.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(i) {
-			return cont.value(stx_ext_ChunkSum.Val(fn(haxe_ds_Option.Some(i)))).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Val(fn(haxe_ds_Option.Some(i))),{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 33, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromOptionIR"}));
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 34, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromOptionIR"}));
 		},function() {
-			return cont.value(stx_ext_ChunkSum.Val(fn(haxe_ds_Option.None))).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Val(fn(haxe_ds_Option.None)),{ fileName : "src/main/haxe/stx/arw/Diffuse.hx", lineNumber : 35, className : "stx.arw._Diffuse.Diffuse_Impl_", methodName : "fromOptionIR"}));
 		});
-	});
+	}));
 };
 stx_arw_Diffuse.prj = function(this1) {
 	return this1;
 };
 stx_arw_Diffuse.get_self = function(this1) {
-	return this1;
+	return stx_arw_Diffuse.lift(this1);
 };
 stx_arw_Diffuse.toArrowlet = function(this1) {
-	return this1;
+	return stx_arw_Arrowlet.lift(this1);
 };
 var stx_arw_Execute = {};
 stx_arw_Execute.__properties__ = {get_self:"get_self"};
@@ -6932,36 +6667,31 @@ stx_arw_Execute._new = function(self) {
 	return self;
 };
 stx_arw_Execute.lift = function(self) {
-	return self;
+	return stx_arw_Execute._new(self);
 };
 stx_arw_Execute.pure = function(e) {
-	return new stx_arw_arrowlet_term_Pure(stx_nano_Report.pure(e));
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.pure(stx_nano_Report.pure(e)));
 };
 stx_arw_Execute.unit = function() {
-	return new stx_arw_arrowlet_term_Pure(stx_nano_Report.unit());
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.pure(stx_nano_Report.unit()));
 };
 stx_arw_Execute.bind_fold = function(fn,arr) {
 	return stx_lift_ArrayLift.lfold(arr,function(next,memo) {
-		return stx_arw_Provide._.flat_map(stx_arw_Execute.toProvide(memo),function(report) {
-			return fn(next,report);
-		});
-	},new stx_arw_arrowlet_term_Pure(stx_nano_Report.unit()));
+		return stx_arw_Execute.lift(stx_arw_Provide._.flat_map(stx_arw_Execute.toProvide(memo),function(report) {
+			return stx_arw_Execute.lift(fn(next,report));
+		}));
+	},stx_arw_Execute.unit());
 };
 stx_arw_Execute.sequence = function(fn,arr) {
 	return stx_lift_ArrayLift.lfold(arr,function(next,memo) {
-		return stx_arw_ExecuteLift.fold_mod(memo,function(report) {
-			var self;
-			switch(report._hx_index) {
-			case 0:
-				self = new stx_arw_arrowlet_term_Pure(stx_nano_Report.pure(report.v));
-				break;
-			case 1:
-				self = fn(next);
-				break;
-			}
-			return self;
-		});
-	},new stx_arw_arrowlet_term_Pure(stx_nano_Report.unit()));
+		return stx_arw_Execute.lift(stx_arw_ExecuteLift.fold_mod(memo,function(report) {
+			return stx_pico_OptionLift.fold(report,function(e) {
+				return stx_arw_Execute.pure(e);
+			},function() {
+				return fn(next);
+			});
+		}));
+	},stx_arw_Execute.unit());
 };
 stx_arw_Execute.toProvide = function(this1) {
 	return this1;
@@ -6970,10 +6700,7 @@ stx_arw_Execute.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Execute.fromFunXR = function(fn) {
-	var f = fn;
-	return new stx_arw_arrowlet_term_Sync(function(_) {
-		return f();
-	});
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.fromFunXR(fn));
 };
 stx_arw_Execute.fromFunXExecute = function(fn) {
 	return fn();
@@ -6982,7 +6709,7 @@ stx_arw_Execute.prj = function(this1) {
 	return this1;
 };
 stx_arw_Execute.get_self = function(this1) {
-	return this1;
+	return stx_arw_Execute.lift(this1);
 };
 stx_arw_Execute.fromOption = function(err) {
 	return stx_arw_Execute.fromFunXR(function() {
@@ -6995,129 +6722,87 @@ stx_arw_Execute.fromErr = function(err) {
 	});
 };
 stx_arw_Execute.environment = function(this1,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(this1,null),function(report) {
-		switch(report._hx_index) {
-		case 0:
-			failure(report.v);
-			break;
-		case 1:
-			success();
-			break;
-		}
+	return stx_arw_Arrowlet._.environment(this1,null,function(report) {
+		stx_pico_OptionLift.fold(report,failure,success);
 	},function(e) {
-		throw haxe_Exception.thrown(e);
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
 	});
 };
 var stx_arw_ExecuteLift = function() { };
 stx_arw_ExecuteLift.__name__ = "stx.arw.ExecuteLift";
 stx_arw_ExecuteLift.errata = function(self,fn) {
-	var self1 = new stx_arw_arrowlet_term_Sync(function(report) {
+	return stx_arw_Execute.lift(stx_arw_arrowlet_Lift.then(stx_arw_Execute.toArrowlet(self),stx_arw_Arrowlet.Sync(function(report) {
 		return stx_nano_Report.errata(report,fn);
-	});
-	return stx_arw_arrowlet_ArrowletLift.then(stx_arw_Execute.toArrowlet(self),self1);
+	})));
 };
 stx_arw_ExecuteLift.errate = function(self,fn) {
-	var self1 = new stx_arw_arrowlet_term_Sync(function(report) {
+	return stx_arw_Execute.lift(stx_arw_arrowlet_Lift.then(stx_arw_Execute.toArrowlet(self),stx_arw_Arrowlet.Sync(function(report) {
 		return stx_nano_Report.errata(report,function(e) {
 			return e.map(fn);
 		});
-	});
-	return stx_arw_arrowlet_ArrowletLift.then(stx_arw_Execute.toArrowlet(self),self1);
+	})));
 };
 stx_arw_ExecuteLift.prepare = function(self,term) {
-	var self1 = stx_arw_Execute.toArrowlet(self);
-	var i = null;
-	var cont = term;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont);
-	},function() {
-		return cont.value(self1.apply(i)).toWork();
-	});
+	return stx_arw_arrowlet_Lift.prepare(stx_arw_Execute.toArrowlet(self),null,term);
 };
 stx_arw_ExecuteLift.deliver = function(self,fn) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(function(report) {
+	return stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(function(report) {
 		fn(report);
 		return null;
 	}));
 };
 stx_arw_ExecuteLift.crack = function(self) {
 	return stx_arw_ExecuteLift.deliver(self,function(report) {
-		switch(report._hx_index) {
-		case 0:
-			throw haxe_Exception.thrown(report.v);
-		case 1:
-			break;
-		}
+		stx_pico_OptionLift.fold(report,function(e) {
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		},function() {
+		});
 	});
 };
 stx_arw_ExecuteLift.then = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,that);
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_ExecuteLift.execute = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			return cont.value(stx_nano_Report.pure(ipt.v)).toWork();
-		case 1:
-			var self = stx_arw_Execute.toArrowlet(next);
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
-	}));
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_pico_OptionLift.fold(ipt,function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.pure(e),{ fileName : "src/main/haxe/stx/arw/Execute.hx", lineNumber : 114, className : "stx.arw.ExecuteLift", methodName : "execute"}));
+		},function() {
+			return stx_arw_ExecuteLift.prepare(next,cont);
+		});
+	})));
 };
 stx_arw_ExecuteLift.produce = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.v)).toWork();
-		case 1:
-			var self = stx_arw_Produce.toArrowlet(next);
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
-	}));
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_pico_OptionLift.fold(ipt,function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Execute.hx", lineNumber : 126, className : "stx.arw.ExecuteLift", methodName : "produce"}));
+		},function() {
+			return stx_arw_Produce.prepare(next,cont);
+		});
+	})));
 };
 stx_arw_ExecuteLift.propose = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		switch(ipt._hx_index) {
-		case 0:
-			return cont.value(stx_ext_ChunkSum.End(ipt.v)).toWork();
-		case 1:
-			var self = next;
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
-	}));
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_pico_OptionLift.fold(ipt,function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Execute.hx", lineNumber : 139, className : "stx.arw.ExecuteLift", methodName : "propose"}));
+		},function() {
+			return stx_arw_ProposeLift.prepare(next,cont);
+		});
+	})));
 };
 stx_arw_ExecuteLift.fold_mod = function(self,fn) {
-	return new stx_arw_arrowlet_term_FlatMap(stx_arw_Execute.toArrowlet(self),function(report) {
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.FlatMap(stx_arw_Execute.toArrowlet(self),function(report) {
 		return stx_arw_Execute.toArrowlet(fn(report));
-	});
+	}));
 };
 stx_arw_ExecuteLift.and = function(self,that) {
 	return stx_arw_ExecuteLift.execute(self,that);
 };
 var stx_arw_Internal = {};
 stx_arw_Internal.lift = function(def) {
-	return def;
+	return stx_arw_Internal._new(def);
 };
 stx_arw_Internal.toWork = function(this1) {
-	return this1.toWork();
+	return this1.toWork({ fileName : "src/main/haxe/stx/arw/Internal.hx", lineNumber : 14, className : "stx.arw._Internal.Internal_Impl_", methodName : "toWork"});
 };
 stx_arw_Internal.toArrowlet = function(this1) {
 	return this1;
@@ -7125,18 +6810,13 @@ stx_arw_Internal.toArrowlet = function(this1) {
 stx_arw_Internal._new = function(self) {
 	return self;
 };
+stx_arw_Internal.get_defect = function(this1) {
+	return this1.get_defect();
+};
 var stx_arw_Log = function() { };
 stx_arw_Log.__name__ = "stx.arw.Log";
 stx_arw_Log.log = function(wildcard) {
-	var this1 = stx_Log.LOG;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag("stx.arw");
-		});
-	};
-	return function(value,pos) {
-		this1(value,fn(pos));
-	};
+	return stx_Log.tag(stx_Log._new(),"stx.arw");
 };
 var stx_arw_Perform = {};
 stx_arw_Perform.__properties__ = {get_self:"get_self"};
@@ -7144,63 +6824,37 @@ stx_arw_Perform._new = function(self) {
 	return self;
 };
 stx_arw_Perform.lift = function(self) {
-	return self;
+	return stx_arw_Perform._new(self);
 };
 stx_arw_Perform.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Perform.toCascade = function(this1) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self = stx_arw_Arrowlet._.postfix(this1,function(_) {
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_arrowlet_Lift.prepare(stx_arw_Arrowlet._.postfix(this1,function(_) {
 			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,_);
-		});
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
+		}),null,cont);
+	}));
 };
 stx_arw_Perform.prj = function(this1) {
 	return this1;
 };
 stx_arw_Perform.get_self = function(this1) {
-	return this1;
+	return stx_arw_Perform.lift(this1);
 };
 var stx_arw_ProduceLift = function() { };
 stx_arw_ProduceLift.__name__ = "stx.arw.ProduceLift";
 stx_arw_ProduceLift.lift = function(self) {
-	return self;
+	return stx_arw_Produce.lift(self);
 };
 stx_arw_ProduceLift.postfix = function(self,fn) {
-	return stx_arw_ProduceLift.lift(stx_arw_ProduceLift.then(self,new stx_arw_arrowlet_term_Sync(function(oc) {
-		var fn1 = fn;
-		var self;
-		switch(oc._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn1(oc.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(oc.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
+	return stx_arw_ProduceLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.fromFun1R(function(oc) {
+		return stx_nano_ResLift.map(oc,fn);
 	})));
 };
 stx_arw_ProduceLift.errata = function(self,fn) {
-	return stx_arw_ProduceLift.lift(stx_arw_ProduceLift.then(self,new stx_arw_arrowlet_term_Sync(function(oc) {
-		var self;
-		switch(oc._hx_index) {
-		case 0:
-			self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,oc.t);
-			break;
-		case 1:
-			self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(oc.e));
-			break;
-		}
-		return stx_nano_Res._new(self);
+	return stx_arw_ProduceLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.fromFun1R(function(oc) {
+		return stx_nano_ResLift.errata(oc,fn);
 	})));
 };
 stx_arw_ProduceLift.errate = function(self,fn) {
@@ -7209,281 +6863,108 @@ stx_arw_ProduceLift.errate = function(self,fn) {
 	});
 };
 stx_arw_ProduceLift.point = function(self,success) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var defer = new tink_core_FutureTrigger();
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		var defer = tink_core_Future.trigger();
 		var inner = cont.inner(function(outcome) {
-			var defer1 = defer;
-			var inner;
-			switch(outcome._hx_index) {
-			case 0:
-				var _g = outcome.t;
-				switch(_g._hx_index) {
-				case 0:
-					var self = stx_arw_Execute.toArrowlet(success(_g.t));
-					var i = null;
-					var cont1 = cont;
-					inner = stx_LiftIf.if_else(self.get_convention(),function() {
-						return self.defer(i,cont1);
-					},function() {
-						return cont1.value(self.apply(i)).toWork();
-					});
-					break;
-				case 1:
-					inner = cont.value(stx_nano_Report.pure(_g.e)).toWork();
-					break;
-				}
-				break;
-			case 1:
-				inner = cont.error([null]).toWork();
-				break;
-			}
-			defer1.trigger(inner);
-		});
-		var self1 = stx_arw_Produce.toArrowlet(self);
-		var i = null;
-		var cont1 = inner;
-		var self2 = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-		var that = stx_async_Work.fromFutureWork(defer);
-		if(self2 == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self2.toTaskApi(),that.toTaskApi()).toWork();
-		}
-	});
-};
-stx_arw_ProduceLift.crack = function(self) {
-	return stx_arw_Arrowlet._.postfix(stx_arw_Produce.toArrowlet(self),function(res) {
-		switch(res._hx_index) {
-		case 0:
-			return res.t;
-		case 1:
-			throw haxe_Exception.thrown(res.e);
-		}
-	});
-};
-stx_arw_ProduceLift.convert = function(self,then) {
-	return stx_arw_ProduceLift.lift(new stx_arw_arrowlet_term_Then(self,stx_arw_Convert.toCascade(then)));
-};
-stx_arw_ProduceLift.prepare = function(self,cont) {
-	var self1 = stx_arw_Produce.toArrowlet(self);
-	var i = null;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont1);
-	},function() {
-		return cont1.value(self1.apply(i)).toWork();
-	});
-};
-stx_arw_ProduceLift.control = function(self,rec) {
-	return stx_arw_ProduceLift.then(self,stx_arw_Rectify.toArrowlet(stx_arw_Recover.toRectify(rec)));
-};
-stx_arw_ProduceLift.attempt = function(self,that) {
-	return stx_arw_ProduceLift.lift(stx_arw_ProduceLift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Attempt.toCascade(that))));
-};
-stx_arw_ProduceLift.deliver = function(self,fn) {
-	return stx_arw_ProduceLift.then(self,new stx_arw_arrowlet_term_Sync(function(res) {
-		switch(res._hx_index) {
-		case 0:
-			fn(res.t);
-			return stx_nano_Report.unit();
-		case 1:
-			return stx_nano_Report.pure(res.e);
-		}
+			defer.trigger(stx_pico_OutcomeLift.fold(outcome,function(s) {
+				return stx_nano_ResLift.fold(s,function(o) {
+					return stx_arw_ExecuteLift.prepare(success(o),cont);
+				},function(e) {
+					return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.pure(e),{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 138, className : "stx.arw.ProduceLift", methodName : "point"}));
+				});
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 140, className : "stx.arw.ProduceLift", methodName : "point"}));
+			}));
+		},{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 132, className : "stx.arw.ProduceLift", methodName : "point"});
+		return stx_async_WorkLift.seq(stx_arw_Produce.prepare(self,inner),stx_async_Work.fromFutureWork(defer));
 	}));
 };
-stx_arw_ProduceLift.reclaim = function(self,next) {
-	var tmp = new stx_arw_arrowlet_term_Anon(function(prd,cont) {
-		var self = stx_arw_Produce.toArrowlet(prd);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
+stx_arw_ProduceLift.crack = function(self) {
+	return stx_arw_Provide.lift(stx_arw_Arrowlet._.postfix(self,function(res) {
+		return stx_nano_ResLift.fold(res,function(ok) {
+			return ok;
+		},function(e) {
+			throw haxe_Exception.thrown(e);
 		});
-	});
-	return stx_arw_ProduceLift.attempt(stx_arw_ProduceLift.lift(stx_arw_ProduceLift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Convert.toCascade(next)))),tmp);
+	}));
+};
+stx_arw_ProduceLift.convert = function(self,then) {
+	return stx_arw_ProduceLift.lift(stx_arw_Arrowlet.Then(self,stx_arw_Convert.toCascade(then)));
+};
+stx_arw_ProduceLift.prepare = function(self,cont) {
+	return stx_arw_arrowlet_Lift.prepare(stx_arw_Produce.toArrowlet(self),null,cont);
+};
+stx_arw_ProduceLift.control = function(self,rec) {
+	return stx_arw_Provide.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Rectify.toArrowlet(stx_arw_Recover.toRectify(rec))));
+};
+stx_arw_ProduceLift.attempt = function(self,that) {
+	return stx_arw_ProduceLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Attempt.toCascade(that))));
+};
+stx_arw_ProduceLift.deliver = function(self,fn) {
+	return stx_arw_Execute.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Arrowlet.Sync(function(res) {
+		return stx_nano_ResLift.fold(res,function(s) {
+			fn(s);
+			return stx_nano_Report.unit();
+		},function(e) {
+			return stx_nano_Report.pure(e);
+		});
+	})));
+};
+stx_arw_ProduceLift.reclaim = function(self,next) {
+	return stx_arw_ProduceLift.attempt(stx_arw_ProduceLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(stx_arw_Convert.toCascade(next)))),stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(prd,cont) {
+		return stx_arw_Produce.prepare(prd,cont);
+	})));
 };
 stx_arw_ProduceLift.arrange = function(self,next) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var bound = new tink_core_FutureTrigger();
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		var bound = tink_core_Future.trigger();
 		var inner = cont.inner(function(outcome) {
-			var input;
-			switch(outcome._hx_index) {
-			case 0:
-				var _g = outcome.t;
-				var self = stx_arw_Arrange.toCascade(next);
-				var fn = function(lhs) {
+			var input = stx_pico_OutcomeLift.fold(outcome,function(res) {
+				return stx_arw_arrowlet_Lift.prepare(stx_arw_Arrange.toCascade(next),stx_nano_ResLift.map(res,function(lhs) {
 					return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,i);
-				};
-				var self1;
-				switch(_g._hx_index) {
-				case 0:
-					self1 = stx_nano_ResSum.Accept(fn(_g.t));
-					break;
-				case 1:
-					self1 = stx_nano_ResSum.Reject(_g.e);
-					break;
-				}
-				var self2 = stx_arw_Cascade.toArrowlet(self);
-				var i1 = stx_nano_Res._new(self1);
-				var cont1 = cont;
-				input = stx_LiftIf.if_else(self2.get_convention(),function() {
-					return self2.defer(i1,cont1);
-				},function() {
-					return cont1.value(self2.apply(i1)).toWork();
-				});
-				break;
-			case 1:
-				input = cont.error([null]).toWork();
-				break;
-			}
+				}),cont);
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 204, className : "stx.arw.ProduceLift", methodName : "arrange"}));
+			});
 			bound.trigger(input);
-		});
-		var self1 = stx_arw_Produce.toArrowlet(self);
-		var i1 = null;
-		var cont1 = inner;
-		var lhs = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i1,cont1);
-		},function() {
-			return cont1.value(self1.apply(i1)).toWork();
-		});
-		var that = stx_async_Work.fromFutureWork(bound);
-		if(lhs == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(lhs.toTaskApi(),that.toTaskApi()).toWork();
-		}
-	});
+		},{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 200, className : "stx.arw.ProduceLift", methodName : "arrange"});
+		return stx_async_WorkLift.seq(stx_arw_Produce.prepare(self,inner),stx_async_Work.fromFutureWork(bound));
+	}));
 };
 stx_arw_ProduceLift.rearrange = function(self,next) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var bound = new tink_core_FutureTrigger();
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		var bound = tink_core_Future.trigger();
 		var inner = cont.inner(function(outcome) {
-			var value;
-			switch(outcome._hx_index) {
-			case 0:
-				var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,outcome.t,i));
-				var self = stx_arw_Cascade.toArrowlet(next);
-				var i2 = i1;
-				var cont1 = cont;
-				value = stx_LiftIf.if_else(self.get_convention(),function() {
-					return self.defer(i2,cont1);
-				},function() {
-					return cont1.value(self.apply(i2)).toWork();
-				});
-				break;
-			case 1:
-				value = cont.error([null]).toWork();
-				break;
-			}
+			var value = stx_pico_OutcomeLift.fold(outcome,function(res) {
+				return stx_arw_Arrange.prepare(next,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,res,i),cont);
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 223, className : "stx.arw.ProduceLift", methodName : "rearrange"}));
+			});
 			bound.trigger(value);
-		});
-		var self1 = stx_arw_Produce.toArrowlet(self);
-		var i1 = null;
-		var cont1 = inner;
-		var self2 = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i1,cont1);
-		},function() {
-			return cont1.value(self1.apply(i1)).toWork();
-		});
-		var that = stx_async_Work.fromFutureWork(bound);
-		if(self2 == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self2.toTaskApi(),that.toTaskApi()).toWork();
-		}
-	});
+		},{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 219, className : "stx.arw.ProduceLift", methodName : "rearrange"});
+		return stx_async_WorkLift.seq(stx_arw_Produce.prepare(self,inner),stx_async_Work.fromFutureWork(bound));
+	}));
 };
 stx_arw_ProduceLift.cascade = function(self,that) {
-	return stx_arw_ProduceLift.lift(stx_arw_ProduceLift.then(self,stx_arw_Cascade.toArrowlet(that)));
+	return stx_arw_ProduceLift.lift(stx_arw_arrowlet_Lift.then(self,stx_arw_Cascade.toArrowlet(that)));
 };
 stx_arw_ProduceLift.fudge = function(self) {
-	var v = null;
-	var fn = function(x) {
-		v = x;
-	};
-	var scheduler = null;
-	var self1 = new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_Produce.toArrowlet(self),null),fn,function(e) {
-		throw haxe_Exception.thrown(e);
-	});
-	var i = null;
-	var cont = stx_async_Terminal.ZERO;
-	var this1 = stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont);
-	},function() {
-		return cont.value(self1.apply(i)).toWork();
-	});
-	var loop = scheduler;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-	loop = self._hx_index == 0 ? self.v : stx_async_Loop.ZERO;
-	var cont1 = true;
-	var suspended = false;
-	var backoff = 0.2;
-	while(true == cont1) {
-		if(this1.get_defect().length > 0) {
-			loop.fail(this1.get_defect());
-			cont1 = false;
-		}
-		if(!suspended) {
-			this1.pursue();
-			if(this1.get_loaded()) {
-				cont1 = false;
-			} else {
-				switch(this1.get_status()) {
-				case -1:
-					loop.fail(this1.get_defect());
-					break;
-				case 1:case 4:
-					cont1 = false;
-					break;
-				case 0:case 2:
-					break;
-				case 3:
-					suspended = true;
-					tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-						backoff = 1.22;
-						suspended = false;
-					});
-					break;
-				}
-			}
-		}
-	}
-	var self = v;
-	switch(self._hx_index) {
-	case 0:
-		return self.t;
-	case 1:
-		throw haxe_Exception.thrown(self.e);
-	}
+	return stx_nano_ResLift.fudge(stx_arw_Arrowlet._.fudge(self,null));
 };
 stx_arw_ProduceLift.flat_map = function(self,that) {
-	return stx_arw_ProduceLift.lift(new stx_arw_arrowlet_term_FlatMap(stx_arw_Produce.toArrowlet(self),function(res) {
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			self = that(res.t);
-			break;
-		case 1:
-			self = stx_arw_Produce.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,res.e));
-			break;
-		}
-		return stx_arw_Produce.toArrowlet(self);
+	return stx_arw_ProduceLift.lift(stx_arw_Arrowlet.FlatMap(self,function(res) {
+		return stx_arw_Produce.toArrowlet(stx_nano_ResLift.fold(res,function(o) {
+			return that(o);
+		},function(e) {
+			return stx_arw_Produce.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e));
+		}));
 	}));
 };
 stx_arw_ProduceLift.then = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,that);
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Then(self,that));
+};
+stx_arw_ProduceLift.contextualize = function(self,success,failure) {
+	return stx_arw_Contextualize.load(stx_arw_Contextualize.make(null,success,failure),stx_arw_Produce.toArrowlet(self).asArrowletDef());
 };
 var stx_arw_Produce = {};
 stx_arw_Produce.__properties__ = {get_self:"get_self"};
@@ -7491,118 +6972,88 @@ stx_arw_Produce._new = function(self) {
 	return self;
 };
 stx_arw_Produce.lift = function(self) {
-	return self;
+	return stx_arw_Produce._new(self);
+};
+stx_arw_Produce.Sync = function(result) {
+	return new stx_arw_produce_term_Sync(result);
+};
+stx_arw_Produce.Thunk = function(result) {
+	return new stx_arw_produce_term_Thunk(result);
 };
 stx_arw_Produce.fromFunXProduce = function(self) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self1 = stx_arw_Produce.toArrowlet(self());
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_Produce.prepare(self(),cont);
+	}));
 };
 stx_arw_Produce.fromErr = function(e) {
-	return new stx_arw_arrowlet_term_Pure(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e));
+	return stx_arw_Produce.Sync(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e));
 };
 stx_arw_Produce.pure = function(v) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
-		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,v);
-	});
+	return stx_arw_Produce.Sync(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,v));
 };
 stx_arw_Produce.fromRes = function(res) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
-		return res;
-	});
+	return stx_arw_Produce.Sync(res);
 };
 stx_arw_Produce.fromFunXRes = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
-		return fn();
-	});
+	return stx_arw_Produce.Thunk(fn);
 };
 stx_arw_Produce.fromPledge = function(pl) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		return cont.later(tink_core_Future.map(pl,stx_pico_OutcomeSum.Success)).toWork();
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_async_terminal_Receiver.serve(cont.later(tink_core_Future.map(pl,stx_pico_OutcomeSum.Success),{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 42, className : "stx.arw._Produce.Produce_Impl_", methodName : "fromPledge"}));
+	}));
 };
 stx_arw_Produce.fromFunXR = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.fromFun1R(function(_) {
 		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn());
-	});
+	}));
 };
 stx_arw_Produce.fromArrowlet = function(arw) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self = arw;
-		var i = null;
-		var cont1 = cont.joint(function(outcome) {
-			var cont1 = cont;
-			var this1;
-			switch(outcome._hx_index) {
-			case 0:
-				this1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,outcome.t);
-				break;
-			case 1:
-				this1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Err.grow(outcome.e,{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 59, className : "stx.arw._Produce.Produce_Impl_", methodName : "fromArrowlet"}));
-				break;
-			}
-			return cont1.value(this1).toWork();
-		});
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_arrowlet_Lift.prepare(arw,null,cont.joint(function(outcome) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_pico_OutcomeLift.fold(outcome,function(t) {
+				return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
+			},function(e) {
+				return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Err.grow(e,{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 65, className : "stx.arw._Produce.Produce_Impl_", methodName : "fromArrowlet"}));
+			}),{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 62, className : "stx.arw._Produce.Produce_Impl_", methodName : "fromArrowlet"}));
+		},{ fileName : "src/main/haxe/stx/arw/Produce.hx", lineNumber : 60, className : "stx.arw._Produce.Produce_Impl_", methodName : "fromArrowlet"}));
+	}));
 };
 stx_arw_Produce.fromProvide = function(self) {
-	return new stx_arw_arrowlet_term_Anon(function(_,cont) {
-		var self1 = self;
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-	});
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Anon(function(_,cont) {
+		return stx_arw_ProvideLift.prepare(self,cont);
+	}));
 };
 stx_arw_Produce.environment = function(this1,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(this1,null),function(res) {
-		switch(res._hx_index) {
-		case 0:
-			success(res.t);
-			break;
-		case 1:
-			failure(res.e);
-			break;
-		}
+	return stx_arw_Arrowlet._.environment(this1,null,function(res) {
+		stx_nano_ResLift.fold(res,success,failure);
 	},function(e) {
-		throw haxe_Exception.thrown(e);
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
 	});
 };
 stx_arw_Produce.toArrowlet = function(this1) {
 	return this1;
 };
 stx_arw_Produce.toPropose = function(this1) {
-	return stx_arw_arrowlet_ArrowletLift.then(this1,new stx_arw_arrowlet_term_Sync(function(res) {
-		switch(res._hx_index) {
-		case 0:
-			return stx_ext_ChunkSum.Val(res.t);
-		case 1:
-			return stx_ext_ChunkSum.End(res.e);
-		}
-	}));
+	return stx_arw_Propose.lift(stx_arw_Arrowlet._.then(this1,stx_arw_Arrowlet.fromFun1R(function(res) {
+		return stx_nano_ResLift.fold(res,stx_ext_ChunkSum.Val,stx_ext_ChunkSum.End);
+	})));
 };
 stx_arw_Produce.get_self = function(this1) {
 	return this1;
 };
+stx_arw_Produce.prepare = function(this1,cont) {
+	return stx_arw_Arrowlet._.prepare(this1,null,cont);
+};
+stx_arw_Produce.fudge = function(this1) {
+	return stx_arw_Produce._.fudge(this1);
+};
+stx_arw_Produce.flat_map = function(this1,fn) {
+	return stx_arw_Produce._.flat_map(this1,fn);
+};
 var stx_arw_ProposeLift = function() { };
 stx_arw_ProposeLift.__name__ = "stx.arw.ProposeLift";
 stx_arw_ProposeLift.flat_map = function(self,fn) {
-	return new stx_arw_arrowlet_term_FlatMap(stx_arw_Propose.toArrowlet(self),function(chunk) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.FlatMap(stx_arw_Propose.toArrowlet(self),function(chunk) {
 		return stx_ext_ChunkLift.fold(chunk,function(o) {
 			return fn(o);
 		},function(e) {
@@ -7610,76 +7061,48 @@ stx_arw_ProposeLift.flat_map = function(self,fn) {
 		},function() {
 			return stx_arw_Propose.fromChunk(stx_ext_ChunkSum.Tap);
 		});
-	});
+	}));
 };
 stx_arw_ProposeLift.convert = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
-			var self = stx_arw_Convert.toArrowlet(stx_arw_ConvertLift.then(next,stx_arw_Convert.fromFun1R(stx_ext_ChunkSum.Val)));
-			var i = o;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			return stx_arw_ConvertLift.prepare(stx_arw_ConvertLift.then(next,stx_arw_Convert.fromFun1R(stx_ext_ChunkSum.Val)),o,cont);
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 81, className : "stx.arw.ProposeLift", methodName : "convert"}));
 		},function() {
-			return cont.value(stx_ext_ChunkSum.Tap).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Tap,{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 82, className : "stx.arw.ProposeLift", methodName : "convert"}));
 		});
-	}));
+	})));
 };
 stx_arw_ProposeLift.attempt = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
-			var self = stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_Attempt.toArrowlet(next),function(res) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.postfix(stx_arw_Attempt.toArrowlet(next),function(res) {
 				return stx_ext_lift_LiftResToChunk.toChunk(res);
-			});
-			var i = o;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			}),o,cont);
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 93, className : "stx.arw.ProposeLift", methodName : "attempt"}));
 		},function() {
-			return cont.value(stx_ext_ChunkSum.Tap).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Tap,{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 94, className : "stx.arw.ProposeLift", methodName : "attempt"}));
 		});
-	}));
+	})));
 };
 stx_arw_ProposeLift.diffuse = function(self,next) {
-	return new stx_arw_arrowlet_term_Then(self,stx_arw_Diffuse.toArrowlet(next));
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Diffuse.toArrowlet(next)));
 };
 stx_arw_ProposeLift.or = function(self,or) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
-			return cont.value(stx_ext_ChunkSum.Val(o)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Val(o),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 114, className : "stx.arw.ProposeLift", methodName : "or"}));
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 115, className : "stx.arw.ProposeLift", methodName : "or"}));
 		},function() {
-			var self = or();
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			return stx_arw_ProposeLift.prepare(or(),cont);
 		});
-	}));
+	})));
 };
 stx_arw_ProposeLift.prepare = function(self,cont) {
-	var self1 = self;
-	var i = null;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont1);
-	},function() {
-		return cont1.value(self1.apply(i)).toWork();
-	});
+	return stx_arw_Arrowlet._.prepare(stx_arw_Arrowlet.lift(self),null,cont);
 };
 stx_arw_ProposeLift.toProduce = function(self) {
 	var val = function(o) {
@@ -7691,13 +7114,13 @@ stx_arw_ProposeLift.toProduce = function(self) {
 	var tap = function() {
 		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,haxe_ds_Option.None);
 	};
-	var self1 = new stx_arw_arrowlet_term_Sync(function(chk) {
+	var tmp = function(chk) {
 		return stx_ext_Chunk._.fold(chk,val,ers,tap);
-	});
-	return stx_arw_arrowlet_ArrowletLift.then(stx_arw_Propose.toArrowlet(self),self1);
+	};
+	return stx_arw_Produce.lift(stx_arw_arrowlet_Lift.then(stx_arw_Propose.toArrowlet(self),stx_arw_Arrowlet.fromFun1R(tmp)));
 };
 stx_arw_ProposeLift.materialise = function(self) {
-	var self1 = new stx_arw_arrowlet_term_Sync(function(ipt) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(stx_arw_Propose.toArrowlet(self),stx_arw_Arrowlet.Sync(function(ipt) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
 			return stx_ext_ChunkSum.Val(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,o));
 		},function(e) {
@@ -7705,62 +7128,47 @@ stx_arw_ProposeLift.materialise = function(self) {
 		},function() {
 			return stx_ext_ChunkSum.Val(haxe_ds_Option.None);
 		});
-	});
-	return new stx_arw_arrowlet_term_Then(stx_arw_Propose.toArrowlet(self),self1);
+	})));
 };
 stx_arw_ProposeLift.and = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
 			var _g = function(tI,tII) {
 				return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 			};
 			var tI = o;
-			var self = function(tII) {
+			var tmp = function(tII) {
 				return _g(tI,tII);
 			};
-			var self1 = stx_arw_ProposeLift.convert(that,stx_arw_Convert.fromFun1R(self));
-			var i = null;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i,cont1);
-			},function() {
-				return cont1.value(self1.apply(i)).toWork();
-			});
+			return stx_arw_ProposeLift.prepare(stx_arw_ProposeLift.convert(that,stx_arw_Convert.fromFun1R(tmp)),cont);
 		},function(e) {
-			return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 162, className : "stx.arw.ProposeLift", methodName : "and"}));
 		},function() {
-			return cont.value(stx_ext_ChunkSum.Tap).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Tap,{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 163, className : "stx.arw.ProposeLift", methodName : "and"}));
 		});
-	}));
+	})));
 };
 stx_arw_ProposeLift.command = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
+	return stx_arw_Execute.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Anon(function(ipt,cont) {
 		return stx_ext_ChunkLift.fold(ipt,function(o) {
-			var self = that;
-			var i = o;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			return stx_arw_Command.prepare(that,o,cont);
 		},function(e) {
-			return cont.value(stx_nano_Report.pure(e)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.pure(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 176, className : "stx.arw.ProposeLift", methodName : "command"}));
 		},function() {
-			return cont.value(stx_nano_Report.unit()).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.unit(),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 177, className : "stx.arw.ProposeLift", methodName : "command"}));
 		});
-	}));
+	})));
 };
 stx_arw_ProposeLift.before = function(self,fn) {
-	return new stx_arw_arrowlet_term_Then(new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,function(_) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(stx_arw_Arrowlet.Sync(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,function(_) {
 		fn();
-	})),self);
+	})),self));
 };
 stx_arw_ProposeLift.after = function(self,fn) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,fn)));
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(stx_nano_lift_LiftNano.passthrough(stx_nano_Wildcard.__,fn))));
 };
 stx_arw_ProposeLift.environment = function(self,success,failure) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_Propose.toArrowlet(self),null),function(chunk) {
+	return stx_arw_Arrowlet._.environment(stx_arw_Propose.toArrowlet(self),null,function(chunk) {
 		stx_ext_ChunkLift.fold(chunk,function(o) {
 			success(haxe_ds_Option.Some(o));
 		},function(e) {
@@ -7773,14 +7181,14 @@ stx_arw_ProposeLift.environment = function(self,success,failure) {
 	});
 };
 stx_arw_ProposeLift.postfix = function(self,then) {
-	var val = stx_fn_UnaryLift.then(then,stx_ext_ChunkSum.Val);
+	var val = stx_fn_UnaryLift.then(stx_LiftUnary.fn(then),stx_ext_ChunkSum.Val);
 	var ers = stx_ext_ChunkSum.End;
 	var tap = function() {
 		return stx_ext_ChunkSum.Tap;
 	};
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(function(chk) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(function(chk) {
 		return stx_ext_Chunk._.fold(chk,val,ers,tap);
-	}));
+	})));
 };
 var stx_arw_Propose = {};
 stx_arw_Propose.__properties__ = {get_self:"get_self"};
@@ -7788,22 +7196,17 @@ stx_arw_Propose._new = function(self) {
 	return self;
 };
 stx_arw_Propose.lift = function(self) {
-	return self;
+	return stx_arw_Propose._new(self);
 };
 stx_arw_Propose.fromChunk = function(chunk) {
-	return new stx_arw_arrowlet_term_Pure(chunk);
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.pure(chunk));
 };
 stx_arw_Propose.fromOption = function(self) {
-	var o;
-	switch(self._hx_index) {
-	case 0:
-		o = stx_ext_ChunkSum.Val(self.v);
-		break;
-	case 1:
-		o = stx_ext_ChunkSum.Tap;
-		break;
-	}
-	return new stx_arw_arrowlet_term_Pure(o);
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.pure(stx_pico_OptionLift.fold(self,function(o) {
+		return stx_ext_ChunkSum.Val(o);
+	},function() {
+		return stx_ext_ChunkSum.Tap;
+	})));
 };
 stx_arw_Propose.make = function(o) {
 	return stx_arw_Propose.fromChunk(stx_Ext.chunk(stx_nano_Wildcard.__,o));
@@ -7815,12 +7218,12 @@ stx_arw_Propose.fromErr = function(e) {
 	return stx_arw_Propose.fromChunk(stx_ext_ChunkSum.End(e));
 };
 stx_arw_Propose.unit = function() {
-	return new stx_arw_arrowlet_term_Pure(stx_ext_ChunkSum.Tap);
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.pure(stx_ext_ChunkSum.Tap));
 };
 stx_arw_Propose.fromChunkThunk = function(thunk) {
-	return new stx_arw_arrowlet_term_Sync(function(_) {
+	return stx_arw_Propose.lift(stx_arw_Arrowlet.Sync(function(_) {
 		return thunk();
-	});
+	}));
 };
 stx_arw_Propose.toArrowlet = function(this1) {
 	return this1;
@@ -7829,27 +7232,19 @@ stx_arw_Propose.elide = function(this1) {
 	return this1;
 };
 stx_arw_Propose.get_self = function(this1) {
-	return this1;
+	return stx_arw_Propose.lift(this1);
 };
 stx_arw_Propose.bind_fold = function(fn,iterable,seed) {
 	return stx_pico_Option.fromNullT(stx_nano_IterLift.foldl(stx_ext_lift_LiftIterableToIter.toIter(iterable),function(next,memo) {
-		var self = new stx_arw_arrowlet_term_Anon(function(res,cont) {
+		return stx_arw_Propose.lift(stx_arw_arrowlet_Lift.then(stx_arw_Propose.toArrowlet(memo),stx_arw_Arrowlet.Anon(function(res,cont) {
 			return stx_ext_ChunkLift.fold(res,function(o) {
-				var self = fn(next,o);
-				var i = null;
-				var cont1 = cont;
-				return stx_LiftIf.if_else(self.get_convention(),function() {
-					return self.defer(i,cont1);
-				},function() {
-					return cont1.value(self.apply(i)).toWork();
-				});
+				return stx_arw_ProposeLift.prepare(fn(next,o),cont);
 			},function(e) {
-				return cont.value(stx_ext_ChunkSum.End(e)).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.End(e),{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 51, className : "stx.arw._Propose.Propose_Impl_", methodName : "bind_fold"}));
 			},function() {
-				return cont.value(stx_ext_ChunkSum.Tap).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_ext_ChunkSum.Tap,{ fileName : "src/main/haxe/stx/arw/Propose.hx", lineNumber : 52, className : "stx.arw._Propose.Propose_Impl_", methodName : "bind_fold"}));
 			});
-		});
-		return stx_arw_arrowlet_ArrowletLift.then(stx_arw_Propose.toArrowlet(memo),self);
+		})));
 	},stx_arw_Propose.pure(seed)));
 };
 stx_arw_Propose.flat_map = function(this1,fn) {
@@ -7858,92 +7253,40 @@ stx_arw_Propose.flat_map = function(this1,fn) {
 var stx_arw_ProvideLift = function() { };
 stx_arw_ProvideLift.__name__ = "stx.arw.ProvideLift";
 stx_arw_ProvideLift.environment = function(self,handler) {
-	return new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_Provide.toArrowlet(self),null),function(o) {
+	return stx_arw_Arrowlet._.environment(self,null,function(o) {
 		handler(o);
 	},function(e) {
 		throw haxe_Exception.thrown(e);
 	});
 };
 stx_arw_ProvideLift.flat_map = function(self,fn) {
-	return new stx_arw_arrowlet_term_FlatMap(stx_arw_Provide.toArrowlet(self),fn);
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.FlatMap(stx_arw_Provide.toArrowlet(self),fn));
 };
 stx_arw_ProvideLift.and = function(lhs,rhs) {
-	return stx_arw_Arrowlet._.pinch(stx_arw_Arrowlet._.both(lhs,rhs));
+	return stx_arw_Provide.lift(stx_arw_Arrowlet._.pinch(stx_arw_Arrowlet._.both(lhs,rhs)));
 };
 stx_arw_ProvideLift.convert = function(self,that) {
-	return stx_arw_Convert._.then(self,that);
+	return stx_arw_Provide.lift(stx_arw_Convert._.then(self,that));
 };
 stx_arw_ProvideLift.prepare = function(self,cont) {
-	var self1 = self;
-	var i = null;
-	var cont1 = cont;
-	return stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont1);
-	},function() {
-		return cont1.value(self1.apply(i)).toWork();
-	});
-};
-stx_arw_ProvideLift.fudge = function(self) {
-	var v = null;
-	var scheduler = null;
-	var self1 = stx_arw_ProvideLift.environment(self,function(o) {
-		v = o;
-	});
-	var i = null;
-	var cont = stx_async_Terminal.ZERO;
-	var this1 = stx_LiftIf.if_else(self1.get_convention(),function() {
-		return self1.defer(i,cont);
-	},function() {
-		return cont.value(self1.apply(i)).toWork();
-	});
-	var loop = scheduler;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-	loop = self._hx_index == 0 ? self.v : stx_async_Loop.ZERO;
-	var cont1 = true;
-	var suspended = false;
-	var backoff = 0.2;
-	while(true == cont1) {
-		if(this1.get_defect().length > 0) {
-			loop.fail(this1.get_defect());
-			cont1 = false;
-		}
-		if(!suspended) {
-			this1.pursue();
-			if(this1.get_loaded()) {
-				cont1 = false;
-			} else {
-				switch(this1.get_status()) {
-				case -1:
-					loop.fail(this1.get_defect());
-					break;
-				case 1:case 4:
-					cont1 = false;
-					break;
-				case 0:case 2:
-					break;
-				case 3:
-					suspended = true;
-					tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-						backoff = 1.22;
-						suspended = false;
-					});
-					break;
-				}
-			}
-		}
-	}
-	return v;
+	return stx_arw_Arrowlet._.prepare(self,null,cont);
 };
 stx_arw_ProvideLift.toProduce = function(self) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(function(t) {
+	return stx_arw_Produce.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(function(t) {
 		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
-	}));
+	})));
 };
 stx_arw_ProvideLift.attempt = function(self,that) {
 	return stx_arw_ProduceLift.attempt(stx_arw_ProvideLift.toProduce(self),that);
 };
 stx_arw_ProvideLift.postfix = function(self,fn) {
-	return new stx_arw_arrowlet_term_Then(self,new stx_arw_arrowlet_term_Sync(fn));
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Then(self,stx_arw_Arrowlet.Sync(fn)));
+};
+stx_arw_ProvideLift.fudge = function(self) {
+	return stx_arw_Arrowlet._.fudge(self,null);
+};
+stx_arw_ProvideLift.contextualize = function(self,success,failure) {
+	return stx_arw_Contextualize.load(stx_arw_Contextualize.make(null,success,failure),stx_arw_Provide.toArrowlet(self).asArrowletDef());
 };
 var stx_arw_Provide = {};
 stx_arw_Provide.__properties__ = {get_self:"get_self"};
@@ -7951,34 +7294,34 @@ stx_arw_Provide._new = function(self) {
 	return self;
 };
 stx_arw_Provide.lift = function(self) {
-	return self;
+	return stx_arw_Provide._new(self);
 };
 stx_arw_Provide.pure = function(v) {
-	return new stx_arw_arrowlet_term_Pure(v);
+	return stx_arw_Provide.lift(new stx_arw_provide_term_Sync(v));
 };
 stx_arw_Provide.fromFuture = function(future) {
-	return new stx_arw_provide_term_Later(future);
+	return stx_arw_Provide.lift(new stx_arw_provide_term_Later(future));
 };
 stx_arw_Provide.fromFunXR = function(fn) {
-	return new stx_arw_provide_term_Thunk(fn);
+	return stx_arw_Provide.lift(new stx_arw_provide_term_Thunk(fn));
 };
 stx_arw_Provide.fromFunXFuture = function(fn) {
-	return new stx_arw_provide_term_FunXFutureProvide(fn);
+	return stx_arw_Provide.lift(new stx_arw_provide_term_FunXFutureProvide(fn));
 };
 stx_arw_Provide.fromFunTerminalWork = function(fn) {
-	return new stx_arw_provide_term_ProvideFunTerminalWork(fn);
+	return stx_arw_Provide.lift(new stx_arw_provide_term_ProvideFunTerminalWork(fn));
 };
 stx_arw_Provide.fromFunFuture = function(ft) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		return cont.later(tink_core_Future.map(ft,stx_pico_OutcomeSum.Success)).toWork();
-	});
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_async_terminal_Receiver.serve(cont.later(tink_core_Future.map(ft,stx_pico_OutcomeSum.Success),{ fileName : "src/main/haxe/stx/arw/Provide.hx", lineNumber : 37, className : "stx.arw._Provide.Provide_Impl_", methodName : "fromFunFuture"}));
+	}));
 };
 stx_arw_Provide.bind_fold = function(fn,arr,seed) {
 	return stx_lift_ArrayLift.lfold(arr,function(next,memo) {
 		return stx_arw_ProvideLift.convert(memo,stx_arw_Convert.fromConvertProvide(stx_arw_Convert.fromFun1R(function(o) {
 			return stx_arw_ConvertLift.provide(fn,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,next,o));
 		})));
-	},new stx_arw_arrowlet_term_Pure(seed));
+	},stx_arw_Provide.pure(seed));
 };
 stx_arw_Provide.toArrowlet = function(this1) {
 	return this1;
@@ -7987,17 +7330,20 @@ stx_arw_Provide.prj = function(this1) {
 	return this1;
 };
 stx_arw_Provide.get_self = function(this1) {
-	return this1;
+	return stx_arw_Provide.lift(this1);
+};
+stx_arw_Provide.fudge = function(this1) {
+	return stx_arw_Provide._.fudge(this1);
 };
 var stx_arw_Recover = {};
 stx_arw_Recover._new = function(self) {
 	return self;
 };
 stx_arw_Recover.lift = function(self) {
-	return self;
+	return stx_arw_Recover._new(self);
 };
 stx_arw_Recover.fromFunErrR = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(fn);
+	return stx_arw_Recover.lift(stx_arw_Arrowlet.Sync(fn));
 };
 stx_arw_Recover.toCascade = function(this1) {
 	return new stx_arw_RecoverCascade(this1);
@@ -8009,7 +7355,7 @@ stx_arw_Recover.prj = function(this1) {
 	return this1;
 };
 stx_arw_Recover.toArrowlet = function(this1) {
-	return this1;
+	return stx_arw_Arrowlet.lift(this1);
 };
 var stx_arw_RecoverRectify = function(delegate) {
 	stx_arw_ArrowletCls.call(this);
@@ -8020,34 +7366,26 @@ stx_arw_RecoverRectify.__super__ = stx_arw_ArrowletCls;
 stx_arw_RecoverRectify.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			return cont.value(p.t).toWork();
-		case 1:
-			var self = this.delegate;
-			var i = p.e;
-			var cont1 = cont.joint(function(outcome) {
-				switch(outcome._hx_index) {
-				case 0:
-					return cont.value(outcome.t).toWork();
-				case 1:
-					return cont.error(outcome.e).toWork();
-				}
-			});
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_async_terminal_Receiver.serve(cont.value(ok,{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 31, className : "stx.arw.RecoverRectify", methodName : "defer"}));
+		},function(no) {
+			return stx_arw_arrowlet_Lift.prepare(_gthis.delegate,no,cont.joint(function(outcome) {
+				return stx_pico_OutcomeLift.fold(outcome,function(ok) {
+					return stx_async_terminal_Receiver.serve(cont.value(ok,{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 36, className : "stx.arw.RecoverRectify", methodName : "defer"}));
+				},function(no) {
+					return stx_async_terminal_Receiver.serve(cont.error(no,{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 37, className : "stx.arw.RecoverRectify", methodName : "defer"}));
+				});
+			},{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 34, className : "stx.arw.RecoverRectify", methodName : "defer"}));
+		});
 	}
 	,apply: function(p) {
-		switch(p._hx_index) {
-		case 0:
-			return p.t;
-		case 1:
-			return this.delegate.apply(p.e);
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return ok;
+		},function(no) {
+			return stx_arw_Arrowlet.toInternal(stx_arw_Recover.toArrowlet(_gthis.delegate)).apply(no);
+		});
 	}
 	,__class__: stx_arw_RecoverRectify
 });
@@ -8060,43 +7398,26 @@ stx_arw_RecoverCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_RecoverCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,p.t)).toWork();
-		case 1:
-			var self = this.delegate;
-			var i = p.e;
-			var cont1 = cont.joint(function(outcome) {
-				var cont1 = cont;
-				var this1;
-				switch(outcome._hx_index) {
-				case 0:
-					this1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,outcome.t);
-					break;
-				case 1:
-					this1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_ResourceNotFound")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 68, className : "stx.arw.RecoverCascade", methodName : "defer"})));
-					break;
-				}
-				return cont1.value(this1).toWork();
-			});
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(i) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 59, className : "stx.arw.RecoverCascade", methodName : "defer"}));
+		},function(e) {
+			return stx_arw_arrowlet_Lift.prepare(_gthis.delegate,e,cont.joint(function(outcome) {
+				return stx_async_terminal_Receiver.serve(cont.value(stx_pico_OutcomeLift.fold(outcome,function(i) {
+					return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i);
+				},function(_) {
+					return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 69, className : "stx.arw.RecoverCascade", methodName : "defer"}),"E_ResourceNotFound"));
+				}),{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 66, className : "stx.arw.RecoverCascade", methodName : "defer"}));
+			},{ fileName : "src/main/haxe/stx/arw/Recover.hx", lineNumber : 64, className : "stx.arw.RecoverCascade", methodName : "defer"}));
+		});
 	}
 	,apply: function(p) {
-		var tmp;
-		switch(p._hx_index) {
-		case 0:
-			tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,p.t);
-			break;
-		case 1:
-			tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,this.delegate.apply(p.e));
-			break;
-		}
-		return tmp;
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok);
+		},function(no) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_arw_Arrowlet.toInternal(stx_arw_Recover.toArrowlet(_gthis.delegate)).apply(no));
+		});
 	}
 	,__class__: stx_arw_RecoverCascade
 });
@@ -8105,12 +7426,12 @@ stx_arw_Rectify._new = function(self) {
 	return self;
 };
 stx_arw_Rectify.lift = function(self) {
-	return self;
+	return stx_arw_Rectify._new(self);
 };
 stx_arw_Rectify.toCascade = function(this1) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(this1,function(t) {
+	return stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(stx_arw_Arrowlet.lift(this1),function(t) {
 		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
-	});
+	}));
 };
 stx_arw_Rectify.prj = function(this1) {
 	return this1;
@@ -8121,158 +7442,70 @@ stx_arw_Rectify.toArrowlet = function(this1) {
 var stx_arw_ReframeLift = function() { };
 stx_arw_ReframeLift.__name__ = "stx.arw.ReframeLift";
 stx_arw_ReframeLift.lift = function(wml) {
-	return wml;
+	return stx_arw_Reframe._new(wml);
 };
 stx_arw_ReframeLift.cascade = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(self,that);
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Then(self,that));
 };
 stx_arw_ReframeLift.attempt = function(self,that) {
 	var fn = function(chk) {
-		var self;
-		switch(chk._hx_index) {
-		case 0:
-			var tp = chk.t;
-			var self1 = stx_nano_CoupleLift.fst(tp);
-			var fn = function(r) {
+		return stx_nano_ResLift.flat_map(chk,function(tp) {
+			return stx_nano_ResLift.map(stx_nano_CoupleLift.fst(tp),function(r) {
 				return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,r,stx_nano_CoupleLift.snd(tp));
-			};
-			var self2;
-			switch(self1._hx_index) {
-			case 0:
-				self2 = stx_nano_ResSum.Accept(fn(self1.t));
-				break;
-			case 1:
-				self2 = stx_nano_ResSum.Reject(self1.e);
-				break;
-			}
-			self = stx_nano_Res._new(self2);
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(chk.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
+			});
+		});
 	};
-	return stx_arw_ReframeLift.lift(stx_arw_Arrowlet._.postfix(stx_arw_Cascade.toArrowlet(stx_arw_Cascade.convert(stx_arw_Reframe.toCascade(self),stx_arw_arrowlet_ArrowletLift.first(stx_arw_Attempt.toArrowlet(that)))),fn));
+	return stx_arw_ReframeLift.lift(stx_arw_Arrowlet._.postfix(stx_arw_Cascade.convert(stx_arw_Reframe.toCascade(self),stx_arw_Convert.lift(stx_arw_arrowlet_Lift.first(stx_arw_Attempt.toArrowlet(that)))),fn));
 };
 stx_arw_ReframeLift.rearrange = function(self,that) {
-	return new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		var waits = new tink_core_FutureTrigger();
-		var waitsII = new tink_core_FutureTrigger();
+	return stx_arw_Reframe.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		var waits = tink_core_Future.trigger();
+		var waitsII = tink_core_Future.trigger();
 		var inner = cont.inner(function(outcome) {
 			var innerI = cont.inner(function(outcome) {
-				var val;
-				switch(ipt._hx_index) {
-				case 0:
-					var _g = ipt.t;
-					switch(outcome._hx_index) {
-					case 0:
-						var _g1 = outcome.t;
-						var val1;
-						switch(_g1._hx_index) {
-						case 0:
-							val1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g1.t,_g));
-							break;
-						case 1:
-							val1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g1.e);
-							break;
-						}
-						val = stx_pico_OutcomeSum.Success(val1);
-						break;
-					case 1:
-						val = stx_pico_OutcomeSum.Failure(outcome.e);
-						break;
-					}
-					break;
-				case 1:
-					val = stx_pico_OutcomeSum.Success(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.e));
-					break;
-				}
-				var work = cont.issue(val).toWork();
-				waitsII.trigger(work);
-			});
-			var value;
-			switch(outcome._hx_index) {
-			case 0:
-				var _g = outcome.t;
-				var val;
-				switch(ipt._hx_index) {
-				case 0:
-					var _g1 = ipt.t;
-					var fn = function(_) {
-						return stx_nano_CoupleLift.fst(_);
-					};
-					var self;
-					switch(_g._hx_index) {
-					case 0:
-						self = stx_nano_ResSum.Accept(fn(_g.t));
-						break;
-					case 1:
-						self = stx_nano_ResSum.Reject(_g.e);
-						break;
-					}
-					var iptI = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,stx_nano_Res._new(self),_g1);
-					var self = stx_arw_Arrange.toArrowlet(that);
-					var i = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,iptI);
-					var cont1 = innerI;
-					val = stx_LiftIf.if_else(self.get_convention(),function() {
-						return self.defer(i,cont1);
-					},function() {
-						return cont1.value(self.apply(i)).toWork();
+				var val = stx_nano_ResLift.fold(ipt,function(i) {
+					return stx_pico_OutcomeLift.fold(outcome,function(res) {
+						return stx_pico_OutcomeSum.Success(stx_nano_ResLift.fold(res,function(oI) {
+							return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,oI,i));
+						},function(e) {
+							return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+						}));
+					},function(e) {
+						return stx_pico_OutcomeSum.Failure(e);
 					});
-					break;
-				case 1:
-					val = cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ipt.e)).toWork();
-					break;
-				}
-				value = val;
-				break;
-			case 1:
-				value = cont.error([null]).toWork();
-				break;
-			}
+				},function(e) {
+					return stx_pico_OutcomeSum.Success(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e));
+				});
+				var work = stx_async_terminal_Receiver.serve(cont.issue(val,{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 79, className : "stx.arw.ReframeLift", methodName : "rearrange"}));
+				waitsII.trigger(work);
+			},{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 67, className : "stx.arw.ReframeLift", methodName : "rearrange"});
+			var value = stx_pico_OutcomeLift.fold(outcome,function(res) {
+				return stx_nano_ResLift.fold(ipt,function(i) {
+					var iptI = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,stx_nano_ResLift.map(res,function(_) {
+						return stx_nano_CoupleLift.fst(_);
+					}),i);
+					return stx_arw_Arrowlet._.prepare(stx_arw_Arrange.toArrowlet(that),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,iptI),innerI);
+				},function(e) {
+					return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 92, className : "stx.arw.ReframeLift", methodName : "rearrange"}));
+				});
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 96, className : "stx.arw.ReframeLift", methodName : "rearrange"}));
+			});
 			waits.trigger(value);
-		});
-		var self1 = self;
-		var i = ipt;
-		var cont1 = inner;
-		var workI = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-		var that1 = stx_async_Work.fromFutureWork(waits);
-		var self2 = workI == null ? that1 : that1 == null ? null : stx_async_Task.Seq(workI.toTaskApi(),that1.toTaskApi()).toWork();
-		var that1 = stx_async_Work.fromFutureWork(waitsII);
-		if(self2 == null) {
-			return that1;
-		} else if(that1 == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self2.toTaskApi(),that1.toTaskApi()).toWork();
-		}
-	});
+		},{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 64, className : "stx.arw.ReframeLift", methodName : "rearrange"});
+		return stx_async_WorkLift.seq(stx_async_WorkLift.seq(stx_arw_arrowlet_Lift.prepare(self,ipt,inner),stx_async_Work.fromFutureWork(waits)),stx_async_Work.fromFutureWork(waitsII));
+	}));
 };
 stx_arw_ReframeLift.arrange = function(self,that) {
-	return stx_arw_Arrowlet._.postfix(stx_arw_Cascade.toArrowlet(stx_arw_Cascade.broach(stx_arw_ReframeLift.cascade(self,stx_arw_Arrange.toCascade(that)))),function(res) {
-		var fn = function(tp) {
+	return stx_arw_Reframe.lift(stx_arw_Arrowlet._.postfix(stx_arw_Cascade.broach(stx_arw_ReframeLift.cascade(self,stx_arw_Arrange.toCascade(that))),function(res) {
+		return stx_nano_ResLift.map(res,function(tp) {
 			return stx_nano_CoupleLift.swap(tp);
-		};
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(res.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(res.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	});
+		});
+	}));
 };
 stx_arw_ReframeLift.arrangement = function(self,that) {
-	return new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		var defer = new tink_core_FutureTrigger();
+	return stx_arw_Attempt.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		var defer = tink_core_Future.trigger();
 		var inner = cont.inner(function(chk) {
 			switch(chk._hx_index) {
 			case 0:
@@ -8280,177 +7513,83 @@ stx_arw_ReframeLift.arrangement = function(self,that) {
 				switch(_g._hx_index) {
 				case 0:
 					var tp = _g.t;
-					var defer1 = defer;
-					var this1 = that(stx_nano_CoupleLift.fst(tp));
-					var i = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,stx_nano_CoupleLift.fst(ipt),stx_nano_CoupleLift.snd(tp)));
-					var self = stx_arw_Cascade.toArrowlet(this1);
-					var i1 = i;
-					var cont1 = cont;
-					defer1.trigger(stx_LiftIf.if_else(self.get_convention(),function() {
-						return self.defer(i1,cont1);
-					},function() {
-						return cont1.value(self.apply(i1)).toWork();
-					}));
+					defer.trigger(stx_arw_Arrange.prepare(that(stx_nano_CoupleLift.fst(tp)),stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,stx_nano_CoupleLift.fst(ipt),stx_nano_CoupleLift.snd(tp)),cont));
 					break;
 				case 1:
-					defer.trigger(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e)).toWork());
+					defer.trigger(stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e),{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 135, className : "stx.arw.ReframeLift", methodName : "arrangement"})));
 					break;
 				}
 				break;
 			case 1:
-				defer.trigger(cont.error([null]).toWork());
+				defer.trigger(stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 133, className : "stx.arw.ReframeLift", methodName : "arrangement"})));
 				break;
 			}
-		});
-		var self1 = self;
-		var i = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(ipt));
-		var cont1 = inner;
-		var self2 = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-		var that1 = stx_async_Work.fromFutureWork(defer);
-		if(self2 == null) {
-			return that1;
-		} else if(that1 == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self2.toTaskApi(),that1.toTaskApi()).toWork();
-		}
-	});
+		},{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 126, className : "stx.arw.ReframeLift", methodName : "arrangement"});
+		return stx_async_WorkLift.seq(stx_arw_arrowlet_Lift.prepare(self,stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_CoupleLift.snd(ipt)),inner),stx_async_Work.fromFutureWork(defer));
+	}));
 };
 stx_arw_ReframeLift.commandeer = function(self,fn) {
-	return stx_arw_Command._new(new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		var self1 = stx_arw_arrowlet_ArrowletLift.then(stx_arw_ReframeLift.commandment(self,fn),new stx_arw_arrowlet_term_Sync(function(res) {
-			switch(res._hx_index) {
-			case 0:
+	return stx_arw_Command.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.then(stx_arw_ReframeLift.commandment(self,fn),stx_arw_Arrowlet.Sync(function(res) {
+			return stx_nano_ResLift.fold(res,function(_) {
 				return stx_nano_Report.unit();
-			case 1:
-				return stx_nano_Report.pure(res.e);
-			}
-		}));
-		var i = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ipt);
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
+			},stx_nano_Report.pure);
+		})),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ipt),cont);
 	}));
 };
 stx_arw_ReframeLift.commandment = function(self,fn) {
-	return stx_arw_ReframeLift.lift(new stx_arw_arrowlet_term_Anon(function(ipt,cont) {
-		var defer = new tink_core_FutureTrigger();
+	return stx_arw_ReframeLift.lift(stx_arw_Arrowlet.Anon(function(ipt,cont) {
+		var defer = tink_core_Future.trigger();
 		var inner = cont.inner(function(out) {
 			if(out._hx_index == 0) {
 				var _g = out.t;
 				switch(_g._hx_index) {
 				case 0:
 					var tp = _g.t;
-					var defer1 = defer;
-					var self = stx_arw_arrowlet_ArrowletLift.postfix(fn(stx_nano_CoupleLift.fst(tp)),function(opt) {
-						switch(opt._hx_index) {
-						case 0:
-							return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,opt.v);
-						case 1:
+					defer.trigger(stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.postfix(fn(stx_nano_CoupleLift.fst(tp)),function(opt) {
+						return stx_pico_OptionLift.fold(opt,function(err) {
+							return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,err);
+						},function() {
 							return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,tp);
-						}
-					});
-					var i = stx_nano_CoupleLift.snd(tp);
-					var cont1 = cont;
-					defer1.trigger(stx_LiftIf.if_else(self.get_convention(),function() {
-						return self.defer(i,cont1);
-					},function() {
-						return cont1.value(self.apply(i)).toWork();
-					}));
+						});
+					}),stx_nano_CoupleLift.snd(tp),cont));
 					break;
 				case 1:
-					defer.trigger(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e)).toWork());
+					defer.trigger(stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e),{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 171, className : "stx.arw.ReframeLift", methodName : "commandment"})));
 					break;
 				}
 			} else {
-				defer.trigger(cont.error([null]).toWork());
+				defer.trigger(stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 173, className : "stx.arw.ReframeLift", methodName : "commandment"})));
 			}
-		});
-		var self1 = self;
-		var i = ipt;
-		var cont1 = inner;
-		var self2 = stx_LiftIf.if_else(self1.get_convention(),function() {
-			return self1.defer(i,cont1);
-		},function() {
-			return cont1.value(self1.apply(i)).toWork();
-		});
-		var that = stx_async_Work.fromFutureWork(defer);
-		if(self2 == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self2.toTaskApi(),that.toTaskApi()).toWork();
-		}
+		},{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 161, className : "stx.arw.ReframeLift", methodName : "commandment"});
+		return stx_async_WorkLift.seq(stx_arw_arrowlet_Lift.prepare(self,ipt,inner),stx_async_Work.fromFutureWork(defer));
 	}));
 };
 stx_arw_ReframeLift.evaluation = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(self,function(o) {
-		var fn = function(tp) {
+	return stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(self,function(o) {
+		return stx_nano_ResLift.map(o,function(tp) {
 			return stx_nano_CoupleLift.fst(tp);
-		};
-		var self;
-		switch(o._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(o.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(o.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	});
+		});
+	}));
 };
 stx_arw_ReframeLift.execution = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(self,function(o) {
-		var fn = function(tp) {
+	return stx_arw_Cascade.lift(stx_arw_arrowlet_Lift.postfix(self,function(o) {
+		return stx_nano_ResLift.map(o,function(tp) {
 			return stx_nano_CoupleLift.snd(tp);
-		};
-		var self;
-		switch(o._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(o.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(o.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	});
+		});
+	}));
 };
 stx_arw_ReframeLift.errate = function(self,fn) {
-	return stx_arw_ReframeLift.lift(new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			var self1 = stx_arw_arrowlet_ArrowletLift.postfix(self,function(o) {
-				var self;
-				switch(o._hx_index) {
-				case 0:
-					self = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,o.t);
-					break;
-				case 1:
-					self = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,o.e.map(fn));
-					break;
-				}
-				return stx_nano_Res._new(self);
-			});
-			var i1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i.t);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i1,cont1);
-			},function() {
-				return cont1.value(self1.apply(i1)).toWork();
-			});
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,i.e)).toWork();
-		}
+	return stx_arw_ReframeLift.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(i) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.postfix(self,function(o) {
+				return stx_nano_ResLift.errata(o,function(e) {
+					return e.map(fn);
+				});
+			}),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i),cont);
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/Reframe.hx", lineNumber : 192, className : "stx.arw.ReframeLift", methodName : "errate"}));
+		});
 	}));
 };
 stx_arw_ReframeLift.environment = function(self,i,success,failure) {
@@ -8465,40 +7604,30 @@ stx_arw_Reframe._new = function(self) {
 	return self;
 };
 stx_arw_Reframe.lift = function(wml) {
-	return wml;
+	return stx_arw_Reframe._new(wml);
 };
 stx_arw_Reframe.pure = function(o) {
-	return stx_arw_Arrowlet._.postfix(stx_arw_Cascade.toArrowlet(stx_arw_Cascade.unit()),function(oc) {
+	return stx_arw_Reframe.lift(stx_arw_Arrowlet._.postfix(stx_arw_Cascade.unit(),function(oc) {
 		var _g = function(tI,tII) {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 		};
 		var tI = o;
-		var fn = function(tII) {
+		return stx_nano_ResLift.map(oc,function(tII) {
 			return _g(tI,tII);
-		};
-		var self;
-		switch(oc._hx_index) {
-		case 0:
-			self = stx_nano_ResSum.Accept(fn(oc.t));
-			break;
-		case 1:
-			self = stx_nano_ResSum.Reject(oc.e);
-			break;
-		}
-		return stx_nano_Res._new(self);
-	});
+		});
+	}));
 };
 stx_arw_Reframe.get_self = function(this1) {
 	return this1;
 };
 stx_arw_Reframe.toCascade = function(this1) {
-	return this1;
+	return stx_arw_Cascade.lift(this1);
 };
 stx_arw_Reframe.toArrowlet = function(this1) {
-	return this1;
+	return stx_arw_Arrowlet.lift(this1);
 };
 stx_arw_Reframe.fromCascade = function(self) {
-	return self;
+	return stx_arw_Reframe.lift(self);
 };
 var stx_arw_Resolve = {};
 stx_arw_Resolve.__properties__ = {get_self:"get_self"};
@@ -8506,51 +7635,31 @@ stx_arw_Resolve._new = function(self) {
 	return self;
 };
 stx_arw_Resolve.lift = function(self) {
-	return self;
+	return stx_arw_Resolve._new(self);
 };
 stx_arw_Resolve.fromResolvePropose = function(arw) {
-	return stx_arw_arrowlet_ArrowletLift.then(arw,new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var self = stx_arw_Propose.toArrowlet(i);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	}));
+	return stx_arw_Resolve.lift(stx_arw_arrowlet_Lift.then(arw,stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_arw_Arrowlet._.prepare(stx_arw_Propose.toArrowlet(i),null,cont);
+	})));
 };
 stx_arw_Resolve.fromFunErrPropose = function(arw) {
-	var lhs = arw;
-	var rhs = new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		var self = stx_arw_Propose.toArrowlet(i);
-		var i = null;
-		var cont1 = cont;
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
-	});
-	return stx_LiftIf.if_else(rhs.get_convention(),function() {
-		return new stx_arw_arrowlet_term_ThenArw(lhs,rhs).asArrowletDef();
-	},function() {
-		return new stx_arw_arrowlet_term_ThenFunFun(lhs,($_=rhs,$bind($_,$_.apply))).asArrowletDef();
-	});
+	return stx_arw_Resolve.lift(stx_arw_Arrowlet.ThenArw(arw,stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_arw_Arrowlet._.prepare(stx_arw_Propose.toArrowlet(i),null,cont);
+	})));
 };
 stx_arw_Resolve.fromErrChunk = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(fn);
+	return stx_arw_Resolve.lift(stx_arw_Arrowlet.Sync(fn));
 };
 stx_arw_Resolve.unit = function() {
-	return new stx_arw_arrowlet_term_Sync(function(e) {
+	return stx_arw_Resolve.lift(stx_arw_Arrowlet.Sync(function(e) {
 		return stx_ext_ChunkSum.Tap;
-	});
+	}));
 };
 stx_arw_Resolve.prj = function(this1) {
 	return this1;
 };
 stx_arw_Resolve.get_self = function(this1) {
-	return this1;
+	return stx_arw_Resolve.lift(this1);
 };
 stx_arw_Resolve.toArrowlet = function(this1) {
 	return this1;
@@ -8558,13 +7667,11 @@ stx_arw_Resolve.toArrowlet = function(this1) {
 var stx_arw_ResolveLift = function() { };
 stx_arw_ResolveLift.__name__ = "stx.arw.ResolveLift";
 stx_arw_ResolveLift.toCascade = function(self) {
-	return new stx_arw_arrowlet_term_Anon(function(i,cont) {
-		switch(i._hx_index) {
-		case 0:
-			return cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i.t)).toWork();
-		case 1:
-			var e = i.e;
-			var next = new stx_arw_arrowlet_term_Sync(function(chk) {
+	return stx_arw_Cascade.lift(stx_arw_Arrowlet.Anon(function(i,cont) {
+		return stx_nano_ResLift.fold(i,function(s) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,s),{ fileName : "src/main/haxe/stx/arw/Resolve.hx", lineNumber : 48, className : "stx.arw.ResolveLift", methodName : "toCascade"}));
+		},function(e) {
+			return stx_arw_Arrowlet._.prepare(stx_arw_Arrowlet._.then(self,stx_arw_Arrowlet.fromFun1R(function(chk) {
 				return stx_ext_ChunkLift.fold(chk,function(i) {
 					return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,i);
 				},function(e) {
@@ -8572,31 +7679,15 @@ stx_arw_ResolveLift.toCascade = function(self) {
 				},function() {
 					return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
 				});
-			});
-			var self1 = stx_arw_Arrowlet._.then(stx_arw_Resolve.toArrowlet(self),next);
-			var i = e;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self1.get_convention(),function() {
-				return self1.defer(i,cont1);
-			},function() {
-				return cont1.value(self1.apply(i)).toWork();
-			});
-		}
-	});
+			})),e,cont);
+		});
+	}));
 };
 var stx_arw_Test = function() {
 };
 stx_arw_Test.__name__ = "stx.arw.Test";
 stx_arw_Test.log = function(wildcard) {
-	var this1 = stx_Log.LOG;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag("stx.arw.test");
-		});
-	};
-	return function(value,pos) {
-		this1(value,fn(pos));
-	};
+	return stx_Log.tag(stx_Log._new(),"stx.arw.test");
 };
 stx_arw_Test.main = function() {
 	var f = stx_log_Facade.unit();
@@ -8606,7 +7697,7 @@ stx_arw_Test.main = function() {
 	f.includes.push("stx.arw.test");
 	f.includes.push("stx.arw");
 	f.includes.push(stx_async_Terminal.identifier());
-	var L = stx_log_Logic._.make();
+	var L = stx_Log._.Logic();
 	f.logic = stx_log_Logic.and(stx_log_Logic.and(f.logic,L.always()),stx_log_Logic.not(L.type(stx_nano_lift_LiftNano.identifier(stx_async_task_term_ThroughBind))));
 	stx_Test.test([new stx_arw_AaaTest(),new stx_arw_Aaa2Test(),new stx_arw_OptimisedTest(),new stx_arw_test_FlatMapTest(),new stx_arw_test_ProduceTest(),new stx_arw_test_TerminalTest(),new stx_arw_test_AfterRewriteTest(),new stx_arw_test_TestCascade(),new stx_arw_TestConvert(),new stx_arw_test_ThenFunTest(),new stx_arw_test_RawTest()],[stx_arw_test_TerminalTest]);
 };
@@ -8620,29 +7711,17 @@ stx_arw_AaaTest.__name__ = "stx.arw.AaaTest";
 stx_arw_AaaTest.__super__ = utest_Test;
 stx_arw_AaaTest.prototype = $extend(utest_Test.prototype,{
 	test_after_tick: function(async) {
-		var fn = function(i,cb) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.fromFunSink(function(i,cb) {
 			haxe_Timer.delay(function() {
-				var fn = i += 1;
-				cb(fn);
+				var tmp = i += 1;
+				cb(tmp);
 			},10);
-		};
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
 		}),1,function(v) {
 			utest_Assert.equals(2,v,null,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 69, className : "stx.arw.AaaTest", methodName : "test_after_tick"});
 			async.done({ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 70, className : "stx.arw.AaaTest", methodName : "test_after_tick"});
 		},function(e) {
 			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -8674,55 +7753,11 @@ stx_arw_OptimisedTest.__name__ = "stx.arw.OptimisedTest";
 stx_arw_OptimisedTest.__super__ = stx_LoggedTest;
 stx_arw_OptimisedTest.prototype = $extend(stx_LoggedTest.prototype,{
 	test_unit_crunch: function() {
-		var scheduler = null;
-		var self = stx_arw_Arrowlet.environment(stx_arw_Arrowlet.unit(),1,function(x) {
+		stx_arw_arrowlet_term_Fiber.crunch(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.unit(),1,function(x) {
 			utest_Assert.equals(1,x,null,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 84, className : "stx.arw.OptimisedTest", methodName : "test_unit_crunch"});
 		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		});
-		var loop = scheduler;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-		loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this1.get_defect().length > 0) {
-				loop.fail(this1.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this1.pursue();
-				if(this1.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this1.get_status()) {
-					case -1:
-						loop.fail(this1.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -8742,167 +7777,28 @@ stx_arw_TestConvert.__name__ = "stx.arw.TestConvert";
 stx_arw_TestConvert.__super__ = stx_LoggedTest;
 stx_arw_TestConvert.prototype = $extend(stx_LoggedTest.prototype,{
 	proc: function() {
-		return new stx_arw_arrowlet_term_Sync(function(x) {
+		return stx_arw_Convert.lift(stx_arw_Arrowlet.Sync(function(x) {
 			haxe_Log.trace(x,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 95, className : "stx.arw.TestConvert", methodName : "proc"});
 			return x + 1;
-		});
+		}));
 	}
 	,test_simple_case: function() {
-		var scheduler = null;
-		var self = stx_arw_Convert.environment(this.proc(),1,function(s) {
+		stx_arw_arrowlet_term_Fiber.crunch(stx_arw_Convert.environment(this.proc(),1,function(s) {
 			utest_Assert.equals(2,s,null,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 107, className : "stx.arw.TestConvert", methodName : "test_simple_case"});
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		});
-		var loop = scheduler;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-		loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this1.get_defect().length > 0) {
-				loop.fail(this1.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this1.pursue();
-				if(this1.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this1.get_status()) {
-					case -1:
-						loop.fail(this1.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+		}));
 	}
 	,test_cascade: function() {
-		var scheduler = null;
-		var self = stx_arw_Cascade.environment(stx_arw_Convert.toCascade(this.proc()),1,function(s) {
+		stx_arw_arrowlet_term_Fiber.crunch(stx_arw_Cascade.environment(stx_arw_Convert.toCascade(this.proc()),1,function(s) {
 			utest_Assert.equals(2,s,null,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 117, className : "stx.arw.TestConvert", methodName : "test_cascade"});
 		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		});
-		var loop = scheduler;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-		loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this1.get_defect().length > 0) {
-				loop.fail(this1.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this1.pursue();
-				if(this1.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this1.get_status()) {
-					case -1:
-						loop.fail(this1.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		}));
 	}
 	,test_cascade_fail_through: function() {
 		var cascade = stx_arw_Convert.toCascade(this.proc());
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 124, className : "stx.arw.TestConvert", methodName : "test_cascade_fail_through"});
-		var all = stx_arw_CascadeLift.cascade(stx_arw_Cascade.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(null)),haxe_ds_Option.None,this1))),cascade);
-		var this1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,1);
-		var this2 = stx_arw_Log.log(stx_nano_Wildcard.__);
-		var pos = { fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 128, className : "stx.arw.TestConvert", methodName : "test_cascade_fail_through"};
-		var scheduler = null;
-		var self = stx_arw_Cascade.environment(all,this1,function(v) {
-			this2(v,pos);
-		},function(x) {
+		stx_arw_arrowlet_term_Fiber.crunch(stx_arw_Cascade.environment(stx_arw_CascadeLift.cascade(stx_arw_Cascade.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 124, className : "stx.arw.TestConvert", methodName : "test_cascade_fail_through"}),null))),cascade),stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,1),stx_Log.printer(stx_arw_Log.log(stx_nano_Wildcard.__),{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 128, className : "stx.arw.TestConvert", methodName : "test_cascade_fail_through"}),function(x) {
 			utest_Assert.pass(null,{ fileName : "src/main/haxe/stx/arw/Test.hx", lineNumber : 131, className : "stx.arw.TestConvert", methodName : "test_cascade_fail_through"});
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		});
-		var loop = scheduler;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-		loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this1.get_defect().length > 0) {
-				loop.fail(this1.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this1.pursue();
-				if(this1.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this1.get_status()) {
-					case -1:
-						loop.fail(this1.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -8959,21 +7855,14 @@ stx_arw_arrowlet_term__$Applier_ApplierImplementation.__super__ = stx_arw_Arrowl
 stx_arw_arrowlet_term__$Applier_ApplierImplementation.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	defer: function(i,cont) {
 		return stx_nano_CoupleLift.decouple(i,function(arw,i) {
-			var self = arw;
-			var i1 = i;
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
+			return stx_arw_arrowlet_Lift.prepare(arw,i,cont);
 		});
 	}
 	,apply: function(i) {
-		return stx_LiftIf.if_else(stx_nano_CoupleLift.fst(i).get_convention(),function() {
+		return stx_arw_Convention.fold(stx_arw_Arrowlet.toInternal(stx_nano_CoupleLift.fst(i)).get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
-			return stx_nano_CoupleLift.fst(i).apply(stx_nano_CoupleLift.snd(i));
+			return stx_arw_Arrowlet.toInternal(stx_nano_CoupleLift.fst(i)).apply(stx_nano_CoupleLift.snd(i));
 		});
 	}
 	,get_convention: function() {
@@ -8996,29 +7885,30 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,rhs: null
 	,apply: function(i) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_gthis.lhs.apply(stx_nano_CoupleLift.fst(i)),_gthis.rhs.apply(stx_nano_CoupleLift.snd(i)));
 		});
 	}
 	,defer: function(i,cont) {
-		var _g = this.rhs.get_status();
-		switch(this.lhs.get_status()) {
+		var _g = this.lhs.get_status();
+		var _g1 = this.rhs.get_status();
+		switch(_g) {
 		case -1:
-			return cont.error(this.lhs.get_defect()).toWork();
+			return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.lhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 30, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 		case 1:
-			switch(_g) {
+			switch(_g1) {
 			case -1:
-				return cont.error(this.rhs.get_defect()).toWork();
+				return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.rhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 31, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			case 1:
-				return cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.apply(stx_nano_CoupleLift.fst(i)),this.rhs.apply(stx_nano_CoupleLift.snd(i)))).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.apply(stx_nano_CoupleLift.fst(i)),this.rhs.apply(stx_nano_CoupleLift.snd(i))),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 26, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			case 4:
-				return cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.apply(stx_nano_CoupleLift.fst(i)),this.rhs.get_result())).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.apply(stx_nano_CoupleLift.fst(i)),this.rhs.get_result()),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 28, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			default:
-				var fut_lhs = new tink_core_FutureTrigger();
-				var fut_rhs = new tink_core_FutureTrigger();
-				tink_core_Future.merge(fut_lhs,fut_rhs,function(l,r) {
+				var fut_lhs = tink_core_Future.trigger();
+				var fut_rhs = tink_core_Future.trigger();
+				tink_core_Future.merge(fut_lhs.asFuture(),fut_rhs.asFuture(),function(l,r) {
 					switch(l._hx_index) {
 					case 0:
 						var _g = l.t;
@@ -9032,7 +7922,7 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 					case 1:
 						var _g = l.e;
 						if(r._hx_index == 1) {
-							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g.concat(r.e));
+							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,stx_nano_Defect.concat(_g,r.e));
 						} else {
 							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g);
 						}
@@ -9041,33 +7931,25 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 				});
 				var inner_lhs = cont.inner(function(outcome) {
 					fut_lhs.trigger(outcome);
-				});
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 45, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
 				var inner_rhs = cont.inner(function(outcome) {
 					fut_rhs.trigger(outcome);
-				});
-				var lhr = this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs);
-				var rhr = this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs);
-				if(lhr == null) {
-					return rhr;
-				} else if(rhr == null) {
-					return null;
-				} else {
-					return stx_async_Task.Par(lhr.toTaskApi(),rhr.toTaskApi()).toWork();
-				}
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 50, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
+				return stx_async_WorkLift.par(this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs),this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs));
 			}
 			break;
 		case 4:
-			switch(_g) {
+			switch(_g1) {
 			case -1:
-				return cont.error(this.rhs.get_defect()).toWork();
+				return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.rhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 31, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			case 1:
-				return cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.apply(stx_nano_CoupleLift.snd(i)))).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.apply(stx_nano_CoupleLift.snd(i))),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 29, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			case 4:
-				return cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.get_result())).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.get_result()),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 27, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			default:
-				var fut_lhs1 = new tink_core_FutureTrigger();
-				var fut_rhs1 = new tink_core_FutureTrigger();
-				tink_core_Future.merge(fut_lhs1,fut_rhs1,function(l,r) {
+				var fut_lhs1 = tink_core_Future.trigger();
+				var fut_rhs1 = tink_core_Future.trigger();
+				tink_core_Future.merge(fut_lhs1.asFuture(),fut_rhs1.asFuture(),function(l,r) {
 					switch(l._hx_index) {
 					case 0:
 						var _g = l.t;
@@ -9081,7 +7963,7 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 					case 1:
 						var _g = l.e;
 						if(r._hx_index == 1) {
-							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g.concat(r.e));
+							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,stx_nano_Defect.concat(_g,r.e));
 						} else {
 							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g);
 						}
@@ -9090,28 +7972,20 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 				});
 				var inner_lhs = cont.inner(function(outcome) {
 					fut_lhs1.trigger(outcome);
-				});
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 45, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
 				var inner_rhs = cont.inner(function(outcome) {
 					fut_rhs1.trigger(outcome);
-				});
-				var lhr = this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs);
-				var rhr = this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs);
-				if(lhr == null) {
-					return rhr;
-				} else if(rhr == null) {
-					return null;
-				} else {
-					return stx_async_Task.Par(lhr.toTaskApi(),rhr.toTaskApi()).toWork();
-				}
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 50, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
+				return stx_async_WorkLift.par(this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs),this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs));
 			}
 			break;
 		default:
-			if(_g == -1) {
-				return cont.error(this.rhs.get_defect()).toWork();
+			if(_g1 == -1) {
+				return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.rhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 31, className : "stx.arw.arrowlet.term.Both", methodName : "defer"}));
 			} else {
-				var fut_lhs2 = new tink_core_FutureTrigger();
-				var fut_rhs2 = new tink_core_FutureTrigger();
-				tink_core_Future.merge(fut_lhs2,fut_rhs2,function(l,r) {
+				var fut_lhs2 = tink_core_Future.trigger();
+				var fut_rhs2 = tink_core_Future.trigger();
+				tink_core_Future.merge(fut_lhs2.asFuture(),fut_rhs2.asFuture(),function(l,r) {
 					switch(l._hx_index) {
 					case 0:
 						var _g = l.t;
@@ -9125,7 +7999,7 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 					case 1:
 						var _g = l.e;
 						if(r._hx_index == 1) {
-							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g.concat(r.e));
+							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,stx_nano_Defect.concat(_g,r.e));
 						} else {
 							return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_g);
 						}
@@ -9134,26 +8008,16 @@ stx_arw_arrowlet_term_Both.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 				});
 				var inner_lhs = cont.inner(function(outcome) {
 					fut_lhs2.trigger(outcome);
-				});
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 45, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
 				var inner_rhs = cont.inner(function(outcome) {
 					fut_rhs2.trigger(outcome);
-				});
-				var lhr = this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs);
-				var rhr = this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs);
-				if(lhr == null) {
-					return rhr;
-				} else if(rhr == null) {
-					return null;
-				} else {
-					return stx_async_Task.Par(lhr.toTaskApi(),rhr.toTaskApi()).toWork();
-				}
+				},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Both.hx", lineNumber : 50, className : "stx.arw.arrowlet.term.Both", methodName : "defer"});
+				return stx_async_WorkLift.par(this.lhs.defer(stx_nano_CoupleLift.fst(i),inner_lhs),this.rhs.defer(stx_nano_CoupleLift.snd(i),inner_rhs));
 			}
 		}
 	}
 	,get_convention: function() {
-		var this1 = this.lhs.get_convention();
-		var that = this.rhs.get_convention();
-		return stx_arw_Convention._new(this1 || that);
+		return stx_arw_Convention.or(this.lhs.get_convention(),this.rhs.get_convention());
 	}
 	,__class__: stx_arw_arrowlet_term_Both
 });
@@ -9169,7 +8033,7 @@ stx_arw_arrowlet_term_Bound.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,rhs: null
 	,apply: function(i) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
 			return _gthis.rhs.apply(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,_gthis.lhs.apply(i)));
@@ -9178,7 +8042,7 @@ stx_arw_arrowlet_term_Bound.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,defer: function(i,cont) {
 		var _gthis = this;
 		return new stx_arw_arrowlet_term_FlatMap(this.lhs,function(oI) {
-			return stx_arw_arrowlet_ArrowletLift.then(new stx_arw_arrowlet_term_Pure(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,oI)),_gthis.rhs);
+			return stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.pure(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,oI)),stx_arw_Internal.toArrowlet(_gthis.rhs));
 		}).defer(i,cont);
 	}
 	,__class__: stx_arw_arrowlet_term_Bound
@@ -9197,19 +8061,14 @@ stx_arw_arrowlet_term_SplitArw.prototype = $extend(stx_arw_ArrowletCls.prototype
 		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs(p),this.rhs.apply(p));
 	}
 	,defer: function(p,cont) {
-		var lhs = this.rhs;
+		var tmp = this.rhs;
 		var _g = function(tI,tII) {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 		};
 		var tI = this.lhs(p);
-		var _this = new stx_arw_arrowlet_term_ThenFun(lhs,function(tII) {
+		return stx_arw_arrowlet_term_ThenFun.make(tmp,function(tII) {
 			return _g(tI,tII);
-		});
-		var _g1 = $bind(_this,_this.joint);
-		var cont1 = cont;
-		return _this.lhs.defer(p,cont.joint(function(outcome) {
-			return _g1(outcome,cont1);
-		}));
+		}).defer(p,cont);
 	}
 	,get_convention: function() {
 		return this.rhs.get_convention();
@@ -9237,22 +8096,21 @@ stx_arw_arrowlet_term_Completion.prototype = $extend(stx_arw_ArrowletCls.prototy
 	context: null
 	,process: null
 	,apply: function(p) {
-		var result = this.process.apply(this.context.environment);
+		var result = stx_arw_Arrowlet.toInternal(this.process).apply(this.context.environment);
 		this.context.on_value(result);
 		return null;
 	}
 	,defer: function(p,cont) {
 		var _gthis = this;
-		return this.process.defer(this.context.environment,stx_async_Terminal.ZERO.joint(function(outcome) {
-			switch(outcome._hx_index) {
-			case 0:
-				_gthis.context.on_value(outcome.t);
-				return new stx_async_work_term_Unit();
-			case 1:
-				_gthis.context.on_error(outcome.e);
-				return new stx_async_work_term_Unit();
-			}
-		}));
+		return stx_arw_Arrowlet.toInternal(this.process).defer(this.context.environment,stx_async_Terminal.ZERO.joint(function(outcome) {
+			return stx_pico_OutcomeLift.fold(outcome,function(ok) {
+				_gthis.context.on_value(ok);
+				return stx_async_Work.unit();
+			},function(no) {
+				_gthis.context.on_error(no);
+				return stx_async_Work.unit();
+			});
+		},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Completion.hx", lineNumber : 21, className : "stx.arw.arrowlet.term.Completion", methodName : "defer"}));
 	}
 	,__class__: stx_arw_arrowlet_term_Completion
 });
@@ -9268,49 +8126,37 @@ stx_arw_arrowlet_term_Delay.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(i,cont) {
-		var ft = new tink_core_FutureTrigger();
+		var ft = tink_core_Future.trigger();
 		haxe_Timer.delay(function() {
 			ft.trigger(stx_pico_OutcomeSum.Success(i));
 		},this.milliseconds);
-		return cont.later(ft).toWork();
+		return stx_async_terminal_Receiver.serve(cont.later(ft,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Delay.hx", lineNumber : 26, className : "stx.arw.arrowlet.term.Delay", methodName : "defer"}));
 	}
 	,__class__: stx_arw_arrowlet_term_Delay
 });
-var stx_arw_arrowlet_term_Deliver = function(arrow,success,failure) {
+var stx_arw_arrowlet_term_Deliver = function(arrow,success,failure,pos) {
+	stx_arw_Task.call(this,pos);
 	this.arrow = arrow;
 	this.success = success;
 	this.failure = failure;
 };
 stx_arw_arrowlet_term_Deliver.__name__ = "stx.arw.arrowlet.term.Deliver";
 stx_arw_arrowlet_term_Deliver.__interfaces__ = [stx_arw_ArrowletApi];
-stx_arw_arrowlet_term_Deliver.prototype = {
+stx_arw_arrowlet_term_Deliver.__super__ = stx_arw_Task;
+stx_arw_arrowlet_term_Deliver.prototype = $extend(stx_arw_Task.prototype,{
 	success: null
 	,failure: null
 	,arrow: null
 	,apply: function(i) {
-		var _gthis = this;
-		return stx_LiftIf.if_else(this.arrow.get_convention(),function() {
-			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
-		},function() {
-			_gthis.success(_gthis.arrow.apply(i));
-			return null;
-		});
+		this.success(this.arrow.apply(i));
+		return null;
 	}
 	,defer: function(i,cont) {
 		var _gthis = this;
 		return this.arrow.defer(i,cont.joint(function(outcome) {
-			var fn = _gthis.success;
-			var er = _gthis.failure;
-			switch(outcome._hx_index) {
-			case 0:
-				fn(outcome.t);
-				break;
-			case 1:
-				er(outcome.e);
-				break;
-			}
+			stx_pico_OutcomeLift.fold(outcome,_gthis.success,_gthis.failure);
 			return stx_async_Work.ZERO;
-		}));
+		},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Deliver.hx", lineNumber : 20, className : "stx.arw.arrowlet.term.Deliver", methodName : "defer"}));
 	}
 	,convention: null
 	,get_convention: function() {
@@ -9319,119 +8165,44 @@ stx_arw_arrowlet_term_Deliver.prototype = {
 	,asArrowletDef: function() {
 		return null;
 	}
-	,loaded: null
-	,get_loaded: function() {
-		return this.arrow.get_status() == 4;
-	}
-	,toWork: function() {
-		return this;
-	}
-	,toTaskApi: function() {
-		return this;
-	}
-	,signal: null
 	,get_signal: function() {
 		return this.arrow.get_signal();
 	}
-	,defect: null
 	,get_defect: function() {
 		return stx_nano_Defect.unit();
 	}
-	,result: null
 	,get_result: function() {
 		return null;
 	}
-	,status: null
 	,get_status: function() {
 		return this.arrow.get_status();
 	}
 	,pursue: function() {
-		this.arrow.toWork().pursue();
+		stx_arw_Internal.toWork(this.arrow).pursue();
 	}
 	,escape: function() {
-		this.arrow.toWork().escape();
+		stx_arw_Internal.toWork(this.arrow).escape();
 	}
 	,toString: function() {
 		return "Deliver(" + Std.string(this.arrow) + ")";
 	}
-	,id: null
-	,get_id: function() {
-		if(this.id == null) {
-			return this.id = stx_async_Task.counter++;
-		} else {
-			return this.id;
-		}
-	}
-	,equals: function(that) {
-		return this.get_id() == that.id;
-	}
 	,__class__: stx_arw_arrowlet_term_Deliver
-	,__properties__: {get_id:"get_id",get_status:"get_status",get_result:"get_result",get_defect:"get_defect",get_signal:"get_signal",get_loaded:"get_loaded",get_convention:"get_convention"}
-};
+	,__properties__: $extend(stx_arw_Task.prototype.__properties__,{get_convention:"get_convention"})
+});
 var stx_arw_arrowlet_term_FiberLift = function() { };
 stx_arw_arrowlet_term_FiberLift.__name__ = "stx.arw.arrowlet.term.FiberLift";
 stx_arw_arrowlet_term_FiberLift.then = function(self,that) {
-	return new stx_arw_arrowlet_term_Then(stx_arw_arrowlet_term_Fiber.prj(self),that);
+	return stx_arw_Provide.lift(stx_arw_Arrowlet.Then(stx_arw_arrowlet_term_Fiber.prj(self),that));
 };
 var stx_arw_arrowlet_term_Fiber = {};
 stx_arw_arrowlet_term_Fiber.lift = function(self) {
 	return self;
 };
 stx_arw_arrowlet_term_Fiber.submit = function(this1,scheduler) {
-	var self = this1;
-	var i = null;
-	var cont = stx_async_Terminal.ZERO;
-	stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-		return self.defer(i,cont);
-	},function() {
-		return cont.value(self.apply(i)).toWork();
-	}),scheduler);
+	stx_async_Work.submit(stx_arw_arrowlet_Lift.prepare(this1,null,stx_async_Terminal.ZERO),scheduler);
 };
 stx_arw_arrowlet_term_Fiber.crunch = function(this1,scheduler) {
-	var self = this1;
-	var i = null;
-	var cont = stx_async_Terminal.ZERO;
-	var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-		return self.defer(i,cont);
-	},function() {
-		return cont.value(self.apply(i)).toWork();
-	});
-	var loop = scheduler;
-	var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-	loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-	var cont1 = true;
-	var suspended = false;
-	var backoff = 0.2;
-	while(true == cont1) {
-		if(this1.get_defect().length > 0) {
-			loop.fail(this1.get_defect());
-			cont1 = false;
-		}
-		if(!suspended) {
-			this1.pursue();
-			if(this1.get_loaded()) {
-				cont1 = false;
-			} else {
-				switch(this1.get_status()) {
-				case -1:
-					loop.fail(this1.get_defect());
-					break;
-				case 1:case 4:
-					cont1 = false;
-					break;
-				case 0:case 2:
-					break;
-				case 3:
-					suspended = true;
-					tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-						backoff = 1.22;
-						suspended = false;
-					});
-					break;
-				}
-			}
-		}
-	}
+	stx_async_Work.crunch(stx_arw_arrowlet_Lift.prepare(this1,null,stx_async_Terminal.ZERO),scheduler);
 };
 stx_arw_arrowlet_term_Fiber.prj = function(this1) {
 	return this1;
@@ -9451,48 +8222,28 @@ stx_arw_arrowlet_term_FlatMap.prototype = $extend(stx_arw_ArrowletCls.prototype,
 	}
 	,defer: function(i,cont) {
 		var _gthis = this;
-		var future_response_trigger = new tink_core_FutureTrigger();
+		var future_response_trigger = tink_core_Future.trigger();
 		var inner = cont.inner(function(res) {
-			var future_response_trigger1 = future_response_trigger;
-			var inner;
-			switch(res._hx_index) {
-			case 0:
-				inner = _gthis.func(res.t).defer(i,cont);
-				break;
-			case 1:
-				inner = cont.error(res.e).toWork();
-				break;
-			}
-			future_response_trigger1.trigger(inner);
-		});
-		var self = this.self.defer(i,inner);
-		var that = stx_async_Work.fromFutureWork(future_response_trigger);
-		if(self == null) {
-			return that;
-		} else if(that == null) {
-			return null;
-		} else {
-			return stx_async_Task.Seq(self.toTaskApi(),that.toTaskApi()).toWork();
-		}
+			future_response_trigger.trigger(stx_pico_OutcomeLift.fold(res,function(oI) {
+				return stx_arw_Arrowlet.toInternal(_gthis.func(oI)).defer(i,cont);
+			},function(e) {
+				return stx_async_terminal_Receiver.serve(cont.error(e,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/FlatMap.hx", lineNumber : 30, className : "stx.arw.arrowlet.term.FlatMap", methodName : "defer"}));
+			}));
+		},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/FlatMap.hx", lineNumber : 22, className : "stx.arw.arrowlet.term.FlatMap", methodName : "defer"});
+		return stx_async_WorkLift.seq(this.self.defer(i,inner),stx_async_Work.fromFutureWork(future_response_trigger));
 	}
 	,__class__: stx_arw_arrowlet_term_FlatMap
 });
-var stx_arw_arrowlet_term_Fulfill = function(arrow,input) {
+var stx_arw_arrowlet_term_Fulfill = function(arrow,input,pos) {
+	stx_arw_Task.call(this,pos);
 	this.arrow = arrow;
 	this.input = input;
 };
 stx_arw_arrowlet_term_Fulfill.__name__ = "stx.arw.arrowlet.term.Fulfill";
 stx_arw_arrowlet_term_Fulfill.__interfaces__ = [stx_arw_ArrowletApi];
-stx_arw_arrowlet_term_Fulfill.prototype = {
-	id: null
-	,get_id: function() {
-		if(this.id == null) {
-			return this.id = stx_async_Task.counter++;
-		} else {
-			return this.id;
-		}
-	}
-	,input: null
+stx_arw_arrowlet_term_Fulfill.__super__ = stx_arw_Task;
+stx_arw_arrowlet_term_Fulfill.prototype = $extend(stx_arw_Task.prototype,{
+	input: null
 	,arrow: null
 	,defer: function(i,cont) {
 		return this.arrow.defer(this.input,cont);
@@ -9507,47 +8258,30 @@ stx_arw_arrowlet_term_Fulfill.prototype = {
 	,asArrowletDef: function() {
 		return null;
 	}
-	,loaded: null
-	,get_loaded: function() {
-		return this.get_status() == 4;
-	}
-	,toWork: function() {
-		return this;
-	}
-	,toTaskApi: function() {
-		return this;
-	}
-	,defect: null
 	,get_defect: function() {
-		return this.arrow.get_defect();
+		return stx_arw_Internal.get_defect(this.arrow);
 	}
-	,result: null
 	,get_result: function() {
 		return this.arrow.get_result();
 	}
-	,status: null
 	,get_status: function() {
 		return this.arrow.get_status();
 	}
-	,signal: null
 	,get_signal: function() {
-		return this.arrow.toWork().get_signal();
+		return stx_arw_Internal.toWork(this.arrow).get_signal();
 	}
 	,pursue: function() {
-		this.arrow.toWork().pursue();
+		stx_arw_Internal.toWork(this.arrow).pursue();
 	}
 	,escape: function() {
-		this.arrow.toWork().escape();
+		stx_arw_Internal.toWork(this.arrow).escape();
 	}
 	,toString: function() {
 		return "FulFill(" + Std.string(this.arrow) + "(" + Std.string(this.input) + "))";
 	}
-	,equals: function(that) {
-		return this.get_id() == that.id;
-	}
 	,__class__: stx_arw_arrowlet_term_Fulfill
-	,__properties__: {get_signal:"get_signal",get_status:"get_status",get_result:"get_result",get_defect:"get_defect",get_loaded:"get_loaded",get_convention:"get_convention",get_id:"get_id"}
-};
+	,__properties__: $extend(stx_arw_Task.prototype.__properties__,{get_convention:"get_convention"})
+});
 var stx_arw_arrowlet_term_Fun1Future = function(delegate) {
 	stx_arw_ArrowletCls.call(this);
 	this.delegate = delegate;
@@ -9560,12 +8294,12 @@ stx_arw_arrowlet_term_Fun1Future.prototype = $extend(stx_arw_ArrowletCls.prototy
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(i,cont) {
-		var later = new tink_core_FutureTrigger();
+		var later = tink_core_Future.trigger();
 		var handler = function(o) {
 			return later.trigger(stx_pico_OutcomeSum.Success(o));
 		};
-		var canceller = this.delegate(i).handle(handler);
-		return new stx_async_work_term_Canceller(cont.later(later).toWork(),canceller == null ? tink_core_CallbackLink.noop : ($_=canceller,$bind($_,$_.cancel)));
+		var canceller = tink_core_Future.handle(this.delegate(i),handler);
+		return stx_async_Work.Canceller(stx_async_terminal_Receiver.serve(cont.later(later,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Fun1Future.hx", lineNumber : 19, className : "stx.arw.arrowlet.term.Fun1Future", methodName : "defer"})),tink_core_CallbackLink.toFunction(canceller));
 	}
 	,__class__: stx_arw_arrowlet_term_Fun1Future
 });
@@ -9581,7 +8315,7 @@ stx_arw_arrowlet_term_Future.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(i,cont) {
-		return cont.later(tink_core_Future.map(this.delegate,stx_pico_OutcomeSum.Success)).toWork();
+		return stx_async_terminal_Receiver.serve(cont.later(tink_core_Future.map(this.delegate,stx_pico_OutcomeSum.Success),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Future.hx", lineNumber : 15, className : "stx.arw.arrowlet.term.Future", methodName : "defer"}));
 	}
 	,__class__: stx_arw_arrowlet_term_Future
 });
@@ -9597,11 +8331,11 @@ stx_arw_arrowlet_term_Handler.prototype = $extend(stx_arw_ArrowletCls.prototype,
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(i,cont) {
-		var defer = new tink_core_FutureTrigger();
+		var defer = tink_core_Future.trigger();
 		this.delegate(function(o) {
 			defer.trigger(stx_pico_OutcomeSum.Success(o));
 		});
-		return cont.later(defer).toWork();
+		return stx_async_terminal_Receiver.serve(cont.later(defer,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Handler.hx", lineNumber : 17, className : "stx.arw.arrowlet.term.Handler", methodName : "defer"}));
 	}
 	,__class__: stx_arw_arrowlet_term_Handler
 });
@@ -9620,13 +8354,13 @@ stx_arw_arrowlet_term_Inform.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	}
 	,defer: function(i,cont) {
 		var _gthis = this;
-		return stx_arw_arrowlet_ArrowletLift.flat_map(this.lhs,function(oI) {
-			return new stx_arw_arrowlet_term_Anon(function(_,contI) {
-				return stx_arw_arrowlet_ArrowletLift.flat_map(_gthis.rhs,function(aOiOii) {
+		return stx_arw_Arrowlet.toInternal(stx_arw_arrowlet_Lift.flat_map(stx_arw_Internal.toArrowlet(this.lhs),function(oI) {
+			return stx_arw_Arrowlet.Anon(function(_,contI) {
+				return stx_arw_Arrowlet.toInternal(stx_arw_arrowlet_Lift.flat_map(stx_arw_Internal.toArrowlet(_gthis.rhs),function(aOiOii) {
 					return aOiOii;
-				}).defer(oI,contI);
+				})).defer(oI,contI);
 			});
-		}).defer(i,cont);
+		})).defer(i,cont);
 	}
 	,__class__: stx_arw_arrowlet_term_Inform
 });
@@ -9646,16 +8380,16 @@ stx_arw_arrowlet_term_Or.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,defer: function(i,cont) {
 		var _gthis = this;
 		return stx_pico_EitherLift.fold(i,function(iI) {
-			return stx_LiftIf.if_else(_gthis.lhs.get_convention(),function() {
+			return stx_arw_Convention.fold(_gthis.lhs.get_convention(),function() {
 				return _gthis.lhs.defer(iI,cont);
 			},function() {
-				return cont.value(_gthis.lhs.apply(iI)).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(_gthis.lhs.apply(iI),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Or.hx", lineNumber : 19, className : "stx.arw.arrowlet.term.Or", methodName : "defer"}));
 			});
 		},function(iII) {
-			return stx_LiftIf.if_else(_gthis.rhs.get_convention(),function() {
+			return stx_arw_Convention.fold(_gthis.rhs.get_convention(),function() {
 				return _gthis.rhs.defer(iII,cont);
 			},function() {
-				return cont.value(_gthis.rhs.apply(iII)).toWork();
+				return stx_async_terminal_Receiver.serve(cont.value(_gthis.rhs.apply(iII),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Or.hx", lineNumber : 23, className : "stx.arw.arrowlet.term.Or", methodName : "defer"}));
 			});
 		});
 	}
@@ -9664,23 +8398,25 @@ stx_arw_arrowlet_term_Or.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	}
 	,__class__: stx_arw_arrowlet_term_Or
 });
-var stx_async_task_term_Pure = function(result) {
-	stx_async_TaskCls.call(this);
+var stx_async_task_term_Pure = function(result,pos) {
+	stx_async_task_Direct.call(this,pos);
 	stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Pure.hx", lineNumber : 6, className : "stx.async.task.term.Pure", methodName : "new"}).exists(result);
 	this.loaded = true;
-	this.result = result;
-	this.status = 4;
+	this.set_result(result);
 };
 stx_async_task_term_Pure.__name__ = "stx.async.task.term.Pure";
-stx_async_task_term_Pure.__super__ = stx_async_TaskCls;
-stx_async_task_term_Pure.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_task_term_Pure.__super__ = stx_async_task_Direct;
+stx_async_task_term_Pure.prototype = $extend(stx_async_task_Direct.prototype,{
 	toString: function() {
-		return "Pure:" + this.get_id() + "(" + stx_async_GoalStatusLift.toString(this.get_status()) + ")";
+		return "Pure[" + this.get_id() + ":" + stx_async_GoalStatusLift.toString(this.get_status()) + "]";
+	}
+	,get_status: function() {
+		return 4;
 	}
 	,__class__: stx_async_task_term_Pure
 });
-var stx_arw_arrowlet_term_Pure = function(result) {
-	stx_async_task_term_Pure.call(this,result);
+var stx_arw_arrowlet_term_Pure = function(result,pos) {
+	stx_async_task_term_Pure.call(this,result,pos);
 };
 stx_arw_arrowlet_term_Pure.__name__ = "stx.arw.arrowlet.term.Pure";
 stx_arw_arrowlet_term_Pure.__interfaces__ = [stx_arw_ArrowletApi];
@@ -9690,7 +8426,7 @@ stx_arw_arrowlet_term_Pure.prototype = $extend(stx_async_task_term_Pure.prototyp
 		return this.get_result();
 	}
 	,defer: function(i,cont) {
-		return cont.lense(this).toWork();
+		return stx_async_terminal_Receiver.serve(cont.lense(this,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Pure.hx", lineNumber : 10, className : "stx.arw.arrowlet.term.Pure", methodName : "defer"}));
 	}
 	,asArrowletDef: function() {
 		return this;
@@ -9723,9 +8459,9 @@ stx_arw_arrowlet_term_Raw.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	}
 	,defer: function(i,cont) {
 		var _gthis = this;
-		return cont.later(tink_core_Future.irreversible(function(cb) {
+		return stx_async_terminal_Receiver.serve(cont.later(tink_core_Future.irreversible(function(cb) {
 			_gthis.delegate(i,cb);
-		})).toWork();
+		}),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Raw.hx", lineNumber : 15, className : "stx.arw.arrowlet.term.Raw", methodName : "defer"}));
 	}
 	,__class__: stx_arw_arrowlet_term_Raw
 });
@@ -9741,12 +8477,12 @@ stx_arw_arrowlet_term_ReplyFuture.prototype = $extend(stx_arw_ArrowletCls.protot
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(i,cont) {
-		var defer = new tink_core_FutureTrigger();
+		var defer = tink_core_Future.trigger();
 		var handler = function(o) {
 			return defer.trigger(stx_pico_OutcomeSum.Success(o));
 		};
-		var canceller = this.delegate().handle(handler);
-		return new stx_async_work_term_Canceller(cont.later(defer).toWork(),canceller == null ? tink_core_CallbackLink.noop : ($_=canceller,$bind($_,$_.cancel)));
+		var canceller = tink_core_Future.handle(this.delegate(),handler);
+		return stx_async_Work.Canceller(stx_async_terminal_Receiver.serve(cont.later(defer,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/ReplyFuture.hx", lineNumber : 20, className : "stx.arw.arrowlet.term.ReplyFuture", methodName : "defer"})),tink_core_CallbackLink.toFunction(canceller));
 	}
 	,__class__: stx_arw_arrowlet_term_ReplyFuture
 });
@@ -9762,19 +8498,17 @@ stx_arw_arrowlet_term_Split.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,rhs: null
 	,apply: function(i) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_gthis.lhs.apply(i),_gthis.rhs.apply(i));
 		});
 	}
 	,defer: function(i,cont) {
-		return new stx_arw_arrowlet_term_Both(this.lhs,this.rhs).defer(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,i),cont);
+		return stx_arw_arrowlet_term_Both.make(this.lhs,this.rhs).defer(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,i,i),cont);
 	}
 	,get_convention: function() {
-		var this1 = this.lhs.get_convention();
-		var that = this.rhs.get_convention();
-		return stx_arw_Convention._new(this1 || that);
+		return stx_arw_Convention.or(this.lhs.get_convention(),this.rhs.get_convention());
 	}
 	,__class__: stx_arw_arrowlet_term_Split
 });
@@ -9794,18 +8528,12 @@ stx_arw_arrowlet_term_SplitFun.prototype = $extend(stx_arw_ArrowletCls.prototype
 	,defer: function(p,cont) {
 		var _gthis = this;
 		return this.lhs.defer(p,cont.joint(function(outcome) {
-			var cont1 = cont;
-			var this1;
-			switch(outcome._hx_index) {
-			case 0:
-				this1 = stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,outcome.t,_gthis.rhs(p)));
-				break;
-			case 1:
-				this1 = stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,outcome.e);
-				break;
-			}
-			return cont1.issue(this1).toWork();
-		}));
+			return stx_async_terminal_Receiver.serve(cont.issue(stx_pico_OutcomeLift.fold(outcome,function(ok) {
+				return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,ok,_gthis.rhs(p)));
+			},function(no) {
+				return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,no);
+			}),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/SplitFun.hx", lineNumber : 20, className : "stx.arw.arrowlet.term.SplitFun", methodName : "defer"}));
+		},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/SplitFun.hx", lineNumber : 19, className : "stx.arw.arrowlet.term.SplitFun", methodName : "defer"}));
 	}
 	,get_convention: function() {
 		return this.lhs.get_convention();
@@ -9828,7 +8556,7 @@ stx_arw_arrowlet_term_Sync.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 		stx_arw_ArrowletCls.prototype.pursue.call(this);
 	}
 	,defer: function(p,cont) {
-		return cont.value(this.delegate(p)).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(this.apply(p),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Sync.hx", lineNumber : 17, className : "stx.arw.arrowlet.term.Sync", methodName : "defer"}));
 	}
 	,get_convention: function() {
 		return false;
@@ -9857,76 +8585,41 @@ stx_arw_arrowlet_term_Then.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,defer: function(i,cont) {
 		switch(this.lhs.get_status()) {
 		case -1:
-			return cont.error(this.lhs.get_defect()).toWork();
+			return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.lhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 17, className : "stx.arw.arrowlet.term.Then", methodName : "defer"}));
 		case 1:
-			var i1 = this.lhs.apply(i);
-			switch(this.rhs.get_status()) {
-			case -1:
-				return cont.error(this.rhs.get_defect()).toWork();
-			case 1:
-				return cont.value(this.rhs.apply(i1)).toWork();
-			case 0:case 2:case 3:
-				return this.rhs.defer(i1,cont);
-			case 4:
-				return cont.value(this.rhs.get_result()).toWork();
-			}
-			break;
+			return this.handle_rhs(this.lhs.apply(i),cont);
 		case 0:case 2:case 3:
 			var _g = $bind(this,this.joint);
 			var cont1 = cont;
 			return this.lhs.defer(i,cont.joint(function(outcome) {
 				return _g(outcome,cont1);
-			}));
+			},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 21, className : "stx.arw.arrowlet.term.Then", methodName : "defer"}));
 		case 4:
-			var i = this.lhs.get_result();
-			switch(this.rhs.get_status()) {
-			case -1:
-				return cont.error(this.rhs.get_defect()).toWork();
-			case 1:
-				return cont.value(this.rhs.apply(i)).toWork();
-			case 0:case 2:case 3:
-				return this.rhs.defer(i,cont);
-			case 4:
-				return cont.value(this.rhs.get_result()).toWork();
-			}
-			break;
+			return this.handle_rhs(this.lhs.get_result(),cont);
 		}
 	}
 	,joint: function(outcome,cont) {
-		switch(outcome._hx_index) {
-		case 0:
-			var _g = outcome.t;
-			switch(this.rhs.get_status()) {
-			case -1:
-				return cont.error(this.rhs.get_defect()).toWork();
-			case 1:
-				return cont.value(this.rhs.apply(_g)).toWork();
-			case 0:case 2:case 3:
-				return this.rhs.defer(_g,cont);
-			case 4:
-				return cont.value(this.rhs.get_result()).toWork();
-			}
-			break;
-		case 1:
-			return cont.error(outcome.e).toWork();
-		}
+		var _gthis = this;
+		return stx_pico_OutcomeLift.fold(outcome,function(ok) {
+			return _gthis.handle_rhs(ok,cont);
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.error(no,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 30, className : "stx.arw.arrowlet.term.Then", methodName : "joint"}));
+		});
 	}
 	,handle_rhs: function(i,cont) {
 		switch(this.rhs.get_status()) {
 		case -1:
-			return cont.error(this.rhs.get_defect()).toWork();
+			return stx_async_terminal_Receiver.serve(cont.error(stx_arw_Internal.get_defect(this.rhs),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 35, className : "stx.arw.arrowlet.term.Then", methodName : "handle_rhs"}));
 		case 1:
-			return cont.value(this.rhs.apply(i)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(this.rhs.apply(i),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 38, className : "stx.arw.arrowlet.term.Then", methodName : "handle_rhs"}));
 		case 0:case 2:case 3:
 			return this.rhs.defer(i,cont);
 		case 4:
-			return cont.value(this.rhs.get_result()).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(this.rhs.get_result(),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Then.hx", lineNumber : 36, className : "stx.arw.arrowlet.term.Then", methodName : "handle_rhs"}));
 		}
 	}
 	,get_convention: function() {
-		var this1 = this.lhs.get_convention();
-		var that = this.rhs.get_convention();
-		return stx_arw_Convention._new(this1 || that);
+		return stx_arw_Convention.or(this.lhs.get_convention(),this.rhs.get_convention());
 	}
 	,__class__: stx_arw_arrowlet_term_Then
 });
@@ -9937,10 +8630,10 @@ var stx_arw_arrowlet_term_ThenArw = function(lhs,rhs) {
 };
 stx_arw_arrowlet_term_ThenArw.__name__ = "stx.arw.arrowlet.term.ThenArw";
 stx_arw_arrowlet_term_ThenArw.make = function(lhs,rhs) {
-	return stx_LiftIf.if_else(rhs.get_convention(),function() {
-		return new stx_arw_arrowlet_term_ThenArw(lhs,rhs).asArrowletDef();
+	return stx_arw_Convention.fold(stx_arw_Arrowlet.toInternal(rhs).get_convention(),function() {
+		return new stx_arw_arrowlet_term_ThenArw(lhs,stx_arw_Arrowlet.toInternal(rhs)).asArrowletDef();
 	},function() {
-		return new stx_arw_arrowlet_term_ThenFunFun(lhs,($_=rhs,$bind($_,$_.apply))).asArrowletDef();
+		return new stx_arw_arrowlet_term_ThenFunFun(lhs,($_=stx_arw_Arrowlet.toInternal(rhs),$bind($_,$_.apply))).asArrowletDef();
 	});
 };
 stx_arw_arrowlet_term_ThenArw.__super__ = stx_arw_ArrowletCls;
@@ -9949,7 +8642,7 @@ stx_arw_arrowlet_term_ThenArw.prototype = $extend(stx_arw_ArrowletCls.prototype,
 	,rhs: null
 	,apply: function(i) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
 			return _gthis.rhs.apply(_gthis.lhs(i));
@@ -9984,22 +8677,19 @@ stx_arw_arrowlet_term_ThenFun.prototype = $extend(stx_arw_ArrowletCls.prototype,
 		var cont1 = cont;
 		return this.lhs.defer(i,cont.joint(function(outcome) {
 			return _g(outcome,cont1);
-		}));
+		},{ fileName : "src/main/haxe/stx/arw/arrowlet/term/ThenFun.hx", lineNumber : 19, className : "stx.arw.arrowlet.term.ThenFun", methodName : "defer"}));
 	}
 	,joint: function(outcome,cont) {
 		var _gthis = this;
-		var fn = function(ok) {
+		return stx_async_terminal_Receiver.serve(cont.issue(stx_pico_OutcomeLift.map(outcome,function(ok) {
 			return _gthis.rhs(ok);
-		};
-		return cont.issue(stx_pico_OutcomeLift.flat_map(outcome,function(x) {
-			return stx_pico_OutcomeSum.Success(fn(x));
-		})).toWork();
+		}),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/ThenFun.hx", lineNumber : 22, className : "stx.arw.arrowlet.term.ThenFun", methodName : "joint"}));
 	}
 	,get_convention: function() {
 		return this.lhs.get_convention();
 	}
 	,toString: function() {
-		return "" + stx_Arw.$name(this) + "(" + Std.string(this.lhs) + " -> " + Std.string(this.rhs) + ")";
+		return "" + stx_pico_Identifier.get_name(this.identifier()) + "(" + Std.string(this.lhs) + " -> " + Std.string(this.rhs) + ")";
 	}
 	,__class__: stx_arw_arrowlet_term_ThenFun
 });
@@ -10014,7 +8704,7 @@ stx_arw_arrowlet_term_ThenFunFun.prototype = $extend(stx_arw_ArrowletCls.prototy
 	lhs: null
 	,rhs: null
 	,defer: function(p,cont) {
-		return cont.value(this.rhs(this.lhs(p))).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(this.apply(p),{ fileName : "src/main/haxe/stx/arw/arrowlet/term/ThenFunFun.hx", lineNumber : 12, className : "stx.arw.arrowlet.term.ThenFunFun", methodName : "defer"}));
 	}
 	,apply: function(p) {
 		return this.rhs(this.lhs(p));
@@ -10034,7 +8724,7 @@ stx_arw_arrowlet_term_Unit.__name__ = "stx.arw.arrowlet.term.Unit";
 stx_arw_arrowlet_term_Unit.__super__ = stx_arw_ArrowletCls;
 stx_arw_arrowlet_term_Unit.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	defer: function(i,cont) {
-		return cont.value(i).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(i,{ fileName : "src/main/haxe/stx/arw/arrowlet/term/Unit.hx", lineNumber : 5, className : "stx.arw.arrowlet.term.Unit", methodName : "defer"}));
 	}
 	,apply: function(i) {
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
@@ -10053,50 +8743,35 @@ stx_arw_attempt_AttemptArrange.prototype = $extend(stx_arw_ArrowletCls.prototype
 	,rhs: null
 	,defer: function(p,cont) {
 		var _gthis = this;
-		var self = this.lhs;
-		var i = p;
-		var cont1 = cont.joint(function(outcome) {
-			switch(outcome._hx_index) {
-			case 0:
-				var _g = outcome.t;
-				switch(_g._hx_index) {
-				case 0:
-					return _gthis.rhs.defer(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g.t,p)),cont);
-				case 1:
-					return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.e)).toWork();
-				}
-				break;
-			case 1:
-				return cont.error([null]).toWork();
-			}
-		});
-		return stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont1);
-		},function() {
-			return cont1.value(self.apply(i)).toWork();
-		});
+		return stx_arw_arrowlet_Lift.prepare(this.lhs,p,cont.joint(function(outcome) {
+			return stx_pico_OutcomeLift.fold(outcome,function(res) {
+				return stx_nano_ResLift.fold(res,function(lhs) {
+					return _gthis.rhs.defer(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,p)),cont);
+				},function(e) {
+					return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e),{ fileName : "src/main/haxe/stx/arw/attempt/AttemptArrange.hx", lineNumber : 17, className : "stx.arw.attempt.AttemptArrange", methodName : "defer"}));
+				});
+			},function(_) {
+				return stx_async_terminal_Receiver.serve(cont.error([null],{ fileName : "src/main/haxe/stx/arw/attempt/AttemptArrange.hx", lineNumber : 19, className : "stx.arw.attempt.AttemptArrange", methodName : "defer"}));
+			});
+		},{ fileName : "src/main/haxe/stx/arw/attempt/AttemptArrange.hx", lineNumber : 12, className : "stx.arw.attempt.AttemptArrange", methodName : "defer"}));
 	}
 	,apply: function(p) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
-			var self = _gthis.lhs.apply(p);
-			switch(self._hx_index) {
-			case 0:
-				return _gthis.rhs.apply(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,self.t,p)));
-			case 1:
-				throw haxe_Exception.thrown(self.e);
-			}
+			return stx_nano_ResLift.fold(_gthis.lhs.apply(p),function(lhs) {
+				return _gthis.rhs.apply(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,p)));
+			},function(e) {
+				throw haxe_Exception.thrown(e);
+			});
 		});
 	}
 	,get_convention: function() {
-		var this1 = this.lhs.get_convention();
-		var that = this.rhs.get_convention();
-		return stx_arw_Convention._new(this1 || that);
+		return stx_arw_Convention.or(this.lhs.get_convention(),this.rhs.get_convention());
 	}
 	,toString: function() {
-		return "" + stx_Arw.$name(this) + "(" + Std.string(this.lhs) + " -> " + Std.string(this.rhs) + ")";
+		return "" + stx_pico_Identifier.get_name(this.identifier()) + "(" + Std.string(this.lhs) + " -> " + Std.string(this.rhs) + ")";
 	}
 	,__class__: stx_arw_attempt_AttemptArrange
 });
@@ -10109,40 +8784,32 @@ stx_arw_cascade_term_ArrowletCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_cascade_term_ArrowletCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		var tmp;
-		switch(p._hx_index) {
-		case 0:
-			tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,this.delegate.apply(p.t));
-			break;
-		case 1:
-			tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e);
-			break;
-		}
-		return tmp;
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,_gthis.delegate.apply(ok));
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	}
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			var _g = $bind(this,this.joint);
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			var _g = $bind(_gthis,_gthis.joint);
 			var cont1 = cont;
-			return this.delegate.defer(p.t,cont.joint(function(outcome) {
+			var tmp = function(outcome) {
 				return _g(outcome,cont1);
-			}));
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e)).toWork();
-		}
+			};
+			return _gthis.delegate.defer(ok,cont.joint(tmp,{ fileName : "src/main/haxe/stx/arw/cascade/term/ArrowletCascade.hx", lineNumber : 19, className : "stx.arw.cascade.term.ArrowletCascade", methodName : "defer"}));
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no),{ fileName : "src/main/haxe/stx/arw/cascade/term/ArrowletCascade.hx", lineNumber : 21, className : "stx.arw.cascade.term.ArrowletCascade", methodName : "defer"}));
+		});
 	}
 	,joint: function(outcome,cont) {
-		var this1;
-		switch(outcome._hx_index) {
-		case 0:
-			this1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,outcome.t);
-			break;
-		case 1:
-			this1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Err.grow(outcome.e,{ fileName : "src/main/haxe/stx/arw/cascade/term/ArrowletCascade.hx", lineNumber : 28, className : "stx.arw.cascade.term.ArrowletCascade", methodName : "joint"}));
-			break;
-		}
-		return cont.value(this1).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(stx_pico_OutcomeLift.fold(outcome,function(t) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
+		},function(e) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Err.grow(e,{ fileName : "src/main/haxe/stx/arw/cascade/term/ArrowletCascade.hx", lineNumber : 28, className : "stx.arw.cascade.term.ArrowletCascade", methodName : "joint"}));
+		}),{ fileName : "src/main/haxe/stx/arw/cascade/term/ArrowletCascade.hx", lineNumber : 25, className : "stx.arw.cascade.term.ArrowletCascade", methodName : "joint"}));
 	}
 	,toString: function() {
 		return "Cascade(" + Std.string(this.delegate) + ")";
@@ -10158,20 +8825,20 @@ stx_arw_cascade_term_AttemptCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_cascade_term_AttemptCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		switch(p._hx_index) {
-		case 0:
-			return this.delegate.apply(p.t);
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e);
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return _gthis.delegate.apply(ok);
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	}
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			return stx_arw_Attempt.toArrowlet(this.delegate).defer(p.t,cont);
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e)).toWork();
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(stx_arw_Attempt.toArrowlet(_gthis.delegate))).defer(ok,cont);
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no),{ fileName : "src/main/haxe/stx/arw/cascade/term/AttemptCascade.hx", lineNumber : 18, className : "stx.arw.cascade.term.AttemptCascade", methodName : "defer"}));
+		});
 	}
 	,__class__: stx_arw_cascade_term_AttemptCascade
 });
@@ -10184,47 +8851,41 @@ stx_arw_cascade_term_CommandCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_cascade_term_CommandCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		switch(p._hx_index) {
-		case 0:
-			var self = this.delegate.apply(p.t);
-			switch(self._hx_index) {
-			case 0:
-				return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,self.v);
-			case 1:
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_pico_OptionLift.fold(stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(_gthis.delegate)).apply(ok),function(er) {
+				return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,er);
+			},function() {
 				return p;
-			}
-			break;
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e);
-		}
+			});
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	}
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			var _g = $bind(this,this.joint);
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			var _g = $bind(_gthis,_gthis.joint);
 			var input = p;
 			var cont1 = cont;
-			return this.delegate.defer(p.t,cont.joint(function(outcome) {
+			var tmp = function(outcome) {
 				return _g(input,outcome,cont1);
-			}));
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e)).toWork();
-		}
+			};
+			return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(_gthis.delegate)).defer(ok,cont.joint(tmp,{ fileName : "src/main/haxe/stx/arw/cascade/term/CommandCascade.hx", lineNumber : 23, className : "stx.arw.cascade.term.CommandCascade", methodName : "defer"}));
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no),{ fileName : "src/main/haxe/stx/arw/cascade/term/CommandCascade.hx", lineNumber : 25, className : "stx.arw.cascade.term.CommandCascade", methodName : "defer"}));
+		});
 	}
 	,joint: function(input,outcome,cont) {
-		switch(outcome._hx_index) {
-		case 0:
-			var _g = outcome.t;
-			switch(_g._hx_index) {
-			case 0:
-				return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g.v)).toWork();
-			case 1:
-				return cont.value(input).toWork();
-			}
-			break;
-		case 1:
-			return cont.error(outcome.e).toWork();
-		}
+		return stx_pico_OutcomeLift.fold(outcome,function(report) {
+			return stx_pico_OptionLift.fold(report,function(err) {
+				return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,err),{ fileName : "src/main/haxe/stx/arw/cascade/term/CommandCascade.hx", lineNumber : 31, className : "stx.arw.cascade.term.CommandCascade", methodName : "joint"}));
+			},function() {
+				return stx_async_terminal_Receiver.serve(cont.value(input,{ fileName : "src/main/haxe/stx/arw/cascade/term/CommandCascade.hx", lineNumber : 32, className : "stx.arw.cascade.term.CommandCascade", methodName : "joint"}));
+			});
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.error(e,{ fileName : "src/main/haxe/stx/arw/cascade/term/CommandCascade.hx", lineNumber : 34, className : "stx.arw.cascade.term.CommandCascade", methodName : "joint"}));
+		});
 	}
 	,__class__: stx_arw_cascade_term_CommandCascade
 });
@@ -10237,39 +8898,29 @@ stx_arw_cascade_term_ConvertCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_cascade_term_ConvertCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		var tmp;
-		switch(p._hx_index) {
-		case 0:
-			tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,this.delegate.apply(p.t));
-			break;
-		case 1:
-			tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e);
-			break;
-		}
-		return tmp;
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(_gthis.delegate)).apply(ok));
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	}
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			return this.delegate.defer(p.t,cont.joint(function(outcome) {
-				var cont1 = cont;
-				var this1;
-				switch(outcome._hx_index) {
-				case 0:
-					this1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,outcome.t);
-					break;
-				case 1:
-					this1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_UndefinedError")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/Async.hx", lineNumber : 45, className : "stx.LiftDefectNoiseToErr", methodName : "toErr"})));
-					break;
-				}
-				return cont1.value(this1).toWork();
-			}));
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e)).toWork();
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(_gthis.delegate)).defer(ok,cont.joint(function(outcome) {
+				return stx_async_terminal_Receiver.serve(cont.value(stx_pico_OutcomeLift.fold(outcome,function(ok) {
+					return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok);
+				},function(no) {
+					return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_LiftDefectNoiseToErr.toErr(no,{ fileName : "src/main/haxe/stx/arw/cascade/term/ConvertCascade.hx", lineNumber : 21, className : "stx.arw.cascade.term.ConvertCascade", methodName : "defer"}));
+				}),{ fileName : "src/main/haxe/stx/arw/cascade/term/ConvertCascade.hx", lineNumber : 18, className : "stx.arw.cascade.term.ConvertCascade", methodName : "defer"}));
+			},{ fileName : "src/main/haxe/stx/arw/cascade/term/ConvertCascade.hx", lineNumber : 17, className : "stx.arw.cascade.term.ConvertCascade", methodName : "defer"}));
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no),{ fileName : "src/main/haxe/stx/arw/cascade/term/ConvertCascade.hx", lineNumber : 25, className : "stx.arw.cascade.term.ConvertCascade", methodName : "defer"}));
+		});
 	}
 	,get_convention: function() {
-		return this.delegate.get_convention();
+		return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(this.delegate)).get_convention();
 	}
 	,__class__: stx_arw_cascade_term_ConvertCascade
 });
@@ -10282,20 +8933,20 @@ stx_arw_cascade_term_ProduceCascade.__super__ = stx_arw_ArrowletCls;
 stx_arw_cascade_term_ProduceCascade.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		switch(p._hx_index) {
-		case 0:
-			return this.delegate.apply(p.t);
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e);
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return _gthis.delegate.apply(ok);
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	}
 	,defer: function(p,cont) {
-		switch(p._hx_index) {
-		case 0:
-			return this.delegate.defer(p.t,cont);
-		case 1:
-			return cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,p.e)).toWork();
-		}
+		var _gthis = this;
+		return stx_nano_ResLift.fold(p,function(ok) {
+			return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(_gthis.delegate)).defer(ok,cont);
+		},function(no) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no),{ fileName : "src/main/haxe/stx/arw/cascade/term/ProduceCascade.hx", lineNumber : 19, className : "stx.arw.cascade.term.ProduceCascade", methodName : "defer"}));
+		});
 	}
 	,__class__: stx_arw_cascade_term_ProduceCascade
 });
@@ -10309,27 +8960,26 @@ stx_arw_command_term_ArrowletCommand.prototype = $extend(stx_arw_ArrowletCls.pro
 	delegate: null
 	,apply: function(p) {
 		try {
-			this.delegate.apply(p);
+			stx_arw_Arrowlet.toInternal(this.delegate).apply(p);
 			return stx_nano_Report.unit();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			return stx_nano_Report.pure(haxe_Exception.caught(_g).unwrap());
 		}
 	}
 	,defer: function(p,cont) {
 		var _g = $bind(this,this.joint);
 		var cont1 = cont;
-		return this.delegate.defer(p,cont.joint(function(oc) {
+		return stx_arw_Arrowlet.toInternal(this.delegate).defer(p,cont.joint(function(oc) {
 			return _g(oc,cont1);
-		}));
+		},{ fileName : "src/main/haxe/stx/arw/command/term/ArrowletCommand.hx", lineNumber : 20, className : "stx.arw.command.term.ArrowletCommand", methodName : "defer"}));
 	}
 	,joint: function(oc,cont) {
-		switch(oc._hx_index) {
-		case 0:
-			return cont.value(stx_nano_Report.unit()).toWork();
-		case 1:
-			return cont.value(stx_nano_Report.pure(stx_nano_Err.grow(oc.e,{ fileName : "src/main/haxe/stx/arw/command/term/ArrowletCommand.hx", lineNumber : 26, className : "stx.arw.command.term.ArrowletCommand", methodName : "joint"}))).toWork();
-		}
+		return stx_pico_OutcomeLift.fold(oc,function(_) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.unit(),{ fileName : "src/main/haxe/stx/arw/command/term/ArrowletCommand.hx", lineNumber : 25, className : "stx.arw.command.term.ArrowletCommand", methodName : "joint"}));
+		},function(e) {
+			return stx_async_terminal_Receiver.serve(cont.value(stx_nano_Report.pure(stx_nano_Err.grow(e,{ fileName : "src/main/haxe/stx/arw/command/term/ArrowletCommand.hx", lineNumber : 26, className : "stx.arw.command.term.ArrowletCommand", methodName : "joint"})),{ fileName : "src/main/haxe/stx/arw/command/term/ArrowletCommand.hx", lineNumber : 26, className : "stx.arw.command.term.ArrowletCommand", methodName : "joint"}));
+		});
 	}
 	,__class__: stx_arw_command_term_ArrowletCommand
 });
@@ -10342,17 +8992,16 @@ stx_arw_convert_term_ConvertProvide.__super__ = stx_arw_ArrowletCls;
 stx_arw_convert_term_ConvertProvide.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		return this.delegate.apply(p).apply(null);
+		return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(this.delegate)).apply(p))).apply(null);
 	}
 	,defer: function(p,cont) {
-		return this.delegate.defer(p,cont.joint(function(outcome) {
-			switch(outcome._hx_index) {
-			case 0:
-				return outcome.t.defer(null,cont);
-			case 1:
-				return cont.error(outcome.e).toWork();
-			}
-		}));
+		return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(this.delegate)).defer(p,cont.joint(function(outcome) {
+			return stx_pico_OutcomeLift.fold(outcome,function(ok) {
+				return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(ok)).defer(null,cont);
+			},function(no) {
+				return stx_async_terminal_Receiver.serve(cont.error(no,{ fileName : "src/main/haxe/stx/arw/convert/term/ConvertProvide.hx", lineNumber : 19, className : "stx.arw.convert.term.ConvertProvide", methodName : "defer"}));
+			});
+		},{ fileName : "src/main/haxe/stx/arw/convert/term/ConvertProvide.hx", lineNumber : 16, className : "stx.arw.convert.term.ConvertProvide", methodName : "defer"}));
 	}
 	,__class__: stx_arw_convert_term_ConvertProvide
 });
@@ -10378,16 +9027,9 @@ stx_arw_left_$choice_term_Base.prototype = $extend(stx_arw_ArrowletCls.prototype
 	,defer: function(either,cont) {
 		switch(either._hx_index) {
 		case 0:
-			var self = stx_arw_arrowlet_ArrowletLift.then(stx_arw_arrowlet_term_Applier._new(),new stx_arw_arrowlet_term_Sync(haxe_ds_Either.Left));
-			var i = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,either.v);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.Applier(),stx_arw_Arrowlet.fromFun1R(haxe_ds_Either.Left)),stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,either.v),cont);
 		case 1:
-			return cont.value(haxe_ds_Either.Right(either.v)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(haxe_ds_Either.Right(either.v),{ fileName : "src/main/haxe/stx/arw/left_choice/term/Base.hx", lineNumber : 16, className : "stx.arw.left_choice.term.Base", methodName : "defer"}));
 		}
 	}
 	,__class__: stx_arw_left_$choice_term_Base
@@ -10406,16 +9048,9 @@ stx_arw_left_$choice_term_Choice.prototype = $extend(stx_arw_ArrowletCls.prototy
 	,defer: function(either,cont) {
 		switch(either._hx_index) {
 		case 0:
-			var self = stx_arw_arrowlet_term_Applier._new();
-			var i = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,either.v);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i,cont1);
-			},function() {
-				return cont1.value(self.apply(i)).toWork();
-			});
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_Arrowlet.Applier(),stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,either.v),cont);
 		case 1:
-			return cont.value(haxe_ds_Either.Right(either.v)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(haxe_ds_Either.Right(either.v),{ fileName : "src/main/haxe/stx/arw/left_choice/term/Choice.hx", lineNumber : 16, className : "stx.arw.left_choice.term.Choice", methodName : "defer"}));
 		}
 	}
 	,__class__: stx_arw_left_$choice_term_Choice
@@ -10423,10 +9058,10 @@ stx_arw_left_$choice_term_Choice.prototype = $extend(stx_arw_ArrowletCls.prototy
 var stx_arw_lift_LiftChoiceToArrowlet = function() { };
 stx_arw_lift_LiftChoiceToArrowlet.__name__ = "stx.arw.lift.LiftChoiceToArrowlet";
 stx_arw_lift_LiftChoiceToArrowlet.left = function(self) {
-	return new stx_arw_left_$choice_term_Choice(self).asArrowletDef();
+	return stx_arw_Arrowlet.lift(new stx_arw_left_$choice_term_Choice(self).asArrowletDef());
 };
 stx_arw_lift_LiftChoiceToArrowlet.right = function(self) {
-	return new stx_arw_right_$choice_term_Choice(self).asArrowletDef();
+	return stx_arw_Arrowlet.lift(new stx_arw_right_$choice_term_Choice(self).asArrowletDef());
 };
 var stx_arw_lift_LiftFun1AttemptToArrange = function() { };
 stx_arw_lift_LiftFun1AttemptToArrange.__name__ = "stx.arw.lift.LiftFun1AttemptToArrange";
@@ -10436,7 +9071,7 @@ stx_arw_lift_LiftFun1AttemptToArrange.toArrange = function(fn) {
 var stx_arw_lift_LiftFun1FutureToArrowlet = function() { };
 stx_arw_lift_LiftFun1FutureToArrowlet.__name__ = "stx.arw.lift.LiftFun1FutureToArrowlet";
 stx_arw_lift_LiftFun1FutureToArrowlet.toArrowlet = function(fn) {
-	return new stx_arw_arrowlet_term_Fun1Future(fn).asArrowletDef();
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Fun1Future(fn).asArrowletDef());
 };
 var stx_arw_lift_LiftFun1ProduceToAttempt = function() { };
 stx_arw_lift_LiftFun1ProduceToAttempt.__name__ = "stx.arw.lift.LiftFun1ProduceToAttempt";
@@ -10446,7 +9081,7 @@ stx_arw_lift_LiftFun1ProduceToAttempt.toAttempt = function(fn) {
 var stx_arw_lift_LiftFun1RToArrowlet = function() { };
 stx_arw_lift_LiftFun1RToArrowlet.__name__ = "stx.arw.lift.LiftFun1RToArrowlet";
 stx_arw_lift_LiftFun1RToArrowlet.toArrowlet = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(fn);
+	return stx_arw_Arrowlet.fromFun1R(fn);
 };
 var stx_arw_lift_LiftFun1RToConvert = function() { };
 stx_arw_lift_LiftFun1RToConvert.__name__ = "stx.arw.lift.LiftFun1RToConvert";
@@ -10456,74 +9091,52 @@ stx_arw_lift_LiftFun1RToConvert.toConvert = function(fn) {
 var stx_arw_lift_LiftFun1ResToCascade = function() { };
 stx_arw_lift_LiftFun1ResToCascade.__name__ = "stx.arw.lift.LiftFun1ResToCascade";
 stx_arw_lift_LiftFun1ResToCascade.toCascade = function(fn) {
-	var fn1 = fn;
-	return new stx_arw_arrowlet_term_Sync(function(ocI) {
-		switch(ocI._hx_index) {
-		case 0:
-			return fn1(ocI.t);
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ocI.e);
-		}
-	});
+	return stx_arw_Cascade.fromFun1Res(fn);
 };
 var stx_arw_lift_LiftFun2RToArrowlet = function() { };
 stx_arw_lift_LiftFun2RToArrowlet.__name__ = "stx.arw.lift.LiftFun2RToArrowlet";
 stx_arw_lift_LiftFun2RToArrowlet.toArrowlet = function(fn) {
-	return new stx_arw_arrowlet_term_Sync(stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,fn));
+	return stx_arw_Arrowlet.fromFun2R(fn);
 };
 var stx_arw_lift_LiftFutureToArrowlet = function() { };
 stx_arw_lift_LiftFutureToArrowlet.__name__ = "stx.arw.lift.LiftFutureToArrowlet";
 stx_arw_lift_LiftFutureToArrowlet.then = function(ft,arw) {
-	return stx_arw_arrowlet_ArrowletLift.then(new stx_arw_arrowlet_term_Future(ft).asArrowletDef(),arw);
+	return stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Future(ft).asArrowletDef()),arw);
 };
 var stx_arw_lift_LiftFutureToProvide = function() { };
 stx_arw_lift_LiftFutureToProvide.__name__ = "stx.arw.lift.LiftFutureToProvide";
 stx_arw_lift_LiftFutureToProvide.toProvide = function(fut) {
-	return new stx_arw_provide_term_FunXFutureProvide(function() {
+	return stx_arw_Provide.fromFunXFuture(function() {
 		return fut;
 	});
 };
 var stx_arw_lift_LiftHandlerToArrowlet = function() { };
 stx_arw_lift_LiftHandlerToArrowlet.__name__ = "stx.arw.lift.LiftHandlerToArrowlet";
 stx_arw_lift_LiftHandlerToArrowlet.toArrowlet = function(fn) {
-	return new stx_arw_arrowlet_term_Handler(fn).asArrowletDef();
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_Handler(fn).asArrowletDef());
 };
 var stx_arw_lift_LiftProduceOfOptionIRToPropose = function() { };
 stx_arw_lift_LiftProduceOfOptionIRToPropose.__name__ = "stx.arw.lift.LiftProduceOfOptionIRToPropose";
 stx_arw_lift_LiftProduceOfOptionIRToPropose.toProduce = function(self) {
-	return stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_Produce.toArrowlet(self),function(res) {
-		var self;
-		switch(res._hx_index) {
-		case 0:
-			var _g = res.t;
-			switch(_g._hx_index) {
-			case 0:
-				self = stx_ext_ChunkSum.Val(_g.v);
-				break;
-			case 1:
-				self = stx_ext_ChunkSum.Tap;
-				break;
-			}
-			break;
-		case 1:
-			self = stx_ext_ChunkSum.End(res.e);
-			break;
-		}
-		return self;
-	});
+	return stx_arw_Propose.lift(stx_arw_arrowlet_Lift.postfix(stx_arw_Produce.toArrowlet(self),function(res) {
+		return stx_nano_ResLift.fold(res,function(opt) {
+			return stx_pico_OptionLift.fold(opt,stx_ext_ChunkSum.Val,function() {
+				return stx_ext_ChunkSum.Tap;
+			});
+		},function(e) {
+			return stx_ext_ChunkSum.End(e);
+		});
+	}));
 };
 var stx_arw_lift_LiftReplyFutureToArrowlet = function() { };
 stx_arw_lift_LiftReplyFutureToArrowlet.__name__ = "stx.arw.lift.LiftReplyFutureToArrowlet";
 stx_arw_lift_LiftReplyFutureToArrowlet.toArrowlet = function(fn) {
-	return new stx_arw_arrowlet_term_ReplyFuture(fn).asArrowletDef();
+	return stx_arw_Arrowlet.lift(new stx_arw_arrowlet_term_ReplyFuture(fn).asArrowletDef());
 };
 var stx_arw_lift_LiftThunkToArrowlet = function() { };
 stx_arw_lift_LiftThunkToArrowlet.__name__ = "stx.arw.lift.LiftThunkToArrowlet";
 stx_arw_lift_LiftThunkToArrowlet.toArrowlet = function(fn) {
-	var f = fn;
-	return new stx_arw_arrowlet_term_Sync(function(_) {
-		return f();
-	});
+	return stx_arw_Arrowlet.fromFunXR(fn);
 };
 var stx_arw_lift_LiftThunkToProduce = function() { };
 stx_arw_lift_LiftThunkToProduce.__name__ = "stx.arw.lift.LiftThunkToProduce";
@@ -10533,13 +9146,50 @@ stx_arw_lift_LiftThunkToProduce.cascade = function(ipt) {
 var stx_arw_lift_LiftToLeftChoice = function() { };
 stx_arw_lift_LiftToLeftChoice.__name__ = "stx.arw.lift.LiftToLeftChoice";
 stx_arw_lift_LiftToLeftChoice.toLeftChoice = function(arw) {
-	return new stx_arw_left_$choice_term_Base(arw);
+	return stx_arw_Arrowlet.lift(new stx_arw_left_$choice_term_Base(arw));
 };
 var stx_arw_lift_LiftToRightChoice = function() { };
 stx_arw_lift_LiftToRightChoice.__name__ = "stx.arw.lift.LiftToRightChoice";
 stx_arw_lift_LiftToRightChoice.toRightChoice = function(arw) {
-	return new stx_arw_right_$choice_term_Base(arw);
+	return stx_arw_Arrowlet.lift(new stx_arw_right_$choice_term_Base(stx_arw_Arrowlet.toInternal(arw)));
 };
+var stx_arw_produce_term_Sync = function(result) {
+	stx_arw_ArrowletCls.call(this);
+	this.set_result(result);
+};
+stx_arw_produce_term_Sync.__name__ = "stx.arw.produce.term.Sync";
+stx_arw_produce_term_Sync.__super__ = stx_arw_ArrowletCls;
+stx_arw_produce_term_Sync.prototype = $extend(stx_arw_ArrowletCls.prototype,{
+	defer: function(_,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(this.get_result(),{ fileName : "src/main/haxe/stx/arw/produce/term/Sync.hx", lineNumber : 9, className : "stx.arw.produce.term.Sync", methodName : "defer"}));
+	}
+	,apply: function(_) {
+		return this.get_result();
+	}
+	,get_convention: function() {
+		return false;
+	}
+	,__class__: stx_arw_produce_term_Sync
+});
+var stx_arw_produce_term_Thunk = function(thunk) {
+	stx_arw_ArrowletCls.call(this);
+	this.thunk = thunk;
+};
+stx_arw_produce_term_Thunk.__name__ = "stx.arw.produce.term.Thunk";
+stx_arw_produce_term_Thunk.__super__ = stx_arw_ArrowletCls;
+stx_arw_produce_term_Thunk.prototype = $extend(stx_arw_ArrowletCls.prototype,{
+	thunk: null
+	,defer: function(_,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(this.apply(_),{ fileName : "src/main/haxe/stx/arw/produce/term/Thunk.hx", lineNumber : 10, className : "stx.arw.produce.term.Thunk", methodName : "defer"}));
+	}
+	,apply: function(_) {
+		return this.set_result(this.thunk());
+	}
+	,get_convention: function() {
+		return false;
+	}
+	,__class__: stx_arw_produce_term_Thunk
+});
 var stx_arw_provide_term_FunXFutureProvide = function(delegate) {
 	stx_arw_ArrowletCls.call(this);
 	this.delegate = delegate;
@@ -10552,9 +9202,9 @@ stx_arw_provide_term_FunXFutureProvide.prototype = $extend(stx_arw_ArrowletCls.p
 		throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 	}
 	,defer: function(p,cont) {
-		return cont.later(tink_core_Future.map(this.delegate(),function(t) {
+		return stx_async_terminal_Receiver.serve(cont.later(tink_core_Future.map(this.delegate(),function(t) {
 			return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,t);
-		})).toWork();
+		}),{ fileName : "src/main/haxe/stx/arw/provide/term/FunXFutureProvide.hx", lineNumber : 13, className : "stx.arw.provide.term.FunXFutureProvide", methodName : "defer"}));
 	}
 	,__class__: stx_arw_provide_term_FunXFutureProvide
 });
@@ -10582,6 +9232,24 @@ stx_arw_provide_term_ProvideFunTerminalWork.prototype = $extend(stx_arw_Arrowlet
 	}
 	,__class__: stx_arw_provide_term_ProvideFunTerminalWork
 });
+var stx_arw_provide_term_Sync = function(result) {
+	stx_arw_ArrowletCls.call(this);
+	this.set_result(result);
+};
+stx_arw_provide_term_Sync.__name__ = "stx.arw.provide.term.Sync";
+stx_arw_provide_term_Sync.__super__ = stx_arw_ArrowletCls;
+stx_arw_provide_term_Sync.prototype = $extend(stx_arw_ArrowletCls.prototype,{
+	defer: function(_,cont) {
+		return stx_async_terminal_Receiver.serve(cont.value(this.get_result(),{ fileName : "src/main/haxe/stx/arw/provide/term/Sync.hx", lineNumber : 9, className : "stx.arw.provide.term.Sync", methodName : "defer"}));
+	}
+	,apply: function(_) {
+		return this.get_result();
+	}
+	,get_convention: function() {
+		return false;
+	}
+	,__class__: stx_arw_provide_term_Sync
+});
 var stx_arw_provide_term_Thunk = function(delegate) {
 	stx_arw_ArrowletCls.call(this);
 	this.delegate = delegate;
@@ -10595,31 +9263,21 @@ stx_arw_provide_term_Thunk.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	,initialize: function() {
 		if(!this.initialized) {
 			this.initialized = true;
-			this.result = this.delegate();
+			this.set_result(this.delegate());
 		}
 	}
 	,apply: function(p) {
-		if(!this.initialized) {
-			this.initialized = true;
-			this.result = this.delegate();
-		}
+		this.initialize();
 		return this.get_result();
 	}
 	,defer: function(p,cont) {
-		if(!this.initialized) {
-			this.initialized = true;
-			this.result = this.delegate();
-		}
-		return cont.value(this.get_result()).toWork();
+		return stx_async_terminal_Receiver.serve(cont.value(this.apply(p),{ fileName : "src/main/haxe/stx/arw/provide/term/Thunk.hx", lineNumber : 23, className : "stx.arw.provide.term.Thunk", methodName : "defer"}));
 	}
 	,get_convention: function() {
 		return false;
 	}
 	,pursue: function() {
-		if(!this.initialized) {
-			this.initialized = true;
-			this.result = this.delegate();
-		}
+		this.initialize();
 		stx_arw_ArrowletCls.prototype.pursue.call(this);
 	}
 	,__class__: stx_arw_provide_term_Thunk
@@ -10633,68 +9291,32 @@ stx_arw_reframe_term_CascadeReframe.__super__ = stx_arw_ArrowletCls;
 stx_arw_reframe_term_CascadeReframe.prototype = $extend(stx_arw_ArrowletCls.prototype,{
 	delegate: null
 	,apply: function(p) {
-		var self = this.delegate.apply(p);
-		var self1;
-		switch(self._hx_index) {
-		case 0:
+		return stx_nano_ResLift.flat_map(this.delegate.apply(p),function(opt) {
 			var _g = function(tI,tII) {
 				return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 			};
-			var tI = self.t;
-			var fn = function(tII) {
+			var tI = opt;
+			var tmp = function(tII) {
 				return _g(tI,tII);
 			};
-			var self2;
-			switch(p._hx_index) {
-			case 0:
-				self2 = stx_nano_ResSum.Accept(fn(p.t));
-				break;
-			case 1:
-				self2 = stx_nano_ResSum.Reject(p.e);
-				break;
-			}
-			self1 = stx_nano_Res._new(self2);
-			break;
-		case 1:
-			self1 = stx_nano_ResSum.Reject(self.e);
-			break;
-		}
-		return stx_nano_Res._new(self1);
+			return stx_nano_ResLift.map(p,tmp);
+		});
 	}
 	,defer: function(p,cont) {
-		return this.delegate.defer(p,cont.joint(function(outcome) {
-			var fn = function(res) {
-				var self;
-				switch(res._hx_index) {
-				case 0:
+		return stx_arw_Arrowlet.toInternal(stx_arw_Arrowlet.lift(this.delegate)).defer(p,cont.joint(function(outcome) {
+			return stx_async_terminal_Receiver.serve(cont.issue(stx_pico_OutcomeLift.map(outcome,function(res) {
+				return stx_nano_ResLift.flat_map(res,function(ok) {
 					var _g = function(tI,tII) {
 						return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
 					};
-					var tI = res.t;
-					var fn = function(tII) {
+					var tI = ok;
+					var tmp = function(tII) {
 						return _g(tI,tII);
 					};
-					var self1;
-					switch(p._hx_index) {
-					case 0:
-						self1 = stx_nano_ResSum.Accept(fn(p.t));
-						break;
-					case 1:
-						self1 = stx_nano_ResSum.Reject(p.e);
-						break;
-					}
-					self = stx_nano_Res._new(self1);
-					break;
-				case 1:
-					self = stx_nano_ResSum.Reject(res.e);
-					break;
-				}
-				return stx_nano_Res._new(self);
-			};
-			return cont.issue(stx_pico_OutcomeLift.flat_map(outcome,function(x) {
-				return stx_pico_OutcomeSum.Success(fn(x));
-			})).toWork();
-		}));
+					return stx_nano_ResLift.map(p,tmp);
+				});
+			}),{ fileName : "src/main/haxe/stx/arw/reframe/term/CascadeReframe.hx", lineNumber : 18, className : "stx.arw.reframe.term.CascadeReframe", methodName : "defer"}));
+		},{ fileName : "src/main/haxe/stx/arw/reframe/term/CascadeReframe.hx", lineNumber : 17, className : "stx.arw.reframe.term.CascadeReframe", methodName : "defer"}));
 	}
 	,__class__: stx_arw_reframe_term_CascadeReframe
 });
@@ -10708,7 +9330,7 @@ stx_arw_right_$choice_term_Base.prototype = $extend(stx_arw_ArrowletCls.prototyp
 	delegate: null
 	,apply: function(i) {
 		var _gthis = this;
-		return stx_LiftIf.if_else(this.get_convention(),function() {
+		return stx_arw_Convention.fold(this.get_convention(),function() {
 			throw haxe_Exception.thrown(stx_fail_ArrowletFailure.E_Arw_IncorrectCallingConvention);
 		},function() {
 			return stx_pico_EitherLift.fold(i,function(l) {
@@ -10721,16 +9343,9 @@ stx_arw_right_$choice_term_Base.prototype = $extend(stx_arw_ArrowletCls.prototyp
 	,defer: function(i,cont) {
 		switch(i._hx_index) {
 		case 0:
-			return cont.value(haxe_ds_Either.Left(i.v)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(haxe_ds_Either.Left(i.v),{ fileName : "src/main/haxe/stx/arw/right_choice/term/Base.hx", lineNumber : 21, className : "stx.arw.right_choice.term.Base", methodName : "defer"}));
 		case 1:
-			var self = stx_arw_arrowlet_ArrowletLift.then(stx_arw_arrowlet_term_Applier._new(),new stx_arw_arrowlet_term_Sync(haxe_ds_Either.Right));
-			var i1 = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,i.v);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.Applier(),stx_arw_Arrowlet.fromFun1R(haxe_ds_Either.Right)),stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,stx_arw_Internal.toArrowlet(this.delegate),i.v),cont);
 		}
 	}
 	,get_convention: function() {
@@ -10752,18 +9367,11 @@ stx_arw_right_$choice_term_Choice.prototype = $extend(stx_arw_ArrowletCls.protot
 	,defer: function(i,cont) {
 		switch(i._hx_index) {
 		case 0:
-			return cont.value(haxe_ds_Either.Left(i.v)).toWork();
+			return stx_async_terminal_Receiver.serve(cont.value(haxe_ds_Either.Left(i.v),{ fileName : "src/main/haxe/stx/arw/right_choice/term/Choice.hx", lineNumber : 19, className : "stx.arw.right_choice.term.Choice", methodName : "defer"}));
 		case 1:
-			var self = stx_arw_arrowlet_ArrowletLift.postfix(stx_arw_arrowlet_term_Applier._new(),function(either) {
+			return stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.postfix(stx_arw_Arrowlet.Applier(),function(either) {
 				return stx_pico_EitherLift.flip(either);
-			});
-			var i1 = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,i.v);
-			var cont1 = cont;
-			return stx_LiftIf.if_else(self.get_convention(),function() {
-				return self.defer(i1,cont1);
-			},function() {
-				return cont1.value(self.apply(i1)).toWork();
-			});
+			}),stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.delegate,i.v),cont);
 		}
 	}
 	,__class__: stx_arw_right_$choice_term_Choice
@@ -10775,83 +9383,45 @@ stx_arw_test_AfterRewriteTest.__name__ = "stx.arw.test.AfterRewriteTest";
 stx_arw_test_AfterRewriteTest.__super__ = utest_Test;
 stx_arw_test_AfterRewriteTest.prototype = $extend(utest_Test.prototype,{
 	testSync: function(async) {
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Sync(function(i) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.Sync(function(i) {
 			return i + 1;
 		}),1,function(v) {
 			utest_Assert.equals(2,v,null,{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 11, className : "stx.arw.test.AfterRewriteTest", methodName : "testSync"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 12, className : "stx.arw.test.AfterRewriteTest", methodName : "testSync"});
 		},function(e) {
 			haxe_Log.trace(e,{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 15, className : "stx.arw.test.AfterRewriteTest", methodName : "testSync"});
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,testAsync: function(async) {
-		var fn = function(i,cb) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.fromFunSink(function(i,cb) {
 			cb(++i);
-		};
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
 		}),1,function(v) {
 			utest_Assert.equals(2,v,null,{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 28, className : "stx.arw.test.AfterRewriteTest", methodName : "testAsync"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 29, className : "stx.arw.test.AfterRewriteTest", methodName : "testAsync"});
 		},function(_) {
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,test_after_tick: function(async) {
-		var fn = function(i,cb) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.fromFunSink(function(i,cb) {
 			haxe_Timer.delay(function() {
-				var fn = i += 1;
-				cb(fn);
+				var tmp = i += 1;
+				cb(tmp);
 			},100);
-		};
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
 		}),1,function(v) {
 			utest_Assert.equals(2,v,null,{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 51, className : "stx.arw.test.AfterRewriteTest", methodName : "test_after_tick"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 52, className : "stx.arw.test.AfterRewriteTest", methodName : "test_after_tick"});
 		},function(e) {
 			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,test_arrowlet_error: function(async) {
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Anon(function(i,cont) {
-			return cont.issue(stx_pico_OutcomeSum.Failure(stx_nano_Defect.pure("E_UnexpectedNullValueEncountered"))).toWork();
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.Anon(function(i,cont) {
+			return stx_async_terminal_Receiver.serve(cont.issue(stx_pico_OutcomeSum.Failure(stx_nano_Defect.pure("E_UnexpectedNullValueEncountered")),{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 63, className : "stx.arw.test.AfterRewriteTest", methodName : "test_arrowlet_error"}));
 		}),1,function(_) {
 		},function(e) {
 			utest_Assert.same(["E_UnexpectedNullValueEncountered"],e,null,null,null,{ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 69, className : "stx.arw.test.AfterRewriteTest", methodName : "test_arrowlet_error"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/AfterRewriteTest.hx", lineNumber : 70, className : "stx.arw.test.AfterRewriteTest", methodName : "test_arrowlet_error"});
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -10887,23 +9457,16 @@ stx_arw_test_FlatMapTest.__name__ = "stx.arw.test.FlatMapTest";
 stx_arw_test_FlatMapTest.__super__ = utest_Test;
 stx_arw_test_FlatMapTest.prototype = $extend(utest_Test.prototype,{
 	test_then: function(async) {
-		var self = stx_arw_Arrowlet.environment(stx_arw_arrowlet_ArrowletLift.then(new stx_arw_arrowlet_term_Sync(function(x) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.Sync(function(x) {
 			return x + 1;
-		}),new stx_arw_arrowlet_term_Sync(function(x) {
+		}),stx_arw_Arrowlet.Sync(function(x) {
 			return x + 1;
 		})),1,function(x) {
 			utest_Assert.equals(3,x,null,{ fileName : "src/main/haxe/stx/arw/test/FlatMapTest.hx", lineNumber : 11, className : "stx.arw.test.FlatMapTest", methodName : "test_then"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/FlatMapTest.hx", lineNumber : 12, className : "stx.arw.test.FlatMapTest", methodName : "test_then"});
 		},function(y) {
 			haxe_Log.trace(y,{ fileName : "src/main/haxe/stx/arw/test/FlatMapTest.hx", lineNumber : 15, className : "stx.arw.test.FlatMapTest", methodName : "test_then"});
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -10924,56 +9487,22 @@ stx_arw_test_ProduceTest.__name__ = "stx.arw.test.ProduceTest";
 stx_arw_test_ProduceTest.__super__ = utest_Test;
 stx_arw_test_ProduceTest.prototype = $extend(utest_Test.prototype,{
 	test_lift_thunk: function(async) {
-		var success = function(v) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Produce.environment(stx_arw_lift_LiftThunkToProduce.cascade(function() {
+			return true;
+		}),function(v) {
 			utest_Assert.isTrue(v,null,{ fileName : "src/main/haxe/stx/arw/test/ProduceTest.hx", lineNumber : 10, className : "stx.arw.test.ProduceTest", methodName : "test_lift_thunk"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/ProduceTest.hx", lineNumber : 11, className : "stx.arw.test.ProduceTest", methodName : "test_lift_thunk"});
-		};
-		var self = new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_lift_LiftThunkToProduce.cascade(function() {
-			return true;
-		}),null),function(res) {
-			switch(res._hx_index) {
-			case 0:
-				success(res.t);
-				break;
-			case 1:
-				break;
-			}
-		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		},function(_) {
+		}));
 	}
 	,test_from_arrowlet: function(async) {
-		var success = function(v) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Produce.environment(stx_arw_Produce.fromArrowlet(stx_arw_Arrowlet.Sync(function(_) {
+			return 1;
+		})),function(v) {
 			utest_Assert.equals(1,v,null,{ fileName : "src/main/haxe/stx/arw/test/ProduceTest.hx", lineNumber : 23, className : "stx.arw.test.ProduceTest", methodName : "test_from_arrowlet"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/ProduceTest.hx", lineNumber : 24, className : "stx.arw.test.ProduceTest", methodName : "test_from_arrowlet"});
-		};
-		var self = new stx_arw_arrowlet_term_Deliver(new stx_arw_arrowlet_term_Fulfill(stx_arw_Produce.fromArrowlet(new stx_arw_arrowlet_term_Sync(function(_) {
-			return 1;
-		})),null),function(res) {
-			switch(res._hx_index) {
-			case 0:
-				success(res.t);
-				break;
-			case 1:
-				break;
-			}
-		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+		},function(_) {
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -10999,26 +9528,14 @@ stx_arw_test_RawTest.__name__ = "stx.arw.test.RawTest";
 stx_arw_test_RawTest.__super__ = utest_Test;
 stx_arw_test_RawTest.prototype = $extend(utest_Test.prototype,{
 	test: function(async) {
-		var fn = function(i,cont) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Arrowlet.environment(stx_arw_Arrowlet.fromFunSink(function(i,cont) {
 			cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,i));
-		};
-		var self = stx_arw_Arrowlet.environment(new stx_arw_arrowlet_term_Raw(function(i,cont) {
-			fn(i,function(o) {
-				cont(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,o));
-			});
 		}),1,function(x) {
 			utest_Assert.pass(null,{ fileName : "src/main/haxe/stx/arw/test/RawTest.hx", lineNumber : 14, className : "stx.arw.test.RawTest", methodName : "test"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/RawTest.hx", lineNumber : 15, className : "stx.arw.test.RawTest", methodName : "test"});
 		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -11039,81 +9556,33 @@ stx_arw_test_TerminalTest.__name__ = "stx.arw.test.TerminalTest";
 stx_arw_test_TerminalTest.__super__ = utest_Test;
 stx_arw_test_TerminalTest.prototype = $extend(utest_Test.prototype,{
 	test: function(async) {
-		var term = stx_async_Terminal._new();
-		var self = stx_arw_arrowlet_ArrowletLift.then(stx_arw_Arrowlet.unit(),stx_arw_Arrowlet.unit());
-		var cont = term;
-		var this1 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(1,cont);
-		},function() {
-			return cont.value(self.apply(1)).toWork();
-		});
-		var loop = null;
-		var loop1 = loop;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop);
-		loop1 = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this1.get_defect().length > 0) {
-				loop1.fail(this1.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this1.pursue();
-				if(this1.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this1.get_status()) {
-					case -1:
-						loop1.fail(this1.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+		var term = stx_async_Terminal._new(null,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 6, className : "stx.arw.test.TerminalTest", methodName : "test"});
+		stx_async_Work.crunch(stx_arw_arrowlet_Lift.prepare(stx_arw_arrowlet_Lift.then(stx_arw_Arrowlet.unit(),stx_arw_Arrowlet.unit()),1,term));
 	}
 	,_test_composition: function(async) {
-		var t = stx_async_Terminal._new();
-		var r0 = stx_async_Task.Handler(t.value(1),function(s) {
-			haxe_Log.trace(s,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 74, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
-		});
-		var res = t.inner(function(outcome) {
-			haxe_Log.trace(outcome,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 78, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
-		}).value("str").toWork();
-		var that = r0.toWork();
+		var t = stx_async_Terminal._new(null,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 72, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
 		(function(v) {
 			haxe_Log.trace(v,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 85, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
 			utest_Assert.pass(null,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 86, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 87, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
-		})(res == null ? that : that == null ? null : stx_async_Task.Seq(res.toTaskApi(),that.toTaskApi()).toWork());
+		})(stx_async_terminal_Receiver.after(stx_async_terminal_Receiver.listen(t.value(1,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 73, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"}),function(s) {
+			haxe_Log.trace(s,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 74, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
+		}),stx_async_terminal_Receiver.serve(t.inner(function(outcome) {
+			haxe_Log.trace(outcome,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 78, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"});
+		},{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 76, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"}).value("str",{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 81, className : "stx.arw.test.TerminalTest", methodName : "_test_composition"}))));
 	}
 	,_test_inner: function(async) {
-		var t = stx_async_Terminal._new();
-		var deferI = new tink_core_FutureTrigger();
-		var r0 = stx_async_Task.Handler(t.later(deferI),function(s) {
+		var t = stx_async_Terminal._new(null,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 92, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"});
+		var deferI = tink_core_Future.trigger();
+		var r0 = stx_async_terminal_Receiver.listen(t.later(deferI,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 94, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"}),function(s) {
 			haxe_Log.trace(s,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 95, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"});
 		});
 		var inner = t.inner(function(s) {
 			haxe_Log.trace(s,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 99, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"});
 			deferI.trigger(s);
-		});
-		var deferII = new tink_core_FutureTrigger();
-		var res = inner.later(deferII).toWork();
-		var that = r0.toWork();
-		var r2 = res == null ? that : that == null ? null : stx_async_Task.Seq(res.toTaskApi(),that.toTaskApi()).toWork();
+		},{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 97, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"});
+		var deferII = tink_core_Future.trigger();
+		var r2 = stx_async_terminal_Receiver.after(r0,stx_async_terminal_Receiver.serve(inner.later(deferII,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 104, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"})));
 		deferII.trigger(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,"hello"));
 		(function(v) {
 			haxe_Log.trace(v,{ fileName : "src/main/haxe/stx/arw/test/TerminalTest.hx", lineNumber : 109, className : "stx.arw.test.TerminalTest", methodName : "_test_inner"});
@@ -11148,21 +9617,14 @@ stx_arw_test_TestCascade.__name__ = "stx.arw.test.TestCascade";
 stx_arw_test_TestCascade.__super__ = utest_Test;
 stx_arw_test_TestCascade.prototype = $extend(utest_Test.prototype,{
 	test_cascade: function(async) {
-		var self = stx_arw_Cascade.environment(stx_arw_Cascade.fromArrowlet(new stx_arw_arrowlet_term_Sync(function(x) {
+		stx_arw_arrowlet_term_Fiber.submit(stx_arw_Cascade.environment(stx_arw_Cascade.fromArrowlet(stx_arw_Arrowlet.Sync(function(x) {
 			return x + 1;
 		})),1,function(x) {
 			utest_Assert.pass(null,{ fileName : "src/main/haxe/stx/arw/test/TestCascade.hx", lineNumber : 13, className : "stx.arw.test.TestCascade", methodName : "test_cascade"});
 			async.done({ fileName : "src/main/haxe/stx/arw/test/TestCascade.hx", lineNumber : 14, className : "stx.arw.test.TestCascade", methodName : "test_cascade"});
 		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		stx_async_Work.submit(stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		}),null);
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -11183,78 +9645,17 @@ stx_arw_test_ThenFunTest.__name__ = "stx.arw.test.ThenFunTest";
 stx_arw_test_ThenFunTest.__super__ = utest_Test;
 stx_arw_test_ThenFunTest.prototype = $extend(utest_Test.prototype,{
 	test: function() {
-		var lhs = new stx_arw_arrowlet_term_Sync(function(i) {
+		var c = stx_arw_arrowlet_Lift.next(stx_arw_arrowlet_Lift.next(stx_arw_Arrowlet.Sync(function(i) {
 			return i + 1;
-		});
-		var rhs = function(i) {
+		}),function(i) {
 			return i * 10;
-		};
-		var lhs1 = stx_LiftIf.if_else(lhs.get_convention(),function() {
-			return new stx_arw_arrowlet_term_ThenFun(lhs,rhs).asArrowletDef();
-		},function() {
-			return new stx_arw_arrowlet_term_ThenFunFun(($_=lhs,$bind($_,$_.apply)),rhs);
-		});
-		var this1 = stx_arw_Test.log(stx_nano_Wildcard.__);
-		var pos = { fileName : "src/main/haxe/stx/arw/test/ThenFunTest.hx", lineNumber : 14, className : "stx.arw.test.ThenFunTest", methodName : "test"};
-		var rhs1 = function(v) {
-			this1(v,pos);
-			return v;
-		};
-		var c = stx_LiftIf.if_else(lhs1.get_convention(),function() {
-			return new stx_arw_arrowlet_term_ThenFun(lhs1,rhs1).asArrowletDef();
-		},function() {
-			return new stx_arw_arrowlet_term_ThenFunFun(($_=lhs1,$bind($_,$_.apply)),rhs1);
-		});
+		}),stx_Log.through(stx_arw_Test.log(stx_nano_Wildcard.__),{ fileName : "src/main/haxe/stx/arw/test/ThenFunTest.hx", lineNumber : 14, className : "stx.arw.test.ThenFunTest", methodName : "test"}));
 		haxe_Log.trace(c,{ fileName : "src/main/haxe/stx/arw/test/ThenFunTest.hx", lineNumber : 16, className : "stx.arw.test.ThenFunTest", methodName : "test"});
-		var scheduler = null;
-		var self = stx_arw_Arrowlet.environment(c,1,function(x) {
+		stx_arw_arrowlet_term_Fiber.crunch(stx_arw_Arrowlet.environment(c,1,function(x) {
 			utest_Assert.equals(20,x,null,{ fileName : "src/main/haxe/stx/arw/test/ThenFunTest.hx", lineNumber : 19, className : "stx.arw.test.ThenFunTest", methodName : "test"});
 		},function(e) {
-			throw haxe_Exception.thrown(e);
-		});
-		var i = null;
-		var cont = stx_async_Terminal.ZERO;
-		var this2 = stx_LiftIf.if_else(self.get_convention(),function() {
-			return self.defer(i,cont);
-		},function() {
-			return cont.value(self.apply(i)).toWork();
-		});
-		var loop = scheduler;
-		var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scheduler);
-		loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
-		var cont1 = true;
-		var suspended = false;
-		var backoff = 0.2;
-		while(true == cont1) {
-			if(this2.get_defect().length > 0) {
-				loop.fail(this2.get_defect());
-				cont1 = false;
-			}
-			if(!suspended) {
-				this2.pursue();
-				if(this2.get_loaded()) {
-					cont1 = false;
-				} else {
-					switch(this2.get_status()) {
-					case -1:
-						loop.fail(this2.get_defect());
-						break;
-					case 1:case 4:
-						cont1 = false;
-						break;
-					case 0:case 2:
-						break;
-					case 3:
-						suspended = true;
-						tink_core_Signal.nextTime(this2.get_signal()).handle(function(_) {
-							backoff = 1.22;
-							suspended = false;
-						});
-						break;
-					}
-				}
-			}
-		}
+			stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,e);
+		}));
 	}
 	,__initializeUtest__: function() {
 		var _gthis = this;
@@ -11269,8 +9670,7 @@ stx_arw_test_ThenFunTest.prototype = $extend(utest_Test.prototype,{
 });
 var stx_nano_Err = function(data,prev,pos) {
 	this.data = data;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,prev);
-	this.prev = self._hx_index == 0 ? self.v : haxe_ds_Option.None;
+	this.prev = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,prev),haxe_ds_Option.None);
 	this.pos = pos;
 };
 stx_nano_Err.__name__ = "stx.nano.Err";
@@ -11306,12 +9706,7 @@ stx_nano_Err.prototype = {
 		return new stx_nano_Err(next_data,_g == null ? haxe_ds_Option.None : _g._hx_index == 0 ? haxe_ds_Option.Some(_g.v.map(fn)) : haxe_ds_Option.None,this.pos);
 	}
 	,copy: function(data,prev,pos) {
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,data);
-		var tmp = self._hx_index == 0 ? self.v : this.data;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,prev);
-		var tmp1 = self._hx_index == 0 ? self.v : this.prev;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,pos);
-		return new stx_nano_Err(tmp,tmp1,self._hx_index == 0 ? self.v : this.pos);
+		return new stx_nano_Err(stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,data),this.data),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,prev),this.prev),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,pos),this.pos));
 	}
 	,last: function() {
 		var self = this;
@@ -11353,7 +9748,8 @@ stx_nano_Err.prototype = {
 		return this.pos;
 	}
 	,toString: function() {
-		return "" + stx_pico_Option.toString(this.data) + " at (" + stx_nano_PositionLift.toStringClassMethodLine(stx_nano_Position.fromPos(this.pos)) + ")";
+		var p = stx_nano_PositionLift.toStringClassMethodLine(stx_nano_Position.lift(this.pos));
+		return "" + stx_pico_Option.toString(this.data) + " at (" + p + ")";
 	}
 	,iterator: function() {
 		var cursor = haxe_ds_Option.Some(this);
@@ -11682,19 +10078,19 @@ stx_assert_Module.prototype = $extend(stx_pico_Clazz.prototype,{
 		return stx_assert_Assertion.equals(this.pos);
 	}
 	,alike: function() {
-		return new stx_assert_assertion_term_Alike(this.pos);
+		return stx_assert_Assertion.alike(this.pos);
 	}
 	,gt: function() {
 		return stx_assert_Assertion.gt(this.pos);
 	}
 	,gt_eq: function() {
-		return new stx_assert_assertion_term_GreaterThanOrEquals(this.pos);
+		return stx_assert_Assertion.gt_eq(this.pos);
 	}
 	,lt: function() {
-		return new stx_assert_assertion_term_LessThan(this.pos);
+		return stx_assert_Assertion.lt(this.pos);
 	}
 	,lt_eq: function() {
-		return new stx_assert_assertion_term_LessThanOrEquals(this.pos);
+		return stx_assert_Assertion.lt_eq(this.pos);
 	}
 	,always: function() {
 		return stx_assert_Predicate.always(this.pos);
@@ -11703,19 +10099,19 @@ stx_assert_Module.prototype = $extend(stx_pico_Clazz.prototype,{
 		return stx_assert_Predicate.never(this.pos);
 	}
 	,iz: function(clazz) {
-		return new stx_assert_predicate_term_Is(clazz,this.pos);
+		return stx_assert_Predicate.iz(this.pos,clazz);
 	}
 	,throws: function() {
-		return new stx_assert_predicate_term_Throws(this.pos);
+		return stx_assert_Predicate.throws(this.pos);
 	}
 	,'void': function() {
-		return new stx_assert_predicate_term_Void(this.pos);
+		return stx_assert_Predicate.void(this.pos);
 	}
 	,exists: function() {
-		return new stx_assert_predicate_term_Exists(this.pos);
+		return stx_assert_Predicate.exists(this.pos);
 	}
 	,matches: function(reg,opt) {
-		return new stx_assert_predicate_term_Matches(this.pos,reg,opt,{ fileName : "stx/assert/Predicate.hx", lineNumber : 47, className : "stx.assert._Predicate.Predicate_Impl_", methodName : "matches"});
+		return stx_assert_Predicate.matches(this.pos,reg,opt);
 	}
 	,ands: function(self,rest) {
 		return stx_assert_Predicate._.ands(self,rest);
@@ -11906,7 +10302,7 @@ stx_assert_Predicate.fudge = function(this1,v) {
 	}
 };
 stx_assert_Predicate.ok = function(this1) {
-	return stx_fn_UnaryLift.then($bind(this1,this1.applyI),function(report) {
+	return stx_fn_UnaryLift.then(stx_LiftUnary.fn($bind(this1,this1.applyI)),function(report) {
 		return stx_nano_Report.ok(report);
 	});
 };
@@ -11941,8 +10337,7 @@ stx_assert_assertion_term_Base.prototype = $extend(stx_pico_Clazz.prototype,{
 		return stx_nano_Report.unit();
 	}
 	,error: function(l,r,pos) {
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos);
-		return new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_AssertFailure.PredicateFailed(js_Boot.getClass(this),l,r))),haxe_ds_Option.None,this1);
+		return stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos),stx_fail_AssertFailure.PredicateFailed(this.definition(),l,r));
 	}
 	,asAssertionApi: function() {
 		return this;
@@ -11956,7 +10351,7 @@ stx_assert_assertion_term_Alike.__name__ = "stx.assert.assertion.term.Alike";
 stx_assert_assertion_term_Alike.__super__ = stx_assert_assertion_term_Base;
 stx_assert_assertion_term_Alike.prototype = $extend(stx_assert_assertion_term_Base.prototype,{
 	applyII: function(a,b) {
-		return stx_LiftAssert.report(a._hx_index == b._hx_index,this.error(null,null,{ fileName : "stx/assert/assertion/term/Alike.hx", lineNumber : 8, className : "stx.assert.assertion.term.Alike", methodName : "applyII"}));
+		return stx_LiftAssert.report(Type.enumIndex(a) == Type.enumIndex(b),this.error(null,null,{ fileName : "stx/assert/assertion/term/Alike.hx", lineNumber : 8, className : "stx.assert.assertion.term.Alike", methodName : "applyII"}));
 	}
 	,__class__: stx_assert_assertion_term_Alike
 });
@@ -12208,7 +10603,7 @@ stx_assert_eq_term_Enum.__interfaces__ = [stx_assert_EqApi];
 stx_assert_eq_term_Enum.__super__ = stx_pico_Clazz;
 stx_assert_eq_term_Enum.prototype = $extend(stx_pico_Clazz.prototype,{
 	applyII: function(a,b) {
-		if(0 != a._hx_index - b._hx_index) {
+		if(0 != Type.enumIndex(a) - Type.enumIndex(b)) {
 			return false;
 		} else {
 			var pa = Type.enumParameters(a);
@@ -12237,9 +10632,7 @@ stx_assert_eq_term_EqAssertion.__super__ = stx_assert_assertion_term_Base;
 stx_assert_eq_term_EqAssertion.prototype = $extend(stx_assert_assertion_term_Base.prototype,{
 	eq: null
 	,applyII: function(a,b) {
-		var tmp = stx_assert_Equaled.toBool(this.eq.applyII(a,b));
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos);
-		return stx_LiftAssert.report(tmp,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_AssertFailure.PredicateFailed(js_Boot.getClass(this),a,b))),haxe_ds_Option.None,this1));
+		return stx_LiftAssert.report(stx_assert_Equaled.toBool(this.eq.applyII(a,b)),stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos),stx_fail_AssertFailure.PredicateFailed(this.definition(),a,b)));
 	}
 	,__class__: stx_assert_eq_term_EqAssertion
 });
@@ -12319,21 +10712,21 @@ stx_assert_eq_term_Map.prototype = {
 	eq: null
 	,applyII: function(a,b) {
 		var ok = true;
-		var _g = a.keyValueIterator();
+		var _g = $keyValueIterator(haxe_ds_Map)(a);
 		while(_g.hasNext()) {
 			var _g1 = _g.next();
 			var key = _g1.key;
 			var val = _g1.value;
-			if(!b.exists(key)) {
+			if(!haxe_ds_Map.exists(b,key)) {
 				break;
 			}
-			ok = stx_assert_Equaled.toBool(this.eq.applyII(val,b.get(key)));
+			ok = stx_assert_Equaled.toBool(this.eq.applyII(val,haxe_ds_Map.get(b,key)));
 			if(!ok) {
 				break;
 			}
 		}
-		var _g = b.keyValueIterator();
-		while(_g.hasNext()) if(!a.exists(_g.next().key)) {
+		var _g = $keyValueIterator(haxe_ds_Map)(b);
+		while(_g.hasNext()) if(!haxe_ds_Map.exists(a,_g.next().key)) {
 			break;
 		}
 		if(ok) {
@@ -12450,7 +10843,7 @@ stx_assert_eq_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 0:
 			if(rhs._hx_index == 0) {
 				return true;
-			} else if(lhs._hx_index == rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) == Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12459,7 +10852,7 @@ stx_assert_eq_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 1:
 			if(rhs._hx_index == 1) {
 				return stx_assert_Eq.Bool().applyII(lhs.b,rhs.b);
-			} else if(lhs._hx_index == rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) == Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12468,7 +10861,7 @@ stx_assert_eq_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 2:
 			if(rhs._hx_index == 2) {
 				return stx_assert_Eq.Int().applyII(lhs.int,rhs.int);
-			} else if(lhs._hx_index == rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) == Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12477,7 +10870,7 @@ stx_assert_eq_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 3:
 			if(rhs._hx_index == 3) {
 				return stx_assert_Eq.Float().applyII(lhs.fl,rhs.fl);
-			} else if(lhs._hx_index == rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) == Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12486,7 +10879,7 @@ stx_assert_eq_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 4:
 			if(rhs._hx_index == 4) {
 				return stx_assert_Eq.String().applyII(lhs.str,rhs.str);
-			} else if(lhs._hx_index == rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) == Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12520,7 +10913,7 @@ stx_assert_eq_term_Unknown.__interfaces__ = [stx_assert_EqApi];
 stx_assert_eq_term_Unknown.__super__ = stx_pico_Clazz;
 stx_assert_eq_term_Unknown.prototype = $extend(stx_pico_Clazz.prototype,{
 	applyII: function(a,b) {
-		if(Object.prototype.hasOwnProperty.call(a,"equals")) {
+		if(Reflect.hasField(a,"equals")) {
 			return new stx_assert_eq_term_HasFunction().applyII(a,b);
 		} else {
 			return new stx_assert_eq_term_Object().applyII(a,b);
@@ -12536,7 +10929,7 @@ stx_assert_eq_term_UnsupportedClass.__interfaces__ = [stx_assert_EqApi];
 stx_assert_eq_term_UnsupportedClass.__super__ = stx_pico_Clazz;
 stx_assert_eq_term_UnsupportedClass.prototype = $extend(stx_pico_Clazz.prototype,{
 	applyII: function(a,b) {
-		return stx_assert_Equaled.and(new stx_assert_eq_term_Object().applyII(a,b),js_Boot.getClass(a) == js_Boot.getClass(b) && true);
+		return stx_assert_Equaled.and(new stx_assert_eq_term_Object().applyII(a,b),Type.getClass(a) == Type.getClass(b) && true);
 	}
 	,__class__: stx_assert_eq_term_UnsupportedClass
 });
@@ -12567,46 +10960,25 @@ stx_assert_module_Crunch.prototype = $extend(stx_pico_Clazz.prototype,{
 		stx_assert_Assertion.crunchII(this.module.lt_eq(),lhs,rhs);
 	}
 	,always: function(t) {
-		var _g = stx_nano_Report.prj(this.module.always().applyI(t));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.always(),t);
 	}
 	,never: function(t) {
-		var _g = stx_nano_Report.prj(this.module.never().applyI(t));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.never(),t);
 	}
 	,iz: function(a,clazz) {
-		var _g = stx_nano_Report.prj(this.module.iz(clazz).applyI(a));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.iz(clazz),a);
 	}
 	,throws: function(fn) {
-		var _g = stx_nano_Report.prj(this.module.throws().applyI(fn));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.throws(),fn);
 	}
 	,'void': function(t) {
-		var _g = stx_nano_Report.prj(this.module.void().applyI(t));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.void(),t);
 	}
 	,exists: function(t) {
-		var _g = stx_nano_Report.prj(this.module.exists().applyI(t));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.exists(),t);
 	}
 	,matches: function(string,reg,opt) {
-		var _g = stx_nano_Report.prj(this.module.matches(reg,opt).applyI(string));
-		if(_g._hx_index == 0) {
-			throw haxe_Exception.thrown(_g.v);
-		}
+		stx_assert_Predicate.crunch(this.module.matches(reg,opt),string);
 	}
 	,__class__: stx_assert_module_Crunch
 });
@@ -12715,14 +11087,9 @@ stx_assert_ord_term_Option.prototype = {
 	inner: null
 	,applyII: function(lhs,rhs) {
 		var _gthis = this;
-		var self = stx_pico_OptionLift.map(stx_nano_lift_LiftOptionNano.zip(lhs,rhs),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(l,r) {
+		return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftOptionNano.zip(lhs,rhs),stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,function(l,r) {
 			return _gthis.inner.applyII(l,r);
-		}));
-		if(self._hx_index == 0) {
-			return self.v;
-		} else {
-			return false;
-		}
+		})),false);
 	}
 	,__class__: stx_assert_ord_term_Option
 };
@@ -12735,9 +11102,7 @@ stx_assert_ord_term_OrdAssertion.__super__ = stx_assert_assertion_term_Base;
 stx_assert_ord_term_OrdAssertion.prototype = $extend(stx_assert_assertion_term_Base.prototype,{
 	ord: null
 	,applyII: function(a,b) {
-		var tmp = stx_assert_Ordered.toBool(this.ord.applyII(a,b));
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos);
-		return stx_LiftAssert.report(tmp,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_AssertFailure.PredicateFailed(js_Boot.getClass(this),a,b))),haxe_ds_Option.None,this1));
+		return stx_LiftAssert.report(stx_assert_Ordered.toBool(this.ord.applyII(a,b)),stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos),stx_fail_AssertFailure.PredicateFailed(this.definition(),a,b)));
 	}
 	,__class__: stx_assert_ord_term_OrdAssertion
 });
@@ -12753,7 +11118,7 @@ stx_assert_ord_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 0:
 			if(rhs._hx_index == 0) {
 				return false;
-			} else if(lhs._hx_index < rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) < Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12762,7 +11127,7 @@ stx_assert_ord_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 1:
 			if(rhs._hx_index == 1) {
 				return stx_assert_Ord.Bool().applyII(lhs.b,rhs.b);
-			} else if(lhs._hx_index < rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) < Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12771,7 +11136,7 @@ stx_assert_ord_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 2:
 			if(rhs._hx_index == 2) {
 				return stx_assert_Ord.Int().applyII(lhs.int,rhs.int);
-			} else if(lhs._hx_index < rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) < Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12780,7 +11145,7 @@ stx_assert_ord_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 3:
 			if(rhs._hx_index == 3) {
 				return stx_assert_Ord.Float().applyII(lhs.fl,rhs.fl);
-			} else if(lhs._hx_index < rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) < Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12789,7 +11154,7 @@ stx_assert_ord_term_Primitive.prototype = $extend(stx_pico_Clazz.prototype,{
 		case 4:
 			if(rhs._hx_index == 4) {
 				return stx_assert_Ord.String().applyII(lhs.str,rhs.str);
-			} else if(lhs._hx_index < rhs._hx_index) {
+			} else if(Type.enumIndex(lhs) < Type.enumIndex(rhs)) {
 				return true;
 			} else {
 				return false;
@@ -12829,7 +11194,7 @@ stx_assert_predicate_term_Open.prototype = {
 		return stx_nano_Report.unit();
 	}
 	,error: function() {
-		return new stx_nano_Err(haxe_ds_Option.None,haxe_ds_Option.None,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.get_pos()));
+		return stx_nano_Fault.empty(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.get_pos()));
 	}
 	,__class__: stx_assert_predicate_term_Open
 	,__properties__: {get_pos:"get_pos"}
@@ -12906,8 +11271,7 @@ stx_assert_predicate_term_Base.prototype = $extend(stx_pico_Clazz.prototype,{
 		return stx_nano_Report.fromStdOption(haxe_ds_Option.None);
 	}
 	,error: function(l,r) {
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos);
-		return new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_AssertFailure.PredicateFailed(js_Boot.getClass(this),l,r))),haxe_ds_Option.None,this1);
+		return stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,this.pos),stx_fail_AssertFailure.PredicateFailed(this.definition(),l,r));
 	}
 	,__class__: stx_assert_predicate_term_Base
 });
@@ -12918,10 +11282,9 @@ stx_assert_predicate_term_Exists.__name__ = "stx.assert.predicate.term.Exists";
 stx_assert_predicate_term_Exists.__super__ = stx_assert_predicate_term_Base;
 stx_assert_predicate_term_Exists.prototype = $extend(stx_assert_predicate_term_Base.prototype,{
 	applyI: function(v) {
-		var self = stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,v),function(_) {
+		return stx_LiftAssert.report(stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,v),function(_) {
 			return true;
-		});
-		return stx_LiftAssert.report(self._hx_index == 0 && self.v,this.error());
+		}),false),this.error());
 	}
 	,__class__: stx_assert_predicate_term_Exists
 });
@@ -12934,8 +11297,7 @@ stx_assert_predicate_term_Is.__super__ = stx_assert_predicate_term_Base;
 stx_assert_predicate_term_Is.prototype = $extend(stx_assert_predicate_term_Base.prototype,{
 	type: null
 	,applyI: function(v) {
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/assert/predicate/term/Is.hx", lineNumber : 12, className : "stx.assert.predicate.term.Is", methodName : "applyI"});
-		return stx_LiftAssert.report(js_Boot.__instanceof(v,this.type),new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_AssertFailure.PredicateFailed(js_Boot.getClass(this),v))),haxe_ds_Option.None,this1));
+		return stx_LiftAssert.report(Std.isOfType(v,this.type),stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/assert/predicate/term/Is.hx", lineNumber : 12, className : "stx.assert.predicate.term.Is", methodName : "applyI"}),stx_fail_AssertFailure.PredicateFailed(this.definition(),v)));
 	}
 	,__class__: stx_assert_predicate_term_Is
 });
@@ -12993,8 +11355,7 @@ stx_assert_predicate_term_NaturalReport.prototype = {
 	,applyI: function(p) {
 		var _gthis = this;
 		return stx_LiftIf.if_else(this.delegate(p),stx_nano_Report.unit,function() {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,_gthis.pos);
-			return stx_pico_Option.fromNullT(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(_gthis.report)),haxe_ds_Option.None,this1));
+			return stx_pico_Option.fromNullT(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,_gthis.pos),_gthis.report));
 		});
 	}
 	,__class__: stx_assert_predicate_term_NaturalReport
@@ -13019,16 +11380,11 @@ stx_assert_predicate_term_Not.__super__ = stx_assert_predicate_term_Open;
 stx_assert_predicate_term_Not.prototype = $extend(stx_assert_predicate_term_Open.prototype,{
 	predicate: null
 	,applyI: function(v) {
-		var bool;
-		switch(this.predicate.applyI(v)._hx_index) {
-		case 0:
-			bool = true;
-			break;
-		case 1:
-			bool = false;
-			break;
-		}
-		return stx_LiftAssert.report(bool,this.error());
+		return stx_LiftAssert.report(stx_pico_OptionLift.fold(this.predicate.applyI(v),function(c) {
+			return true;
+		},function() {
+			return false;
+		}),this.error());
 	}
 	,__class__: stx_assert_predicate_term_Not
 });
@@ -13063,7 +11419,7 @@ stx_assert_predicate_term_Throws.prototype = $extend(stx_assert_predicate_term_B
 		try {
 			block();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			return stx_nano_Report.unit();
 		}
 		return stx_nano_Report.pure(this.error());
@@ -13113,6 +11469,11 @@ stx_assert_predicate_term_XOr.prototype = $extend(stx_assert_predicate_term_Open
 	}
 	,__class__: stx_assert_predicate_term_XOr
 });
+var stx_async_Counter = function() { };
+stx_async_Counter.__name__ = "stx.async.Counter";
+stx_async_Counter.next = function() {
+	return stx_async_Counter.val++;
+};
 var stx_async_GoalStatusLift = function() { };
 stx_async_GoalStatusLift.__name__ = "stx.async.GoalStatusLift";
 stx_async_GoalStatusLift.is_partial = function(self) {
@@ -13161,119 +11522,27 @@ stx_async_Hook.get_loops = function() {
 };
 stx_async_Hook.notify = function(loop) {
 	stx_async_Hook.get_loops().push(loop);
-	var this1 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("initialize",{ fileName : "stx/async/Hook.hx", lineNumber : 27, className : "stx.async.Hook", methodName : "initialize"});
-	var this2 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn1 = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(3);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn1(pos));
-	})("initialize",{ fileName : "stx/async/Hook.hx", lineNumber : 29, className : "stx.async.Hook", methodName : "initialize"});
-	if(stx_async_Hook.get_initialized() == false) {
-		stx_async_Hook.set_initialized(true);
-		stx_async_Hook.initializing();
-	} else {
-		var this3 = stx_async_Hook_log(stx_nano_Wildcard.__);
-		var fn2 = function(pos) {
-			return stx_log_LogPosition.restamp(pos,function(stamp) {
-				return stamp.relevel(2);
-			});
-		};
-		(function(value,pos) {
-			this3(value,fn2(pos));
-		})("initializer",{ fileName : "stx/async/Hook.hx", lineNumber : 57, className : "stx.async.Hook", methodName : "initializer"});
-		var _g = 0;
-		var _g1 = stx_async_Hook.get_loops();
-		while(_g < _g1.length) _g1[_g++].ignition(stx_async_HookTag._new());
-	}
+	stx_async_Hook.initialize();
 };
 stx_async_Hook.initialize = function() {
-	var this1 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("initialize",{ fileName : "stx/async/Hook.hx", lineNumber : 27, className : "stx.async.Hook", methodName : "initialize"});
-	var this2 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn1 = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(3);
-		});
-	};
-	(function(value,pos) {
-		this2(value,fn1(pos));
-	})("initialize",{ fileName : "stx/async/Hook.hx", lineNumber : 29, className : "stx.async.Hook", methodName : "initialize"});
 	if(stx_async_Hook.get_initialized() == false) {
 		stx_async_Hook.set_initialized(true);
 		stx_async_Hook.initializing();
 	} else {
-		var this3 = stx_async_Hook_log(stx_nano_Wildcard.__);
-		var fn2 = function(pos) {
-			return stx_log_LogPosition.restamp(pos,function(stamp) {
-				return stamp.relevel(2);
-			});
-		};
-		(function(value,pos) {
-			this3(value,fn2(pos));
-		})("initializer",{ fileName : "stx/async/Hook.hx", lineNumber : 57, className : "stx.async.Hook", methodName : "initializer"});
-		var _g = 0;
-		var _g1 = stx_async_Hook.get_loops();
-		while(_g < _g1.length) _g1[_g++].ignition(stx_async_HookTag._new());
+		stx_async_Hook.initializer(function() {
+		});
 	}
 };
 stx_async_Hook.initializing = function() {
-	var this1 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("initializing",{ fileName : "stx/async/Hook.hx", lineNumber : 46, className : "stx.async.Hook", methodName : "initializing"});
 	var event = null;
 	var canceller = function() {
 		event.stop();
 	};
 	event = haxe_MainLoop.add(function() {
-		var this1 = stx_async_Hook_log(stx_nano_Wildcard.__);
-		var fn = function(pos) {
-			return stx_log_LogPosition.restamp(pos,function(stamp) {
-				return stamp.relevel(2);
-			});
-		};
-		(function(value,pos) {
-			this1(value,fn(pos));
-		})("initializer",{ fileName : "stx/async/Hook.hx", lineNumber : 57, className : "stx.async.Hook", methodName : "initializer"});
-		var _g = 0;
-		var _g1 = stx_async_Hook.get_loops();
-		while(_g < _g1.length) _g1[_g++].ignition(stx_async_HookTag._new());
-		canceller();
+		stx_async_Hook.initializer(canceller);
 	});
 };
 stx_async_Hook.initializer = function(canceller) {
-	var this1 = stx_async_Hook_log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("initializer",{ fileName : "stx/async/Hook.hx", lineNumber : 57, className : "stx.async.Hook", methodName : "initializer"});
 	var _g = 0;
 	var _g1 = stx_async_Hook.get_loops();
 	while(_g < _g1.length) _g1[_g++].ignition(stx_async_HookTag._new());
@@ -13284,39 +11553,21 @@ stx_async_HookTag._new = function() {
 	return null;
 };
 function stx_async_Hook_log(wildcard) {
-	var this1 = stx_async_Log.log(stx_nano_Wildcard.__);
-	var tag = stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Hook.hx", lineNumber : 5, className : "stx.async._Hook.Hook_Fields_", methodName : "log"})));
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag(tag);
-		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
+	return stx_Log.tag(stx_async_Log.log(stx_nano_Wildcard.__),stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Hook.hx", lineNumber : 5, className : "stx.async._Hook.Hook_Fields_", methodName : "log"}))));
 }
 var stx_async_Log = function() { };
 stx_async_Log.__name__ = "stx.async.Log";
 stx_async_Log.log = function(wildcard) {
-	var this1 = stx_Log.LOG;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag("stx.async");
-		});
-	};
-	return function(value,pos) {
-		this1(value,fn(pos));
-	};
+	return stx_Log.tag(stx_Log._new(),"stx.async");
 };
 var stx_async_LogicalClock = function() { };
 stx_async_LogicalClock.__name__ = "stx.async.LogicalClock";
 stx_async_LogicalClock.get = function() {
 	var st = stx_async_TimeStamp.pure;
 	if(stx_async_LogicalClock.previous == null) {
-		return st({ realm : stx_async_LogicalClock.previous = HxOverrides.now() / 1000, index : stx_async_LogicalClock.counter, exact : ++stx_async_LogicalClock.lifetime});
+		return st({ realm : stx_async_LogicalClock.previous = haxe_Timer.stamp(), index : stx_async_LogicalClock.counter, exact : ++stx_async_LogicalClock.lifetime});
 	} else {
-		var stamp = HxOverrides.now() / 1000;
+		var stamp = haxe_Timer.stamp();
 		if(stamp == stx_async_LogicalClock.previous) {
 			return st({ realm : stamp, index : stx_async_LogicalClock.counter++, exact : ++stx_async_LogicalClock.lifetime});
 		} else {
@@ -13357,15 +11608,6 @@ stx_async_LoopCls.prototype = {
 	,suspended: null
 	,threads: null
 	,add: function(work) {
-		var this1 = stx_async_Loop_log(stx_nano_Wildcard.__);
-		var fn = function(pos) {
-			return stx_log_LogPosition.restamp(pos,function(stamp) {
-				return stamp.relevel(2);
-			});
-		};
-		(function(value,pos) {
-			this1(value,fn(pos));
-		})("add: " + Std.string(work),{ fileName : "stx/async/Loop.hx", lineNumber : 47, className : "stx.async.LoopCls", methodName : "add"});
 		this.initialize();
 		this.threads.add(work);
 	}
@@ -13376,23 +11618,19 @@ stx_async_LoopCls.prototype = {
 	}
 	,reply: function() {
 		var _gthis = this;
-		(stx_async_Loop_log(stx_nano_Wildcard.__))("" + Std.string(this),{ fileName : "stx/async/Loop.hx", lineNumber : 58, className : "stx.async.LoopCls", methodName : "reply"});
 		var next = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.threads.pop());
-		(stx_async_Loop_log(stx_nano_Wildcard.__))("has next? " + Std.string(stx_pico_OptionLift.is_defined(next)),{ fileName : "stx/async/Loop.hx", lineNumber : 60, className : "stx.async.LoopCls", methodName : "reply"});
 		if(stx_pico_OptionLift.is_defined(next)) {
 			var work = $iterator(stx_pico_OptionLift)(next);
 			while(work.hasNext()) {
 				var work1 = [work.next()];
-				(stx_async_Loop_log(stx_nano_Wildcard.__))("work on: " + Std.string(work1[0]) + " of " + this.threads.length,{ fileName : "stx/async/Loop.hx", lineNumber : 63, className : "stx.async.LoopCls", methodName : "reply"});
 				try {
 					work1[0].pursue();
 				} catch( _g ) {
-					haxe_NativeStackTrace.lastError = _g;
+					haxe_NativeStackTrace.saveStack(_g);
 					var _g1 = haxe_Exception.caught(_g).unwrap();
 					this.fail(_g1);
 					break;
 				}
-				(stx_async_Loop_log(stx_nano_Wildcard.__))("" + Std.string(work1[0]),{ fileName : "stx/async/Loop.hx", lineNumber : 70, className : "stx.async.LoopCls", methodName : "reply"});
 				if(!work1[0].get_loaded()) {
 					switch(work1[0].get_status()) {
 					case -1:
@@ -13406,23 +11644,8 @@ stx_async_LoopCls.prototype = {
 						this.threads.push(work1[0]);
 						break;
 					case 3:
-						var this1 = stx_async_Loop_log(stx_nano_Wildcard.__);
-						var v = "suspend: " + Std.string(work1[0]);
-						(function(fn,this1) {
-							return function(value,pos) {
-								this1[0](value,fn[0](pos));
-							};
-						})([(function() {
-							return function(pos) {
-								return stx_log_LogPosition.restamp(pos,(function() {
-									return function(stamp) {
-										return stamp.relevel(2);
-									};
-								})());
-							};
-						})()],[this1])(v,{ fileName : "stx/async/Loop.hx", lineNumber : 75, className : "stx.async.LoopCls", methodName : "reply"});
 						this.suspended.push(work1[0]);
-						tink_core_Signal.nextTime(work1[0].get_signal()).handle((function(work) {
+						tink_core_Future.handle(tink_core_Signal.nextTime(work1[0].get_signal()),(function(work) {
 							return function(_) {
 								HxOverrides.remove(_gthis.suspended,work[0]);
 								_gthis.threads.push(work[0]);
@@ -13436,24 +11659,6 @@ stx_async_LoopCls.prototype = {
 			}
 			return true;
 		} else if(this.suspended.length > 0) {
-			var this1 = stx_async_Loop_log(stx_nano_Wildcard.__);
-			var _this = this.suspended;
-			var result = new Array(_this.length);
-			var _g = 0;
-			var _g1 = _this.length;
-			while(_g < _g1) {
-				var i = _g++;
-				result[i] = stx_LiftTToString.toString(_this[i]);
-			}
-			var this2 = this1;
-			var fn = function(pos) {
-				return stx_log_LogPosition.restamp(pos,function(stamp) {
-					return stamp.relevel(2);
-				});
-			};
-			(function(value,pos) {
-				this2(value,fn(pos));
-			})(result,{ fileName : "stx/async/Loop.hx", lineNumber : 97, className : "stx.async.LoopCls", methodName : "reply"});
 			return true;
 		} else {
 			return false;
@@ -13461,7 +11666,7 @@ stx_async_LoopCls.prototype = {
 	}
 	,ignition: null
 	,toString: function() {
-		return "" + stx_nano_Identifier.$name(stx_nano_lift_LiftNano.identifier(stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,this))) + "(initialized:" + Std.string(this.initialized) + ",suspended:" + Std.string(this.suspended) + ",threads:" + Std.string(this.threads) + ")";
+		return "" + stx_pico_Identifier.get_name(stx_nano_lift_LiftNano.identifier(stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,this))) + "(initialized:" + Std.string(this.initialized) + ",suspended:" + Std.string(this.suspended) + ",threads:" + Std.string(this.threads) + ")";
 	}
 	,__class__: stx_async_LoopCls
 };
@@ -13477,7 +11682,6 @@ stx_async_loop_term_Event.prototype = $extend(stx_async_LoopCls.prototype,{
 	}
 	,rec: function() {
 		if(!this.reply() && this.tick != null) {
-			(stx_async_Log.log(stx_nano_Wildcard.__))("done",{ fileName : "stx/async/loop/term/Event.hx", lineNumber : 10, className : "stx.async.loop.term.Event", methodName : "rec"});
 			this.tick.stop();
 			this.exit();
 		}
@@ -13494,33 +11698,22 @@ stx_async_Loop.Event = function() {
 	return new stx_async_loop_term_Event();
 };
 function stx_async_Loop_log(wildcard) {
-	var this1 = stx_async_Log.log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag("stx.async.Loop");
-		});
-	};
-	return function(value,pos) {
-		this1(value,fn(pos));
-	};
+	return stx_Log.tag(stx_async_Log.log(stx_nano_Wildcard.__),"stx.async.Loop");
 }
 var stx_async_TaskLift = function() { };
 stx_async_TaskLift.__name__ = "stx.async.TaskLift";
 stx_async_TaskLift.outcome = function(self) {
-	var self1 = stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self.get_defect()),function(e) {
+	return stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self.get_defect()),function(e) {
 		return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,e);
-	});
-	if(self1._hx_index == 0) {
-		return self1.v;
-	} else {
+	}),function() {
 		return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,self.get_result());
-	}
+	});
 };
 stx_async_TaskLift.map = function(self,fn) {
 	return stx_async_Task.Map(self,fn);
 };
 stx_async_TaskLift.flat_map = function(self,fn) {
-	return stx_async_Task.FlatMap(self,fn);
+	return stx_async_Task.AnonFlatMap(self,fn,{ fileName : "stx/async/Task.hx", lineNumber : 60, className : "stx.async.TaskLift", methodName : "flat_map"});
 };
 var stx_async_Task = {};
 stx_async_Task.lift = function(self) {
@@ -13529,8 +11722,8 @@ stx_async_Task.lift = function(self) {
 stx_async_Task._new = function(self) {
 	return self;
 };
-stx_async_Task.FlatMap = function(self,flat_map) {
-	return new stx_async_task_term_FlatMap(self,flat_map);
+stx_async_Task.AnonFlatMap = function(self,flat_map,pos) {
+	return new stx_async_task_term_AnonFlatMap(self,flat_map,pos);
 };
 stx_async_Task.ThroughBind = function(self,through_bind) {
 	return new stx_async_task_term_AnonThroughBind(self,through_bind);
@@ -13542,1493 +11735,358 @@ stx_async_Task.FutureOutcome = function(self,pos) {
 	return new stx_async_task_term_FutureOutcome(self,pos);
 };
 stx_async_Task.Later = function(self) {
-	return stx_async_Task._new(new stx_async_task_term_Later(self));
+	return stx_async_Task.lift(new stx_async_task_term_Later(self));
 };
 stx_async_Task.Thunk = function(self) {
-	return stx_async_Task._new(new stx_async_task_term_Thunk(self));
+	return stx_async_Task.lift(new stx_async_task_term_Thunk(self));
 };
 stx_async_Task.Pause = function(work,task) {
-	return stx_async_Task._new(new stx_async_task_term_Pause(work,task));
+	return stx_async_Task.lift(new stx_async_task_term_Pause(work,task,{ fileName : "stx/async/Task.hx", lineNumber : 31, className : "stx.async._Task.Task_Impl_", methodName : "Pause"}));
 };
 stx_async_Task.After = function(task,work) {
-	return stx_async_Task._new(new stx_async_task_term_After(task,work));
+	return stx_async_Task.lift(new stx_async_task_term_After(task,work,{ fileName : "stx/async/Task.hx", lineNumber : 34, className : "stx.async._Task.Task_Impl_", methodName : "After"}));
 };
 stx_async_Task.Map = function(self,fn) {
-	return stx_async_Task._new(new stx_async_task_term_Map(self,fn));
+	return stx_async_Task.lift(new stx_async_task_term_Map(self,fn));
 };
-stx_async_Task.Pure = function(t) {
-	return new stx_async_task_term_Pure(t);
+stx_async_Task.Logging = function(self,logging,showing) {
+	return stx_async_Task.lift(new stx_async_task_term_Logging(self,logging,showing,{ fileName : "stx/async/Task.hx", lineNumber : 40, className : "stx.async._Task.Task_Impl_", methodName : "Logging"}));
 };
-stx_async_Task.Fail = function(e) {
-	return new stx_async_task_term_Fail(e);
+stx_async_Task.At = function(self,pos) {
+	return stx_async_Task.lift(new stx_async_task_term_At(self,pos));
+};
+stx_async_Task.Pure = function(t,pos) {
+	return new stx_async_task_term_Pure(t,pos);
+};
+stx_async_Task.Fail = function(e,pos) {
+	return new stx_async_task_term_Fail(e,pos);
 };
 stx_async_Task.Par = function(self,that) {
 	return new stx_async_task_term_Par(self,that);
 };
 stx_async_Task.Seq = function(self,that) {
-	return new stx_async_task_term_Seq(self,that);
+	return new stx_async_task_term_Seq(self,that,{ fileName : "stx/async/Task.hx", lineNumber : 49, className : "stx.async._Task.Task_Impl_", methodName : "Seq"});
 };
-var stx_async_TerminalApi = function() { };
-stx_async_TerminalApi.__name__ = "stx.async.TerminalApi";
-stx_async_TerminalApi.__isInterface__ = true;
-stx_async_TerminalApi.prototype = {
-	id: null
-	,get_id: null
+var stx_async_terminal_Api = function() { };
+stx_async_terminal_Api.__name__ = "stx.async.terminal.Api";
+stx_async_terminal_Api.__isInterface__ = true;
+stx_async_terminal_Api.__interfaces__ = [stx_async_declared_Api];
+stx_async_terminal_Api.prototype = {
+	resolve: null
 	,issue: null
 	,value: null
 	,error: null
 	,later: null
 	,lense: null
+	,release: null
 	,pause: null
 	,joint: null
 	,inner: null
 	,toTerminalApi: null
-	,__class__: stx_async_TerminalApi
-	,__properties__: {get_id:"get_id"}
+	,toTask: null
+	,toWork: null
+	,toGoalApi: null
+	,__class__: stx_async_terminal_Api
 };
-var stx_async_TerminalAbs = function() {
-	this.counter = 0;
-	this.id = this.counter++;
-	var this1 = stx_async_Terminal_log(stx_nano_Wildcard.__);
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.relevel(2);
-		});
-	};
-	(function(value,pos) {
-		this1(value,fn(pos));
-	})("id: " + this.get_id(),{ fileName : "stx/async/Terminal.hx", lineNumber : 44, className : "stx.async.TerminalAbs", methodName : "new"});
+var stx_async_terminal_Cls = function(pos) {
+	stx_async_goal_term_Direct.call(this,pos);
+	this.set_status(0);
+	this.dependent = new stx_async_task_term_DeferredDelegate(stx_async_Work.Unit().toTaskApi(),{ fileName : "stx/async/terminal/Cls.hx", lineNumber : 9, className : "stx.async.terminal.Cls", methodName : "new"});
+	this.id = stx_async_Counter.next();
 };
-stx_async_TerminalAbs.__name__ = "stx.async.TerminalAbs";
-stx_async_TerminalAbs.__interfaces__ = [stx_async_TerminalApi];
-stx_async_TerminalAbs.prototype = {
-	counter: null
-	,id: null
-	,get_id: function() {
-		return this.id;
+stx_async_terminal_Cls.__name__ = "stx.async.terminal.Cls";
+stx_async_terminal_Cls.__interfaces__ = [stx_async_terminal_Api];
+stx_async_terminal_Cls.__super__ = stx_async_goal_term_Direct;
+stx_async_terminal_Cls.prototype = $extend(stx_async_goal_term_Direct.prototype,{
+	dependent: null
+	,resolve: function(receiver) {
+		return stx_async_terminal_Receiver.lift(stx_async_Task.After(stx_async_terminal_Receiver.prj(receiver),this.toWork({ fileName : "stx/async/terminal/Cls.hx", lineNumber : 14, className : "stx.async.terminal.Cls", methodName : "resolve"})).toTaskApi());
 	}
-	,issue: null
-	,value: null
-	,error: null
-	,later: null
-	,lense: null
-	,pause: function(work) {
-		return new stx_async_WorkTerminal(work);
+	,issue: function(res,pos) {
+		var _g = $bind(this,this.value);
+		var pos1 = pos;
+		var _g1 = $bind(this,this.error);
+		var pos2 = pos;
+		return this.resolve(stx_pico_OutcomeLift.fold(res,function(r) {
+			return _g(r,pos1);
+		},function(e) {
+			return _g1(e,pos2);
+		}));
 	}
-	,inner: function(join) {
-		return new stx_async_SubTerminal(join);
+	,value: function(r,pos) {
+		return this.resolve(stx_async_terminal_Receiver.lift(stx_async_Task.Pure(r,pos)));
 	}
-	,joint: function(joiner) {
-		return new stx_async_JointTerminal(joiner);
+	,error: function(e,pos) {
+		return this.resolve(stx_async_terminal_Receiver.lift(stx_async_Task.Fail(e,pos)));
+	}
+	,later: function(ft,pos) {
+		return this.resolve(stx_async_terminal_Receiver.lift(stx_async_Task.FutureOutcome(ft,pos)));
+	}
+	,lense: function(t,pos) {
+		return this.resolve(stx_async_terminal_Receiver.lift(stx_async_Task.At(t,pos)));
+	}
+	,release: function(term) {
+		this.dependent.set_delegate(term.toTask());
+		return new stx_async_terminal_term_Release(term,this.toWork({ fileName : "stx/async/terminal/Cls.hx", lineNumber : 37, className : "stx.async.terminal.Cls", methodName : "release"}),{ fileName : "stx/async/terminal/Cls.hx", lineNumber : 37, className : "stx.async.terminal.Cls", methodName : "release"});
+	}
+	,pause: function(work,pos) {
+		return this.release(new stx_async_terminal_term_Pause(work,pos));
+	}
+	,inner: function(join,pos) {
+		return this.release(new stx_async_terminal_term_Sub(join,pos));
+	}
+	,joint: function(joiner,pos) {
+		return this.release(new stx_async_terminal_term_Joint(joiner,pos));
 	}
 	,toTerminalApi: function() {
 		return this;
 	}
+	,toTask: function() {
+		return stx_async_Task.lift(new stx_async_work_term_Goal(this.toGoalApi(),{ fileName : "stx/async/terminal/Cls.hx", lineNumber : 53, className : "stx.async.terminal.Cls", methodName : "toTask"}));
+	}
 	,toString: function() {
-		return "Terminal(" + this.get_id() + ")";
+		return "" + stx_pico_Identifier.get_name(this.identifier()) + "[" + this.get_id() + ":" + stx_async_GoalStatusLift.toString(this.get_status()) + "]" + this.ident() + " [dependent: " + Std.string(this.dependent) + "]";
 	}
-	,__class__: stx_async_TerminalAbs
-	,__properties__: {get_id:"get_id"}
-};
-var stx_async_TerminalCls = function() {
-	stx_async_TerminalAbs.call(this);
-};
-stx_async_TerminalCls.__name__ = "stx.async.TerminalCls";
-stx_async_TerminalCls.__super__ = stx_async_TerminalAbs;
-stx_async_TerminalCls.prototype = $extend(stx_async_TerminalAbs.prototype,{
-	issue: function(res) {
-		switch(res._hx_index) {
-		case 0:
-			return this.value(res.t);
-		case 1:
-			return this.error(res.e);
-		}
+	,ident: function() {
+		return "(" + stx_nano_PositionLift.toString_name_method_line(stx_LiftPos.lift(this.pos)) + ")";
 	}
-	,value: function(r) {
-		return stx_async_Task.Pure(r);
+	,get_status: function() {
+		return this.dependent.get_status();
 	}
-	,error: function(e) {
-		return stx_async_Task.Fail(e);
+	,get_result: function() {
+		throw haxe_Exception.thrown("Terminal has no result");
 	}
-	,later: function(ft) {
-		return stx_async_Task.FutureOutcome(ft,{ fileName : "stx/async/Terminal.hx", lineNumber : 69, className : "stx.async.TerminalCls", methodName : "later"});
-	}
-	,lense: function(t) {
-		return t;
-	}
-	,__class__: stx_async_TerminalCls
-});
-function stx_async_Terminal_log(wildcard) {
-	var this1 = stx_async_Log.log(stx_nano_Wildcard.__);
-	var tag = stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Terminal.hx", lineNumber : 8, className : "stx.async._Terminal.Terminal_Fields_", methodName : "log"})));
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag(tag);
-		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
-}
-var stx_log_LogCustomParameters = {};
-stx_log_LogCustomParameters.__properties__ = {get_stamp:"get_stamp"};
-stx_log_LogCustomParameters._new = function(self) {
-	var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self);
-	return self1._hx_index == 0 ? self1.v : [];
-};
-stx_log_LogCustomParameters.get_stamp = function(this1) {
-	var obj = null;
-	var _g = 0;
-	while(_g < this1.length) {
-		var x = this1[_g];
-		++_g;
-		if(js_Boot.getClass(x) == stx_log_Stamp) {
-			obj = x;
-			break;
-		}
-	}
-	if(obj == null) {
-		obj = new stx_log_Stamp();
-		this1.push(obj);
-	}
-	return obj;
-};
-stx_log_LogCustomParameters.restamp = function(this1,fn) {
-	var self = stx_lift_ArrayLift.search(stx_lift_ArrayLift.mapi(this1,function(tI,tII) {
-		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
-	}),function(tp) {
-		return stx_log_LogCustomParameters.is_stamp(stx_nano_CoupleLift.snd(tp));
-	});
-	var indexed;
-	if(self._hx_index == 0) {
-		indexed = self.v;
-	} else {
-		var stamp = new stx_log_Stamp();
-		var index = this1.length;
-		this1[index] = stamp;
-		indexed = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,index,stamp);
-	}
-	var next_stamp = fn(stx_nano_CoupleLift.snd(indexed));
-	var copy = this1.slice();
-	copy[stx_nano_CoupleLift.fst(indexed)] = next_stamp;
-	return copy;
-};
-stx_log_LogCustomParameters.is_stamp = function(v) {
-	return js_Boot.getClass(v) == stx_log_Stamp;
-};
-var stx_lift_ArrayLift = function() { };
-stx_lift_ArrayLift.__name__ = "stx.lift.ArrayLift";
-stx_lift_ArrayLift.flatten = function(arrs) {
-	var res = [];
-	var _g = 0;
-	while(_g < arrs.length) {
-		var arr = arrs[_g];
-		++_g;
-		var _g1 = 0;
-		while(_g1 < arr.length) res.push(arr[_g1++]);
-	}
-	return res;
-};
-stx_lift_ArrayLift.interleave = function(alls) {
-	var res = [];
-	if(alls.length > 0) {
-		var minLength = alls[0].length;
-		var _g = 0;
-		while(_g < alls.length) minLength = Math.min(minLength,alls[_g++].length) | 0;
-		var length = minLength;
-		var i = 0;
-		while(i < length) {
-			var _g = 0;
-			while(_g < alls.length) res.push(alls[_g++][i]);
-			++i;
-		}
-	}
-	return res;
-};
-stx_lift_ArrayLift.is_defined = function(self) {
-	return self.length > 0;
-};
-stx_lift_ArrayLift.cons = function(self,t) {
-	var copy = stx_lift_ArrayLift.copy(self);
-	copy.unshift(t);
-	return copy;
-};
-stx_lift_ArrayLift.snoc = function(self,t) {
-	var copy = stx_lift_ArrayLift.copy(self);
-	copy.push(t);
-	return copy;
-};
-stx_lift_ArrayLift.set = function(self,i,v) {
-	var arr0 = self.slice();
-	arr0[i] = v;
-	return arr0;
-};
-stx_lift_ArrayLift.get = function(self,i) {
-	return self[i];
-};
-stx_lift_ArrayLift.head = function(self) {
-	if(self.length == 0) {
-		return haxe_ds_Option.None;
-	} else if(self[0] == null) {
-		return haxe_ds_Option.None;
-	} else {
-		return haxe_ds_Option.Some(self[0]);
-	}
-};
-stx_lift_ArrayLift.tail = function(self) {
-	return self.slice(1);
-};
-stx_lift_ArrayLift.last = function(self) {
-	var v = self[self.length > 0 ? self.length - 1 : 0];
-	if(v == null) {
-		return haxe_ds_Option.None;
-	} else {
-		return haxe_ds_Option.Some(v);
-	}
-};
-stx_lift_ArrayLift.copy = function(self) {
-	return [].concat(self);
-};
-stx_lift_ArrayLift.concat = function(self,that) {
-	var acc = stx_lift_ArrayLift.copy(self);
-	var _g = 0;
-	while(_g < self.length) acc.push(self[_g++]);
-	return acc;
-};
-stx_lift_ArrayLift.bind_fold = function(self,pure,init,bind,fold) {
-	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
-		return bind(memo,function(b) {
-			return pure(fold(next,b));
-		});
-	},pure(init));
-};
-stx_lift_ArrayLift.reduce = function(self,unit,pure,plus) {
-	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
-		return plus(memo,pure(next));
-	},unit());
-};
-stx_lift_ArrayLift.map = function(self,fn) {
-	var n = [];
-	var _g = 0;
-	while(_g < self.length) n.push(fn(self[_g++]));
-	return n;
-};
-stx_lift_ArrayLift.mapi = function(self,fn) {
-	var n = [];
-	var e = null;
-	var _g = 0;
-	var _g1 = self.length;
-	while(_g < _g1) {
-		var i = _g++;
-		e = self[i];
-		n.push(fn(i,e));
-	}
-	return n;
-};
-stx_lift_ArrayLift.flat_map = function(self,fn) {
-	var n = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var e2 = $getIterator(fn(self[_g++]));
-		while(e2.hasNext()) n.push(e2.next());
-	}
-	return n;
-};
-stx_lift_ArrayLift.lfold = function(self,fn,memo) {
-	var r = memo;
-	var _g = 0;
-	while(_g < self.length) r = fn(self[_g++],r);
-	return r;
-};
-stx_lift_ArrayLift.lfold1 = function(self,fn) {
-	var folded = stx_lift_ArrayLift.head(self);
-	var tail = stx_lift_ArrayLift.tail(self);
-	return stx_pico_OptionLift.map(folded,function(memo) {
-		var _g = 0;
-		while(_g < tail.length) memo = fn(memo,tail[_g++]);
-		return memo;
-	});
-};
-stx_lift_ArrayLift.rfold = function(self,fn,z) {
-	var r = z;
-	var _g = 0;
-	var _g1 = self.length;
-	while(_g < _g1) r = fn(self[self.length - 1 - _g++],r);
-	return r;
-};
-stx_lift_ArrayLift.rfold1 = function(self,fn) {
-	return stx_lift_ArrayLift.lfold1(stx_lift_ArrayLift.lfold(self,function(b,a) {
-		a.unshift(b);
-		return a;
-	},[]),fn);
-};
-stx_lift_ArrayLift.lscan = function(self,f,init) {
-	var result = [init];
-	var _g = 0;
-	while(_g < self.length) result.push(f(self[_g++],init));
-	return result;
-};
-stx_lift_ArrayLift.lscan1 = function(self,f) {
-	var result = [];
-	if(0 == self.length) {
-		return result;
-	}
-	var accum = self[0];
-	result.push(accum);
-	var _g = 1;
-	var _g1 = self.length;
-	while(_g < _g1) result.push(f(self[_g++],accum));
-	return result;
-};
-stx_lift_ArrayLift.rscan = function(self,init,f) {
-	var a = self.slice();
-	a.reverse();
-	return stx_lift_ArrayLift.lscan(a,f,init);
-};
-stx_lift_ArrayLift.rscan1 = function(self,f) {
-	var a = self.slice();
-	a.reverse();
-	return stx_lift_ArrayLift.lscan1(a,f);
-};
-stx_lift_ArrayLift.filter = function(self,fn) {
-	var n = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var e = self[_g];
-		++_g;
-		if(fn(e)) {
-			n.push(e);
-		}
-	}
-	return n;
-};
-stx_lift_ArrayLift.map_filter = function(self,fn) {
-	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
-		var _g = fn(next);
-		if(_g._hx_index == 0) {
-			return stx_lift_ArrayLift.snoc(memo,_g.v);
-		} else {
-			return memo;
-		}
-	},[]);
-};
-stx_lift_ArrayLift.whilst = function(self,fn) {
-	var r = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var e = self[_g];
-		++_g;
-		if(fn(e)) {
-			r.push(e);
-		} else {
-			break;
-		}
-	}
-	return r;
-};
-stx_lift_ArrayLift.ltaken = function(self,n) {
-	return self.slice(0,Math.min(n,self.length) | 0);
-};
-stx_lift_ArrayLift.ldropn = function(self,n) {
-	if(n >= self.length) {
-		return [];
-	} else {
-		return self.slice(n);
-	}
-};
-stx_lift_ArrayLift.rdropn = function(self,n) {
-	if(self != null && n >= self.length) {
-		return [];
-	} else {
-		return self.splice(0,self.length - n);
-	}
-};
-stx_lift_ArrayLift.ldrop = function(self,p) {
-	var r = [].concat(self);
-	var _g = 0;
-	while(_g < self.length) if(p(self[_g++])) {
-		r.shift();
-	} else {
-		break;
-	}
-	return r;
-};
-stx_lift_ArrayLift.search = function(self,fn) {
-	var out = haxe_ds_Option.None;
-	var _g = 0;
-	while(_g < self.length) {
-		var el = self[_g];
-		++_g;
-		if(fn(el)) {
-			out = haxe_ds_Option.Some(el);
-			break;
-		}
-	}
-	return out;
-};
-stx_lift_ArrayLift.all = function(self,fn) {
-	return stx_lift_ArrayLift.lfold(self,function(b,a) {
-		if(a) {
-			return fn(b);
-		} else {
-			return false;
-		}
-	},true);
-};
-stx_lift_ArrayLift.any = function(self,fn) {
-	return stx_lift_ArrayLift.lfold(self,function(b,a) {
-		if(a) {
-			return true;
-		} else {
-			return fn(b);
-		}
-	},false);
-};
-stx_lift_ArrayLift.zip_with = function(self,that,fn) {
-	var next = [];
-	var lower = Math.min(self.length,that.length) | 0;
-	var _g = 0;
-	while(_g < lower) {
-		var i = _g++;
-		next.push(fn(self[i],that[i]));
-	}
-	return next;
-};
-stx_lift_ArrayLift.cross_with = function(self,that,fn) {
-	var r = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var va = self[_g++];
-		var _g1 = 0;
-		while(_g1 < that.length) r.push(fn(va,that[_g1++]));
-	}
-	return r;
-};
-stx_lift_ArrayLift.difference_with = function(self,that,eq) {
-	var res = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var e = [self[_g]];
-		++_g;
-		if(!stx_lift_ArrayLift.any(that,(function(e) {
-			return function(x) {
-				return eq(x,e[0]);
-			};
-		})(e))) {
-			res.push(e[0]);
-		}
-	}
-	return res;
-};
-stx_lift_ArrayLift.union_with = function(self,that,eq) {
-	var res = [];
-	var _g = 0;
-	while(_g < self.length) res.push(self[_g++]);
-	var _g = 0;
-	while(_g < that.length) {
-		var e = [that[_g]];
-		++_g;
-		if(!stx_lift_ArrayLift.any(res,(function(e) {
-			return function(x) {
-				return eq(x,e[0]);
-			};
-		})(e))) {
-			res.push(e[0]);
-		}
-	}
-	return res;
-};
-stx_lift_ArrayLift.unique_with = function(self,eq) {
-	var r = [];
-	var _g = 0;
-	while(_g < self.length) {
-		var e = self[_g];
-		++_g;
-		var exists = stx_lift_ArrayLift.any(r,(function(_g,a1) {
-			return function(a2) {
-				return _g[0](a1[0],a2);
-			};
-		})([eq],[e]));
-		stx_lift_ArrayLift.search(r,(function(_g,a1) {
-			return function(a2) {
-				return _g[0](a1[0],a2);
-			};
-		})([eq],[e]));
-		if(!exists) {
-			r.push(e);
-		}
-	}
-	return r;
-};
-stx_lift_ArrayLift.nub_with = function(self,f) {
-	return stx_lift_ArrayLift.lfold(self,function(b,a) {
-		var _g = f;
-		var a1 = b;
-		if(stx_lift_ArrayLift.any(a,function(a2) {
-			return _g(a1,a2);
-		})) {
-			return a;
-		} else {
-			return stx_lift_ArrayLift.snoc(a,b);
-		}
-	},[]);
-};
-stx_lift_ArrayLift.intersect_with = function(self,that,f) {
-	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
-		var _g = f;
-		var a1 = next;
-		var _g1 = function(a2) {
-			return _g(a1,a2);
-		};
-		if(stx_lift_ArrayLift.any(that,_g1) == true) {
-			return stx_lift_ArrayLift.snoc(memo,next);
-		} else {
-			return memo;
-		}
-	},[]);
-};
-stx_lift_ArrayLift.reversed = function(self) {
-	return stx_lift_ArrayLift.lfold(self,function(b,a) {
-		a.unshift(b);
-		return a;
-	},[]);
-};
-stx_lift_ArrayLift.count = function(self,f) {
-	return stx_lift_ArrayLift.lfold(self,function(b,a) {
-		return a + (f(b) ? 1 : 0);
-	},0);
-};
-stx_lift_ArrayLift.size = function(self) {
-	return self.length;
-};
-stx_lift_ArrayLift.index_of = function(self,t) {
-	var index = 0;
-	var ok = false;
-	var _g = 0;
-	while(_g < self.length) {
-		if(t(self[_g++])) {
-			ok = true;
-			break;
-		}
-		++index;
-	}
-	if(ok) {
-		return index;
-	} else {
-		return -1;
-	}
-};
-stx_lift_ArrayLift.has = function(self,obj) {
-	var index = self.indexOf(obj);
-	if(index == -1) {
-		return haxe_ds_Option.None;
-	} else {
-		return haxe_ds_Option.Some(index);
-	}
-};
-stx_lift_ArrayLift.partition = function(self,f) {
-	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
-		if(f(next)) {
-			memo.a.push(next);
-		} else {
-			memo.b.push(next);
-		}
-		return memo;
-	},{ a : [], b : []});
-};
-stx_lift_ArrayLift.chunk = function(self,size) {
-	var slices = [];
-	var rest = 0;
-	var _g = 0;
-	while(_g < size.length) {
-		var next = rest + size[_g++];
-		slices.push(self.slice(rest,next));
-		rest = next;
-	}
-	return slices;
-};
-stx_lift_ArrayLift.pad = function(self,len,val) {
-	var len0 = len - self.length;
-	var arr0 = [];
-	var _g = 0;
-	while(_g < len0) {
-		++_g;
-		arr0.push(val);
-	}
-	return self.concat(arr0);
-};
-stx_lift_ArrayLift.fill = function(self,def) {
-	var result = new Array(self.length);
-	var _g = 0;
-	var _g1 = self.length;
-	while(_g < _g1) {
-		var i = _g++;
-		var x = self[i];
-		result[i] = x == null ? def : x;
-	}
-	return result;
-};
-stx_lift_ArrayLift.toIterable = function(self) {
-	return self;
-};
-stx_lift_ArrayLift.toMap = function(self) {
-	var mp = new haxe_ds_StringMap();
-	var _g = 0;
-	while(_g < self.length) {
-		var val = self[_g++]();
-		mp.h[val.a] = val.b;
-	}
-	return mp;
-};
-stx_lift_ArrayLift.random = function(self) {
-	var len = self.length;
-	return self[Math.round(Math.random() * (len - 1))];
-};
-stx_lift_ArrayLift.shuffle = function(self) {
-	var res = [];
-	var cp = self.slice();
-	while(cp.length > 0) res.push(cp.splice(Math.floor(Math.random() * cp.length),1)[0]);
-	return res;
-};
-stx_lift_ArrayLift.and_with = function(self,that,eq) {
-	return stx_lift_ArrayLift.lfold(stx_lift_ArrayLift.zip_with(self,that,function(l,r) {
-		return { a : l, b : r};
-	}),function(next,memo) {
-		if(memo) {
-			if(eq(next.a,next.b)) {
-				return eq(next.a,next.b);
-			} else {
-				return false;
-			}
-		} else {
-			return memo;
-		}
-	},true);
-};
-stx_lift_ArrayLift.rotate = function(self,num) {
-	num %= self.length;
-	var l = stx_lift_ArrayLift.ltaken(self,num);
-	var r = stx_lift_ArrayLift.ldropn(self,num);
-	if(num < 0) {
-		return stx_lift_ArrayLift.concat(l,r);
-	} else if(num > 1) {
-		return stx_lift_ArrayLift.concat(l,r);
-	} else {
-		return self;
-	}
-};
-stx_lift_ArrayLift.iterator = function(self) {
-	return new haxe_iterators_ArrayIterator(self);
-};
-stx_lift_ArrayLift.elide = function(self) {
-	return stx_lift_ArrayLift.map(self,function(v) {
-		return v;
-	});
-};
-stx_lift_ArrayLift.prj = function(self) {
-	return self;
-};
-var stx_log_Stamp = function(id,level,timestamp,tags,hidden) {
-	if(hidden == null) {
-		hidden = false;
-	}
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,id);
-	var tmp;
-	if(self._hx_index == 0) {
-		tmp = self.v;
-	} else {
-		var _g = function(value) {
-			return stx_nano_lift_LiftNano.uuid(stx_nano_Wildcard.__,value);
-		};
-		var value = "xxxxx";
-		tmp = (function() {
-			return _g(value);
-		})();
-	}
-	this.id = tmp;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,level);
-	this.level = self._hx_index == 0 ? self.v : 0;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,timestamp);
-	this.timestamp = self._hx_index == 0 ? self.v : _$Date_Date_$Impl_$.now();
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,tags);
-	this.tags = self._hx_index == 0 ? self.v : [];
-	this.hidden = hidden;
-};
-stx_log_Stamp.__name__ = "stx.log.Stamp";
-stx_log_Stamp.prototype = {
-	id: null
-	,level: null
-	,timestamp: null
-	,tags: null
-	,hidden: null
-	,copy: function(id,level,timestamp,tags,hidden) {
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,id);
-		var tmp = self._hx_index == 0 ? self.v : this.id;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,level);
-		var tmp1 = self._hx_index == 0 ? self.v : this.level;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,timestamp);
-		var tmp2 = self._hx_index == 0 ? self.v : this.timestamp;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,tags);
-		var tmp3 = self._hx_index == 0 ? self.v : this.tags;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,hidden);
-		return new stx_log_Stamp(tmp,tmp1,tmp2,tmp3,self._hx_index == 0 ? self.v : this.hidden);
-	}
-	,relevel: function(level) {
-		return this.copy(null,level);
-	}
-	,tag: function(tag) {
-		return this.copy(null,null,null,stx_lift_ArrayLift.snoc(this.tags,tag));
-	}
-	,hide: function() {
-		return this.copy(this.id,this.level,this.timestamp,this.tags,true);
-	}
-	,is_zero: function() {
-		return this == stx_log_Stamp.ZERO;
-	}
-	,__class__: stx_log_Stamp
-};
-var stx_nano_CoupleLift = function() { };
-stx_nano_CoupleLift.__name__ = "stx.nano.CoupleLift";
-stx_nano_CoupleLift.map = function(self,fn) {
-	return function(tp) {
-		self(function(ti,tii) {
-			tp(ti,fn(tii));
-		});
-	};
-};
-stx_nano_CoupleLift.mapl = function(self,fn) {
-	return function(tp) {
-		self(function(ti,tii) {
-			tp(fn(ti),tii);
-		});
-	};
-};
-stx_nano_CoupleLift.mapr = function(self,fn) {
-	return stx_nano_CoupleLift.map(self,fn);
-};
-stx_nano_CoupleLift.fst = function(self) {
-	return stx_nano_CoupleLift.decouple(self,function(tI,_) {
-		return tI;
-	});
-};
-stx_nano_CoupleLift.snd = function(self) {
-	return stx_nano_CoupleLift.decouple(self,function(_,tII) {
-		return tII;
-	});
-};
-stx_nano_CoupleLift.swap = function(self) {
-	return function(tp) {
-		self(function(ti,tii) {
-			tp(tii,ti);
-		});
-	};
-};
-stx_nano_CoupleLift.equals = function(lhs,rhs) {
-	return stx_nano_CoupleLift.decouple(lhs,function(t0l,t0r) {
-		return stx_nano_CoupleLift.decouple(rhs,function(t1l,t1r) {
-			if(t0l == t1l) {
-				return t0r == t1r;
-			} else {
-				return false;
-			}
-		});
-	});
-};
-stx_nano_CoupleLift.reduce = function(self,flhs,frhs,plus) {
-	return stx_nano_CoupleLift.decouple(self,function(tI,tII) {
-		return plus(flhs(tI),frhs(tII));
-	});
-};
-stx_nano_CoupleLift.decouple = function(self,fn) {
-	var out = null;
-	self(function(ti,tii) {
-		out = fn(ti,tii);
-	});
-	return out;
-};
-stx_nano_CoupleLift.cat = function(self) {
-	return stx_nano_CoupleLift.decouple(self,function(l,r) {
-		return [haxe_ds_Either.Left(l),haxe_ds_Either.Right(r)];
-	});
-};
-stx_nano_CoupleLift.tup = function(self) {
-	return stx_nano_CoupleLift.decouple(self,stx_Tup2.tuple2);
-};
-stx_nano_CoupleLift.toString = function(self) {
-	return stx_nano_CoupleLift.decouple(self,function(l,r) {
-		return "(" + Std.string(l) + " " + Std.string(r) + ")";
-	});
-};
-var stx_pico_OptionLift = function() { };
-stx_pico_OptionLift.__name__ = "stx.pico.OptionLift";
-stx_pico_OptionLift.fold = function(self,ok,no) {
-	switch(self._hx_index) {
-	case 0:
-		return ok(self.v);
-	case 1:
-		return no();
-	}
-};
-stx_pico_OptionLift.map = function(self,f) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = haxe_ds_Option.Some(f(self.v));
-		break;
-	case 1:
-		tmp = haxe_ds_Option.None;
-		break;
-	}
-	return tmp;
-};
-stx_pico_OptionLift.flat_map = function(self,f) {
-	return stx_pico_Option.flatten(stx_pico_OptionLift.map(self,f));
-};
-stx_pico_OptionLift.or = function(self,thunk) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = haxe_ds_Option.Some(self.v);
-		break;
-	case 1:
-		tmp = thunk();
-		break;
-	}
-	return tmp;
-};
-stx_pico_OptionLift.filter = function(self,fn) {
-	return stx_pico_OptionLift.flat_map(self,function(v) {
-		if(fn(v)) {
-			return haxe_ds_Option.Some(v);
-		} else {
-			return haxe_ds_Option.None;
-		}
-	});
-};
-stx_pico_OptionLift.def = function(self,thunk) {
-	if(self._hx_index == 0) {
-		return self.v;
-	} else {
-		return thunk();
-	}
-};
-stx_pico_OptionLift.defv = function(self,v) {
-	if(self._hx_index == 0) {
-		return self.v;
-	} else {
-		return v;
-	}
-};
-stx_pico_OptionLift.is_defined = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return true;
-	case 1:
-		return false;
-	}
-};
-stx_pico_OptionLift.iterator = function(self) {
-	var done = false;
-	return { hasNext : function() {
-		if(!done) {
-			return stx_pico_OptionLift.is_defined(self);
-		} else {
-			return false;
-		}
-	}, next : function() {
-		done = true;
-		if(self._hx_index == 0) {
-			return self.v;
-		} else {
-			return null;
-		}
-	}};
-};
-stx_pico_OptionLift.merge = function(self,that,fn) {
-	switch(self._hx_index) {
-	case 0:
-		var _g = self.v;
-		switch(that._hx_index) {
-		case 0:
-			return haxe_ds_Option.Some(fn(_g,that.v));
-		case 1:
-			return haxe_ds_Option.Some(_g);
-		}
-		break;
-	case 1:
-		if(that._hx_index == 0) {
-			return haxe_ds_Option.Some(that.v);
-		} else {
-			return haxe_ds_Option.None;
-		}
-		break;
-	}
-};
-stx_pico_OptionLift.toArray = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return [self.v];
-	case 1:
-		return [];
-	}
-};
-stx_pico_OptionLift.fudge = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return self.v;
-	case 1:
-		throw haxe_Exception.thrown("empty Option");
-	}
-};
-stx_pico_OptionLift.toString = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return "" + Std.string(self.v);
-	case 1:
-		return "<undefined>";
-	}
-};
-stx_pico_OptionLift.prj = function(self) {
-	return self;
-};
-var stx_nano_PositionLift = function() { };
-stx_nano_PositionLift.__name__ = "stx.nano.PositionLift";
-stx_nano_PositionLift.toString = function(pos) {
-	if(pos == null) {
-		return ":pos ()";
-	}
-	var fn = pos.methodName;
-	return ":pos (object :file_name " + fn + " :class_name " + pos.className + " :method_name " + fn + "  :line_number " + pos.lineNumber + ")";
-};
-stx_nano_PositionLift.clone = function(p) {
-	return stx_nano_Position.make(p.fileName,p.className,p.methodName,p.lineNumber,p.customParams);
-};
-stx_nano_PositionLift.withFragmentName = function(pos) {
-	return "" + pos.className + "." + pos.methodName;
-};
-stx_nano_PositionLift.toStringClassMethodLine = function(pos) {
-	return "(" + stx_nano_PositionLift.withFragmentName(pos) + "@" + pos.lineNumber + ")";
-};
-stx_nano_PositionLift.to_vscode_clickable_link = function(pos) {
-	return "" + pos.fileName + ":" + pos.lineNumber;
-};
-stx_nano_PositionLift.withCustomParams = function(p,v) {
-	p = stx_nano_PositionLift.clone(p);
-	if(p.customParams == null) {
-		p.customParams = [];
-	}
-	p.customParams.push(v);
-	return p;
-};
-stx_nano_PositionLift.identifier = function(self) {
-	return stx_nano_Identifier._new(stx_nano_Position.get_fileName(stx_nano_lift_LiftNano.toPosition(self)).split(".")[0].split(stx_nano_lift_LiftNano.sep(stx_nano_Wildcard.__)).join("."));
-};
-var stx_nano_Position = {};
-stx_nano_Position.__properties__ = {get_lineNummber:"get_lineNummber",get_methodName:"get_methodName",get_className:"get_className",get_fileName:"get_fileName"};
-stx_nano_Position._new = function(self) {
-	return self;
-};
-stx_nano_Position.lift = function(pos) {
-	return stx_nano_Position.fromPos(pos);
-};
-stx_nano_Position.make = function(fileName,className,methodName,lineNumber,customParams) {
-	return { fileName : fileName, className : className, methodName : methodName, lineNumber : lineNumber, customParams : customParams};
-};
-stx_nano_Position.fromPos = function(pos) {
-	return stx_nano_Position._new(pos);
-};
-stx_nano_Position.toString = function(this1) {
-	return stx_nano_Position._.toStringClassMethodLine(this1);
-};
-stx_nano_Position.here = function(pos) {
-	return pos;
-};
-stx_nano_Position.get_fileName = function(this1) {
-	return this1.fileName;
-};
-stx_nano_Position.get_className = function(this1) {
-	return this1.className;
-};
-stx_nano_Position.get_methodName = function(this1) {
-	return this1.methodName;
-};
-stx_nano_Position.get_lineNummber = function(this1) {
-	return this1.lineNumber;
-};
-var stx_nano_Identifier = {};
-stx_nano_Identifier._new = function(self) {
-	return self;
-};
-stx_nano_Identifier.$name = function(this1) {
-	var self = stx_lift_ArrayLift.last(this1.split("."));
-	if(self._hx_index == 0) {
-		return self.v;
-	} else {
-		return "?";
-	}
-};
-stx_nano_Identifier.ns = function(this1) {
-	return stx_lift_ArrayLift.rdropn(this1.split("."),1);
-};
-var stx_async_Terminal = {};
-stx_async_Terminal._new = function(self) {
-	var this1;
-	var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self);
-	if(self1._hx_index == 0) {
-		this1 = self1.v;
-	} else {
-		this1 = new stx_async_TerminalCls();
-		this1 = this1;
-	}
-	return this1;
-};
-stx_async_Terminal.identifier = function() {
-	return stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Terminal.hx", lineNumber : 33, className : "stx.async._Terminal.Terminal_Impl_", methodName : "identifier"})));
-};
-var stx_async_TerminalTask = function(delegate,joiner) {
-	stx_async_TaskCls.call(this);
-	this.delegate = delegate;
-	this.joiner = joiner;
-	this.state = false;
-	this.called = false;
-};
-stx_async_TerminalTask.__name__ = "stx.async.TerminalTask";
-stx_async_TerminalTask.__super__ = stx_async_TaskCls;
-stx_async_TerminalTask.prototype = $extend(stx_async_TaskCls.prototype,{
-	state: null
-	,delegate: null
-	,work: null
-	,called: null
-	,joiner: function(outcome) {
-		return stx_async_Work.ZERO;
+	,get_defect: function() {
+		return stx_nano_Defect.entype(this.dependent.get_defect());
 	}
 	,pursue: function() {
-		var _gthis = this;
-		(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.delegate),{ fileName : "stx/async/Terminal.hx", lineNumber : 90, className : "stx.async.TerminalTask", methodName : "pursue"});
-		if(this.state) {
-			var _gthis1 = this;
-			(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.work),{ fileName : "stx/async/Terminal.hx", lineNumber : 150, className : "stx.async.TerminalTask", methodName : "handle_work"});
-			this.state = true;
-			switch(this.work.get_status()) {
-			case -1:
-				this.defect = this.delegate.get_defect().concat(stx_nano_Defect.entype(this.work.get_defect()));
-				this.status = -1;
-				break;
-			case 0:
-				this.work.pursue();
-				this.status = this.work.get_status();
-				break;
-			case 1:
-				this.work.pursue();
-				this.status = 4;
-				if(this.work.get_status() != 4) {
-					throw haxe_Exception.thrown(this.work);
-				}
-				break;
-			case 2:
-				this.status = 2;
-				break;
-			case 3:
-				if(this.trigger == null) {
-					this.trigger = tink_core_Signal.trigger();
-					this.signal = this.trigger;
-				}
-				tink_core_Signal.nextTime(this.work.get_signal()).handle(function(_) {
-					_gthis1.trigger.handlers.invoke(null);
-				});
-				this.status = 3;
-				break;
-			case 4:
-				this.status = 4;
-				break;
-			}
-		} else {
-			switch(this.delegate.get_status()) {
-			case -1:
-				this.work = this.joiner(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,this.delegate.get_defect()));
-				this.defect = this.delegate.get_defect();
-				var _gthis2 = this;
-				(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.work),{ fileName : "stx/async/Terminal.hx", lineNumber : 150, className : "stx.async.TerminalTask", methodName : "handle_work"});
-				this.state = true;
-				switch(this.work.get_status()) {
-				case -1:
-					this.defect = this.delegate.get_defect().concat(stx_nano_Defect.entype(this.work.get_defect()));
-					this.status = -1;
-					break;
-				case 0:
-					this.work.pursue();
-					this.status = this.work.get_status();
-					break;
-				case 1:
-					this.work.pursue();
-					this.status = 4;
-					if(this.work.get_status() != 4) {
-						throw haxe_Exception.thrown(this.work);
-					}
-					break;
-				case 2:
-					this.status = 2;
-					break;
-				case 3:
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.work.get_signal()).handle(function(_) {
-						_gthis2.trigger.handlers.invoke(null);
-					});
-					this.status = 3;
-					break;
-				case 4:
-					this.status = 4;
-					break;
-				}
-				break;
-			case 0:
-				this.delegate.pursue();
-				break;
-			case 1:
-				this.delegate.pursue();
-				this.work = stx_nano_lift_LiftNano.if_else(this.delegate.get_defect().length > 0,function() {
-					_gthis.defect = _gthis.delegate.get_defect();
-					if(_gthis.called) {
-						throw haxe_Exception.thrown("CALLED");
-					} else {
-						_gthis.called = true;
-						return _gthis.joiner(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect()));
-					}
-				},function() {
-					_gthis.result = _gthis.delegate.get_result();
-					if(_gthis.called) {
-						throw haxe_Exception.thrown("CALLED");
-					} else {
-						_gthis.called = true;
-						return _gthis.joiner(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result()));
-					}
-				});
-				var _gthis3 = this;
-				(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.work),{ fileName : "stx/async/Terminal.hx", lineNumber : 150, className : "stx.async.TerminalTask", methodName : "handle_work"});
-				this.state = true;
-				switch(this.work.get_status()) {
-				case -1:
-					this.defect = this.delegate.get_defect().concat(stx_nano_Defect.entype(this.work.get_defect()));
-					this.status = -1;
-					break;
-				case 0:
-					this.work.pursue();
-					this.status = this.work.get_status();
-					break;
-				case 1:
-					this.work.pursue();
-					this.status = 4;
-					if(this.work.get_status() != 4) {
-						throw haxe_Exception.thrown(this.work);
-					}
-					break;
-				case 2:
-					this.status = 2;
-					break;
-				case 3:
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.work.get_signal()).handle(function(_) {
-						_gthis3.trigger.handlers.invoke(null);
-					});
-					this.status = 3;
-					break;
-				case 4:
-					this.status = 4;
-					break;
-				}
-				break;
-			case 2:
-				break;
-			case 3:
-				if(this.trigger == null) {
-					this.trigger = tink_core_Signal.trigger();
-					this.signal = this.trigger;
-				}
-				tink_core_Signal.nextTime(this.delegate.get_signal()).handle(function(_) {
-					_gthis.trigger.handlers.invoke(null);
-				});
-				break;
-			case 4:
-				(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this) + " " + Std.string(this.delegate),{ fileName : "stx/async/Terminal.hx", lineNumber : 132, className : "stx.async.TerminalTask", methodName : "pursue"});
-				this.result = this.delegate.get_result();
-				if(this.called) {
-					throw haxe_Exception.thrown("CALLED");
-				} else {
-					this.called = true;
-					this.work = this.joiner(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,this.delegate.get_result()));
-				}
-				var _gthis4 = this;
-				(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.work),{ fileName : "stx/async/Terminal.hx", lineNumber : 150, className : "stx.async.TerminalTask", methodName : "handle_work"});
-				this.state = true;
-				switch(this.work.get_status()) {
-				case -1:
-					this.defect = this.delegate.get_defect().concat(stx_nano_Defect.entype(this.work.get_defect()));
-					this.status = -1;
-					break;
-				case 0:
-					this.work.pursue();
-					this.status = this.work.get_status();
-					break;
-				case 1:
-					this.work.pursue();
-					this.status = 4;
-					if(this.work.get_status() != 4) {
-						throw haxe_Exception.thrown(this.work);
-					}
-					break;
-				case 2:
-					this.status = 2;
-					break;
-				case 3:
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.work.get_signal()).handle(function(_) {
-						_gthis4.trigger.handlers.invoke(null);
-					});
-					this.status = 3;
-					break;
-				case 4:
-					this.status = 4;
-					break;
-				}
-				break;
-			}
-		}
-	}
-	,handle_work: function() {
-		var _gthis = this;
-		(stx_async_Terminal_log(stx_nano_Wildcard.__))("" + Std.string(this.work),{ fileName : "stx/async/Terminal.hx", lineNumber : 150, className : "stx.async.TerminalTask", methodName : "handle_work"});
-		this.state = true;
-		switch(this.work.get_status()) {
+		haxe_Log.trace("terminal.Cls.pursue " + this.dependent.get_status(),{ fileName : "stx/async/terminal/Cls.hx", lineNumber : 73, className : "stx.async.terminal.Cls", methodName : "pursue"});
+		switch(this.dependent.get_status()) {
 		case -1:
-			this.defect = this.delegate.get_defect().concat(stx_nano_Defect.entype(this.work.get_defect()));
-			this.status = -1;
 			break;
 		case 0:
-			this.work.pursue();
-			this.status = this.work.get_status();
+			this.dependent.pursue();
 			break;
 		case 1:
-			this.work.pursue();
-			this.status = 4;
-			if(this.work.get_status() != 4) {
-				throw haxe_Exception.thrown(this.work);
-			}
+			this.dependent.pursue();
 			break;
 		case 2:
-			this.status = 2;
 			break;
 		case 3:
-			if(this.trigger == null) {
-				this.trigger = tink_core_Signal.trigger();
-				this.signal = this.trigger;
-			}
-			tink_core_Signal.nextTime(this.work.get_signal()).handle(function(_) {
-				_gthis.trigger.handlers.invoke(null);
-			});
-			this.status = 3;
 			break;
 		case 4:
-			this.status = 4;
 			break;
 		}
 	}
-	,toString: function() {
-		return "TERMINAL:" + this.get_id() + "(" + stx_async_GoalStatusLift.toString(this.get_status()) + ")";
+	,escape: function() {
+		this.dependent.escape();
 	}
-	,__class__: stx_async_TerminalTask
+	,update: function() {
+		this.dependent.update();
+	}
+	,get_signal: function() {
+		return this.dependent.get_signal();
+	}
+	,toWork: function(pos) {
+		return stx_async_Work.lift(new stx_async_work_term_Goal(this.toGoalApi(),pos));
+	}
+	,__class__: stx_async_terminal_Cls
 });
-var stx_async_TerminalLog = function(delegate) {
-	this.delegate = delegate;
+var stx_async_work_term_Unit = function() {
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/work/term/Unit.hx", lineNumber : 5, className : "stx.async.work.term.Unit", methodName : "new"});
+	this.set_result(null);
+	this.loaded = true;
 };
-stx_async_TerminalLog.__name__ = "stx.async.TerminalLog";
-stx_async_TerminalLog.__interfaces__ = [stx_async_TerminalApi];
-stx_async_TerminalLog.prototype = {
-	id: null
-	,get_id: function() {
-		return this.delegate.get_id();
+stx_async_work_term_Unit.__name__ = "stx.async.work.term.Unit";
+stx_async_work_term_Unit.__super__ = stx_async_task_Direct;
+stx_async_work_term_Unit.prototype = $extend(stx_async_task_Direct.prototype,{
+	pursue: function() {
 	}
-	,delegate: null
-	,issue: function(res) {
-		return this.delegate.issue(res);
+	,get_status: function() {
+		return 4;
 	}
-	,value: function(r) {
-		return this.delegate.value(r);
-	}
-	,error: function(e) {
-		return this.delegate.error(e);
-	}
-	,later: function(ft) {
-		return this.delegate.later(ft);
-	}
-	,inner: function(join) {
-		return this.delegate.inner(join);
-	}
-	,lense: function(t) {
-		return this.delegate.lense(t);
-	}
-	,joint: function(joiner) {
-		return this.delegate.joint(joiner);
-	}
-	,pause: function(work) {
-		return this.delegate.pause(work);
-	}
-	,toTerminalApi: function() {
-		return this;
-	}
-	,__class__: stx_async_TerminalLog
-	,__properties__: {get_id:"get_id"}
-};
-var stx_async_JointTerminal = function(joiner) {
-	stx_async_TerminalAbs.call(this);
-	this.complete = false;
-	this.joiner = joiner;
-};
-stx_async_JointTerminal.__name__ = "stx.async.JointTerminal";
-stx_async_JointTerminal.__super__ = stx_async_TerminalAbs;
-stx_async_JointTerminal.prototype = $extend(stx_async_TerminalAbs.prototype,{
-	complete: null
-	,joiner: function(outcome) {
-		return stx_async_Work.ZERO;
-	}
-	,handle: function(receiver) {
-		return new stx_async_TerminalTask(receiver,$bind(this,this.joiner));
-	}
-	,issue: function(res) {
-		var tmp;
-		switch(res._hx_index) {
-		case 0:
-			tmp = this.value(res.t);
-			break;
-		case 1:
-			tmp = this.error(res.e);
-			break;
-		}
-		return this.handle(tmp);
-	}
-	,value: function(r) {
-		return this.handle(stx_async_Task.Pure(r));
-	}
-	,error: function(e) {
-		return this.handle(stx_async_Task.Fail(e));
-	}
-	,later: function(ft) {
-		return this.handle(stx_async_Task.FutureOutcome(ft,{ fileName : "stx/async/Terminal.hx", lineNumber : 249, className : "stx.async.JointTerminal", methodName : "later"}));
-	}
-	,lense: function(t) {
-		return this.handle(t);
-	}
-	,__class__: stx_async_JointTerminal
+	,__class__: stx_async_work_term_Unit
 });
-var stx_async_WorkTerminal = function(work) {
-	stx_async_TerminalAbs.call(this);
-	this.work = work;
+var stx_async_Work = {};
+stx_async_Work.lift = function(self) {
+	return stx_async_Work._new(self);
 };
-stx_async_WorkTerminal.__name__ = "stx.async.WorkTerminal";
-stx_async_WorkTerminal.__super__ = stx_async_TerminalAbs;
-stx_async_WorkTerminal.prototype = $extend(stx_async_TerminalAbs.prototype,{
-	work: null
-	,handle: function(receiver) {
-		return stx_async_Task.Pause(this.work,receiver).toTaskApi();
-	}
-	,issue: function(res) {
-		var tmp;
-		switch(res._hx_index) {
-		case 0:
-			tmp = this.value(res.t);
-			break;
-		case 1:
-			tmp = this.error(res.e);
-			break;
-		}
-		return this.handle(tmp);
-	}
-	,value: function(r) {
-		return this.handle(stx_async_Task.Pure(r));
-	}
-	,error: function(e) {
-		return this.handle(stx_async_Task.Fail(e));
-	}
-	,later: function(ft) {
-		return this.handle(stx_async_Task.FutureOutcome(ft,{ fileName : "stx/async/Terminal.hx", lineNumber : 266, className : "stx.async.WorkTerminal", methodName : "later"}));
-	}
-	,lense: function(t) {
-		return this.handle(t);
-	}
-	,__class__: stx_async_WorkTerminal
-});
-var stx_async_SubTerminal = function(handler) {
-	stx_async_TerminalAbs.call(this);
-	this.handler = handler;
+stx_async_Work.unit = function() {
+	return stx_async_Work.Unit();
 };
-stx_async_SubTerminal.__name__ = "stx.async.SubTerminal";
-stx_async_SubTerminal.__super__ = stx_async_TerminalAbs;
-stx_async_SubTerminal.prototype = $extend(stx_async_TerminalAbs.prototype,{
-	handler: null
-	,handle: function(receiver) {
-		return stx_async_Task.Handler(receiver,this.handler);
-	}
-	,issue: function(res) {
-		var tmp;
-		switch(res._hx_index) {
-		case 0:
-			tmp = this.value(res.t);
-			break;
-		case 1:
-			tmp = this.error(res.e);
-			break;
-		}
-		return this.handle(tmp);
-	}
-	,value: function(r) {
-		return this.handle(stx_async_Task.Pure(r));
-	}
-	,error: function(e) {
-		return this.handle(stx_async_Task.Fail(e));
-	}
-	,later: function(ft) {
-		return this.handle(stx_async_Task.FutureOutcome(ft,{ fileName : "stx/async/Terminal.hx", lineNumber : 283, className : "stx.async.SubTerminal", methodName : "later"}));
-	}
-	,lense: function(t) {
-		return this.handle(t);
-	}
-	,__class__: stx_async_SubTerminal
-});
-var stx_async__$Terminal_Receiver = {};
-stx_async__$Terminal_Receiver.lift = function(self) {
+stx_async_Work.Unit = function() {
+	return new stx_async_work_term_Unit().toWork({ fileName : "stx/async/Work.hx", lineNumber : 18, className : "stx.async._Work.Work_Impl_", methodName : "Unit"});
+};
+stx_async_Work.At = function(delegate,pos) {
+	return new stx_async_work_term_At(delegate,pos).toWork({ fileName : "stx/async/Work.hx", lineNumber : 21, className : "stx.async._Work.Work_Impl_", methodName : "At"});
+};
+stx_async_Work.Canceller = function(delegate,fn) {
+	return new stx_async_work_term_Canceller(delegate,fn,{ fileName : "stx/async/Work.hx", lineNumber : 24, className : "stx.async._Work.Work_Impl_", methodName : "Canceller"}).toWork({ fileName : "stx/async/Work.hx", lineNumber : 24, className : "stx.async._Work.Work_Impl_", methodName : "Canceller"});
+};
+stx_async_Work.Delegate = function(delegate) {
+	return new stx_async_work_term_Delegate(delegate,{ fileName : "stx/async/Work.hx", lineNumber : 27, className : "stx.async._Work.Work_Impl_", methodName : "Delegate"}).toWork({ fileName : "stx/async/Work.hx", lineNumber : 27, className : "stx.async._Work.Work_Impl_", methodName : "Delegate"});
+};
+stx_async_Work.Shim = function(delegate) {
+	return new stx_async_work_term_Shim(delegate,{ fileName : "stx/async/Work.hx", lineNumber : 30, className : "stx.async._Work.Work_Impl_", methodName : "Shim"}).toWork({ fileName : "stx/async/Work.hx", lineNumber : 30, className : "stx.async._Work.Work_Impl_", methodName : "Shim"});
+};
+stx_async_Work.fromFutureWork = function(ft) {
+	return stx_async_Task.Later(tink_core_Future.map(ft,function(work) {
+		return work.toTaskApi();
+	})).toWork({ fileName : "stx/async/Work.hx", lineNumber : 33, className : "stx.async._Work.Work_Impl_", methodName : "fromFutureWork"});
+};
+stx_async_Work.Stamp = function(outcome) {
+	return new stx_async_work_term_Stamp(outcome);
+};
+stx_async_Work.fromFunXX = function(fn) {
+	return stx_async_Work.lift(new stx_async_work_term_Block(fn));
+};
+stx_async_Work._new = function(self) {
 	return self;
 };
-stx_async__$Terminal_Receiver._new = function(self) {
-	return self;
-};
-stx_async__$Terminal_Receiver.after = function(this1,res) {
-	var that = this1.toWork();
-	if(res == null) {
-		return that;
-	} else if(that == null) {
-		return null;
-	} else {
-		return stx_async_Task.Seq(res.toTaskApi(),that.toTaskApi()).toWork();
+stx_async_Work.submit = function(this1,loop) {
+	loop = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop),stx_async_Loop.ZERO);
+	if(this1 != null) {
+		loop.add(this1);
 	}
 };
-stx_async__$Terminal_Receiver.listen = function(this1,fn) {
-	return stx_async_Task.Handler(this1,fn);
-};
-stx_async__$Terminal_Receiver.serve = function(this1) {
-	return this1.toWork();
-};
-stx_async__$Terminal_Receiver.prj = function(this1) {
+stx_async_Work.latch = function(this1) {
 	return this1;
 };
+stx_async_Work.carrying = function(this1,oc) {
+	return new stx_async_task_term_Pause(this1,new stx_async_task_term_Stamp(oc),{ fileName : "stx/async/Work.hx", lineNumber : 54, className : "stx.async._Work.Work_Impl_", methodName : "carrying"});
+};
+stx_async_Work.crunch = function(this1,loop) {
+	stx_async_work_Crunch.apply(this1,loop);
+};
+var stx_async_goal_term_Delegate = function(pos) {
+	stx_async_tick_Abs.call(this,pos);
+};
+stx_async_goal_term_Delegate.__name__ = "stx.async.goal.term.Delegate";
+stx_async_goal_term_Delegate.__interfaces__ = [stx_async_goal_Api];
+stx_async_goal_term_Delegate.__super__ = stx_async_tick_Abs;
+stx_async_goal_term_Delegate.prototype = $extend(stx_async_tick_Abs.prototype,{
+	loaded: null
+	,get_loaded: null
+	,get_status: null
+	,toGoalApi: function() {
+		return this;
+	}
+	,toString: null
+	,__class__: stx_async_goal_term_Delegate
+	,__properties__: $extend(stx_async_tick_Abs.prototype.__properties__,{get_loaded:"get_loaded"})
+});
+var stx_async_task_Delegate = function(pos) {
+	stx_async_goal_term_Delegate.call(this,pos);
+};
+stx_async_task_Delegate.__name__ = "stx.async.task.Delegate";
+stx_async_task_Delegate.__interfaces__ = [stx_async_task_Api];
+stx_async_task_Delegate.__super__ = stx_async_goal_term_Delegate;
+stx_async_task_Delegate.prototype = $extend(stx_async_goal_term_Delegate.prototype,{
+	get_defect: null
+	,get_result: null
+	,toString: function() {
+		return stx_async_task_Util.toString(this);
+	}
+	,toTaskApi: function() {
+		return this;
+	}
+	,toWork: function(pos) {
+		return this;
+	}
+	,__class__: stx_async_task_Delegate
+});
+var stx_async_task_term_Delegate = function(delegate,pos) {
+	stx_async_task_Delegate.call(this,pos);
+	this.set_delegate(delegate);
+};
+stx_async_task_term_Delegate.__name__ = "stx.async.task.term.Delegate";
+stx_async_task_term_Delegate.__super__ = stx_async_task_Delegate;
+stx_async_task_term_Delegate.prototype = $extend(stx_async_task_Delegate.prototype,{
+	delegate: null
+	,get_delegate: function() {
+		return this.delegate;
+	}
+	,set_delegate: function(delegate) {
+		return this.delegate = delegate;
+	}
+	,get_signal: function() {
+		var _gthis = this;
+		tink_core_Signal.handle(this.get_delegate().get_signal(),function(_) {
+			_gthis.get_trigger().trigger(null);
+		});
+		return stx_async_task_Delegate.prototype.get_signal.call(this);
+	}
+	,get_defect: function() {
+		return this.get_delegate().get_defect();
+	}
+	,get_result: function() {
+		return this.get_delegate().get_result();
+	}
+	,get_status: null
+	,pursue: function() {
+		if(!this.get_loaded()) {
+			this.get_delegate().pursue();
+		}
+	}
+	,escape: function() {
+		this.get_delegate().escape();
+	}
+	,update: function() {
+		this.get_delegate().update();
+	}
+	,get_loaded: function() {
+		return this.get_delegate().get_loaded();
+	}
+	,toString: function() {
+		return "" + stx_pico_Identifier.get_name(this.identifier()) + "(" + Std.string(this.get_delegate()) + ")";
+	}
+	,__class__: stx_async_task_term_Delegate
+	,__properties__: $extend(stx_async_task_Delegate.prototype.__properties__,{set_delegate:"set_delegate",get_delegate:"get_delegate"})
+});
+var stx_async_task_term_DeferredDelegate = function(delegate,pos) {
+	stx_async_task_term_Delegate.call(this,delegate,pos);
+};
+stx_async_task_term_DeferredDelegate.__name__ = "stx.async.task.term.DeferredDelegate";
+stx_async_task_term_DeferredDelegate.__super__ = stx_async_task_term_Delegate;
+stx_async_task_term_DeferredDelegate.prototype = $extend(stx_async_task_term_Delegate.prototype,{
+	get_status: function() {
+		if(this.get_delegate() == null) {
+			return 0;
+		} else {
+			return this.get_delegate().get_status();
+		}
+	}
+	,pursue: function() {
+		if(this.get_delegate() != null) {
+			stx_async_task_term_Delegate.prototype.pursue.call(this);
+		}
+	}
+	,is_defined: function() {
+		return stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.get_delegate()));
+	}
+	,toString: function() {
+		return "DDelegate(" + Std.string(this.get_delegate()) + ")";
+	}
+	,__class__: stx_async_task_term_DeferredDelegate
+});
+var stx_async_Terminal = {};
+stx_async_Terminal.lift = function(self,pos) {
+	return stx_async_Terminal._new(self,pos);
+};
+stx_async_Terminal._new = function(self,pos) {
+	return stx_pico_OptionLift.def(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self),function() {
+		return new stx_async_terminal_Cls(pos);
+	});
+};
+stx_async_Terminal.identifier = function() {
+	return stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Terminal.hx", lineNumber : 19, className : "stx.async._Terminal.Terminal_Impl_", methodName : "identifier"})));
+};
+stx_async_Terminal.Logging = function(terminal) {
+	return new stx_async_terminal_term_Logging(terminal,{ fileName : "stx/async/Terminal.hx", lineNumber : 22, className : "stx.async._Terminal.Terminal_Impl_", methodName : "Logging"});
+};
+function stx_async_Terminal_log(wildcard) {
+	return stx_Log.tag(stx_async_Log.log(stx_nano_Wildcard.__),stx_nano_PositionLift.identifier(stx_LiftPos.lift(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/Terminal.hx", lineNumber : 8, className : "stx.async._Terminal.Terminal_Fields_", methodName : "log"}))));
+}
 var stx_async_TimeStamp = {};
 stx_async_TimeStamp.__properties__ = {get_exact:"get_exact",get_index:"get_index",get_realm:"get_realm"};
 stx_async_TimeStamp._new = function(self) {
@@ -15069,7 +12127,7 @@ stx_async_Timer.unit = function() {
 	return stx_async_Timer.pure(stx_async_Timer.mark());
 };
 stx_async_Timer.mark = function() {
-	return HxOverrides.now() / 1000;
+	return haxe_Timer.stamp();
 };
 stx_async_Timer.copy = function(this1,created) {
 	return stx_async_Timer.pure(created == null ? this1.created : created);
@@ -15083,103 +12141,6 @@ stx_async_Timer.since = function(this1) {
 stx_async_Timer.prj = function(this1) {
 	return this1;
 };
-var stx_async_work_term_Unit = function() {
-	stx_async_TaskCls.call(this);
-	this.status = 4;
-	this.result = null;
-	this.loaded = true;
-};
-stx_async_work_term_Unit.__name__ = "stx.async.work.term.Unit";
-stx_async_work_term_Unit.__super__ = stx_async_TaskCls;
-stx_async_work_term_Unit.prototype = $extend(stx_async_TaskCls.prototype,{
-	pursue: function() {
-	}
-	,__class__: stx_async_work_term_Unit
-});
-var stx_async_Work = {};
-stx_async_Work.lift = function(self) {
-	return self;
-};
-stx_async_Work.unit = function() {
-	return new stx_async_work_term_Unit();
-};
-stx_async_Work.Unit = function() {
-	return new stx_async_work_term_Unit();
-};
-stx_async_Work.Canceller = function(delegate,fn) {
-	return new stx_async_work_term_Canceller(delegate,fn);
-};
-stx_async_Work.Delegate = function(delegate) {
-	return new stx_async_work_term_Delegate(delegate);
-};
-stx_async_Work.Shim = function(delegate) {
-	return new stx_async_work_term_Shim(delegate);
-};
-stx_async_Work.fromFutureWork = function(ft) {
-	return stx_async_Task.Later(tink_core_Future.map(ft,function(work) {
-		return work.toTaskApi();
-	})).toWork();
-};
-stx_async_Work.Stamp = function(outcome) {
-	return new stx_async_work_term_Stamp(outcome);
-};
-stx_async_Work.fromFunXX = function(fn) {
-	return new stx_async_work_term_Block(fn);
-};
-stx_async_Work._new = function(self) {
-	return self;
-};
-stx_async_Work.submit = function(this1,loop) {
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop);
-	loop = self._hx_index == 0 ? self.v : stx_async_Loop.ZERO;
-	if(this1 != null) {
-		loop.add(this1);
-	}
-};
-stx_async_Work.latch = function(this1) {
-	return this1;
-};
-stx_async_Work.carrying = function(this1,oc) {
-	return new stx_async_task_term_Pause(this1,new stx_async_task_term_Stamp(oc));
-};
-stx_async_Work.crunch = function(this1,loop) {
-	var loop1 = loop;
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop);
-	loop1 = self._hx_index == 0 ? self.v : stx_async_Loop.ZERO;
-	var cont = true;
-	var suspended = false;
-	var backoff = 0.2;
-	while(true == cont) {
-		if(this1.get_defect().length > 0) {
-			loop1.fail(this1.get_defect());
-			cont = false;
-		}
-		if(!suspended) {
-			this1.pursue();
-			if(this1.get_loaded()) {
-				cont = false;
-			} else {
-				switch(this1.get_status()) {
-				case -1:
-					loop1.fail(this1.get_defect());
-					break;
-				case 1:case 4:
-					cont = false;
-					break;
-				case 0:case 2:
-					break;
-				case 3:
-					suspended = true;
-					tink_core_Signal.nextTime(this1.get_signal()).handle(function(_) {
-						backoff = 1.22;
-						suspended = false;
-					});
-					break;
-				}
-			}
-		}
-	}
-};
 var stx_async_WorkLift = function() { };
 stx_async_WorkLift.__name__ = "stx.async.WorkLift";
 stx_async_WorkLift.seq = function(self,that) {
@@ -15188,7 +12149,7 @@ stx_async_WorkLift.seq = function(self,that) {
 	} else if(that == null) {
 		return null;
 	} else {
-		return stx_async_Task.Seq(self.toTaskApi(),that.toTaskApi()).toWork();
+		return stx_async_Task.Seq(self.toTaskApi(),that.toTaskApi()).toWork({ fileName : "stx/async/Work.hx", lineNumber : 60, className : "stx.async.WorkLift", methodName : "seq"});
 	}
 };
 stx_async_WorkLift.par = function(self,that) {
@@ -15197,241 +12158,19 @@ stx_async_WorkLift.par = function(self,that) {
 	} else if(that == null) {
 		return null;
 	} else {
-		return stx_async_Task.Par(self.toTaskApi(),that.toTaskApi()).toWork();
+		return stx_async_Task.Par(self.toTaskApi(),that.toTaskApi()).toWork({ fileName : "stx/async/Work.hx", lineNumber : 63, className : "stx.async.WorkLift", methodName : "par"});
 	}
 };
-var stx_async_task_term_After = function(next,work) {
-	stx_async_TaskCls.call(this);
-	this.inner = new stx_async_task_term_Seq(next,stx_async_Work.latch(work));
-};
-stx_async_task_term_After.__name__ = "stx.async.task.term.After";
-stx_async_task_term_After.__super__ = stx_async_TaskCls;
-stx_async_task_term_After.prototype = $extend(stx_async_TaskCls.prototype,{
-	inner: null
-	,get_signal: function() {
-		return this.inner.get_signal();
-	}
-	,get_defect: function() {
-		return this.inner.get_defect();
-	}
-	,get_result: function() {
-		return stx_nano_CoupleLift.fst(this.inner.get_result());
-	}
-	,get_status: function() {
-		return this.inner.get_status();
-	}
-	,pursue: function() {
-		var _this = this.inner;
-		var _gthis = _this;
-		if(_this.get_defect().length <= 0 && _this.get_status() != 4) {
-			if(_this.sel) {
-				switch(_this.snd.get_status()) {
-				case -1:
-					_this.defect = _this.snd.get_defect();
-					break;
-				case 0:
-					_this.snd.pursue();
-					break;
-				case 1:
-					_this.loaded = true;
-					_this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_this.fst.get_result(),_this.snd.get_result());
-					_this.status = 4;
-					break;
-				case 2:
-					break;
-				case 3:
-					if(!_this.snd.get_loaded()) {
-						if(_this.trigger == null) {
-							_this.trigger = tink_core_Signal.trigger();
-							_this.signal = _this.trigger;
-						}
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 54, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(_this.snd.get_signal());
-						_this.status = 3;
-						tink_core_Signal.nextTime(_this.snd.get_signal()).handle(function(_) {
-							_gthis.trigger.handlers.invoke(null);
-						});
-					} else {
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 63, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(_this.fst.get_result());
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 64, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(_this.snd.get_result());
-						_this.status = 4;
-						_this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_this.fst.get_result(),_this.snd.get_result());
-					}
-					break;
-				case 4:
-					_this.loaded = true;
-					_this.status = 4;
-					_this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_this.fst.get_result(),_this.snd.get_result());
-					break;
-				}
-			} else {
-				switch(_this.fst.get_status()) {
-				case -1:
-					_this.defect = _this.fst.get_defect();
-					break;
-				case 0:
-					_this.fst.pursue();
-					break;
-				case 1:
-					_this.sel = true;
-					break;
-				case 2:
-					break;
-				case 3:
-					if(!_this.fst.get_loaded()) {
-						if(_this.trigger == null) {
-							_this.trigger = tink_core_Signal.trigger();
-							_this.signal = _this.trigger;
-						}
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 30, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(_this.fst.get_signal());
-						_this.status = 3;
-						tink_core_Signal.nextTime(_this.fst.get_signal()).handle(function(_) {
-							_gthis.trigger.handlers.invoke(null);
-						});
-					} else {
-						_this.sel = true;
-					}
-					break;
-				case 4:
-					_this.sel = true;
-					break;
-				}
-			}
-		}
-	}
-	,escape: function() {
-		this.inner.escape();
-	}
-	,__class__: stx_async_task_term_After
-});
-var stx_async_task_term_ThroughBind = function(delegate) {
-	stx_async_TaskCls.call(this);
+var stx_async_goal_term_Delegated = function(delegate,pos) {
+	stx_async_goal_term_Delegate.call(this,pos);
 	this.delegate = delegate;
 };
-stx_async_task_term_ThroughBind.__name__ = "stx.async.task.term.ThroughBind";
-stx_async_task_term_ThroughBind.__super__ = stx_async_TaskCls;
-stx_async_task_term_ThroughBind.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_goal_term_Delegated.__name__ = "stx.async.goal.term.Delegated";
+stx_async_goal_term_Delegated.__super__ = stx_async_goal_term_Delegate;
+stx_async_goal_term_Delegated.prototype = $extend(stx_async_goal_term_Delegate.prototype,{
 	delegate: null
-	,further: null
-	,through_bind: null
-	,pursue: function() {
-		var _gthis = this;
-		if(this.get_defect().length <= 0 && this.get_status() != 4) {
-			if(this.further == null) {
-				switch(this.delegate.get_status()) {
-				case -1:
-					this.defect = this.delegate.get_defect();
-					this.status = -1;
-					break;
-				case 0:
-					this.delegate.pursue();
-					this.status = this.delegate.get_status();
-					break;
-				case 1:
-					this.delegate.pursue();
-					this.further = this.through_bind(stx_nano_lift_LiftNano.if_else(this.delegate.get_defect().length > 0,function() {
-						return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect());
-					},function() {
-						return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result());
-					}));
-					this.status = 0;
-					break;
-				case 3:
-					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.delegate.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
-					});
-					break;
-				case 4:
-					this.further = this.through_bind(stx_nano_lift_LiftNano.if_else(this.delegate.get_defect().length > 0,function() {
-						return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect());
-					},function() {
-						return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result());
-					}));
-					this.status = 0;
-					break;
-				default:
-				}
-			} else if(!this.further.get_loaded()) {
-				switch(this.further.get_status()) {
-				case -1:
-					this.status = -1;
-					this.defect = this.further.get_defect();
-					break;
-				case 0:
-					this.further.pursue();
-					break;
-				case 1:
-					this.further.pursue();
-					this.loaded = true;
-					this.status = 4;
-					this.result = this.further.get_result();
-					break;
-				case 2:
-					break;
-				case 3:
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/ThroughBind.hx", lineNumber : 62, className : "stx.async.task.term.ThroughBind", methodName : "pursue"}).exists(this.further.get_signal());
-					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.further.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
-					});
-					break;
-				case 4:
-					this.loaded = true;
-					this.status = 4;
-					this.result = this.further.get_result();
-					break;
-				}
-			} else {
-				this.result = this.further.get_result();
-				this.loaded = true;
-				this.status = 4;
-			}
-		}
-	}
-	,toString: function() {
-		return "ThroughBind:" + this.get_id() + "(" + Std.string(this.delegate) + ")";
-	}
-	,__class__: stx_async_task_term_ThroughBind
-});
-var stx_async_task_term_AnonThroughBind = function(delegate,__through_bind) {
-	stx_async_task_term_ThroughBind.call(this,delegate);
-	this.__through_bind = __through_bind;
-};
-stx_async_task_term_AnonThroughBind.__name__ = "stx.async.task.term.AnonThroughBind";
-stx_async_task_term_AnonThroughBind.__super__ = stx_async_task_term_ThroughBind;
-stx_async_task_term_AnonThroughBind.prototype = $extend(stx_async_task_term_ThroughBind.prototype,{
-	__through_bind: function(outcome) {
-		return new stx_async_task_term_Fail([]);
-	}
-	,through_bind: function(outcome) {
-		return this.__through_bind(outcome);
-	}
-	,__class__: stx_async_task_term_AnonThroughBind
-});
-var stx_async_task_term_Delegate = function(delegate) {
-	stx_async_TaskCls.call(this);
-	this.delegate = delegate;
-};
-stx_async_task_term_Delegate.__name__ = "stx.async.task.term.Delegate";
-stx_async_task_term_Delegate.__super__ = stx_async_TaskCls;
-stx_async_task_term_Delegate.prototype = $extend(stx_async_TaskCls.prototype,{
-	delegate: null
-	,get_signal: function() {
-		return this.delegate.get_signal();
-	}
-	,get_defect: function() {
-		return this.delegate.get_defect();
-	}
-	,get_result: function() {
-		return this.delegate.get_result();
+	,get_loaded: function() {
+		return this.delegate.get_loaded();
 	}
 	,get_status: function() {
 		return this.delegate.get_status();
@@ -15442,36 +12181,242 @@ stx_async_task_term_Delegate.prototype = $extend(stx_async_TaskCls.prototype,{
 	,escape: function() {
 		this.delegate.escape();
 	}
-	,__class__: stx_async_task_term_Delegate
+	,update: function() {
+		this.delegate.update();
+	}
+	,toString: function() {
+		if(this.delegate == null) {
+			return "?";
+		} else {
+			return this.delegate.toString();
+		}
+	}
+	,__class__: stx_async_goal_term_Delegated
 });
-var stx_async_task_term_Fail = function(defect) {
-	stx_async_TaskCls.call(this);
-	this.defect = defect;
-	this.status = -1;
+var stx_async_goal_term_DeferredDelegated = function(delegate,pos) {
+	stx_async_goal_term_Delegated.call(this,delegate,pos);
 };
-stx_async_task_term_Fail.__name__ = "stx.async.task.term.Fail";
-stx_async_task_term_Fail.__super__ = stx_async_TaskCls;
-stx_async_task_term_Fail.prototype = $extend(stx_async_TaskCls.prototype,{
-	__class__: stx_async_task_term_Fail
+stx_async_goal_term_DeferredDelegated.__name__ = "stx.async.goal.term.DeferredDelegated";
+stx_async_goal_term_DeferredDelegated.__super__ = stx_async_goal_term_Delegated;
+stx_async_goal_term_DeferredDelegated.prototype = $extend(stx_async_goal_term_Delegated.prototype,{
+	get_status: function() {
+		var _gthis = this;
+		return stx_nano_lift_LiftNano.if_else(stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.delegate)),function() {
+			return _gthis.delegate.get_status();
+		},function() {
+			return 0;
+		});
+	}
+	,pursue: function() {
+		if(this.delegate != null) {
+			this.delegate.pursue();
+		}
+	}
+	,escape: function() {
+		if(this.delegate != null) {
+			this.delegate.escape();
+		}
+	}
+	,update: function() {
+		if(this.delegate != null) {
+			this.delegate.update();
+		}
+	}
+	,__class__: stx_async_goal_term_DeferredDelegated
 });
-var stx_async_task_term_FlatMap = function(deferred,flat_map) {
-	stx_async_TaskCls.call(this);
-	this.deferred = deferred;
-	this.flat_map = flat_map;
+var stx_async_goal_term_Seq = function(lhs,rhs,pos) {
+	stx_async_goal_term_Delegate.call(this,pos);
+	this.lhs = lhs;
+	this.rhs = rhs;
 };
-stx_async_task_term_FlatMap.__name__ = "stx.async.task.term.FlatMap";
-stx_async_task_term_FlatMap.__super__ = stx_async_TaskCls;
-stx_async_task_term_FlatMap.prototype = $extend(stx_async_TaskCls.prototype,{
-	deferred: null
-	,flat_map: null
-	,further: null
+stx_async_goal_term_Seq.__name__ = "stx.async.goal.term.Seq";
+stx_async_goal_term_Seq.__super__ = stx_async_goal_term_Delegate;
+stx_async_goal_term_Seq.prototype = $extend(stx_async_goal_term_Delegate.prototype,{
+	set_status: function(v) {
+		return this.status = this.get_status();
+	}
+	,get_loaded: function() {
+		if(this.lhs.get_loaded()) {
+			return this.rhs.get_loaded();
+		} else {
+			return false;
+		}
+	}
+	,get_status: function() {
+		var l = this.lhs.get_status();
+		var r = this.rhs.get_status();
+		if(this.status == null) {
+			if(l == 4) {
+				return r;
+			} else {
+				return l;
+			}
+		} else if(l == 4) {
+			if(r == 4) {
+				return 4;
+			} else {
+				return this.status;
+			}
+		} else {
+			return this.status;
+		}
+	}
+	,status: null
+	,lhs: null
+	,rhs: null
+	,sel: null
 	,pursue: function() {
 		var _gthis = this;
-		if(this.get_defect().length <= 0 && this.get_status() != 4) {
+		if(!this.get_loaded()) {
+			if(this.sel) {
+				switch(this.rhs.get_status()) {
+				case -1:
+					break;
+				case 0:
+					this.rhs.pursue();
+					break;
+				case 1:
+					this.loaded = true;
+					this.set_status(4);
+					break;
+				case 2:
+					break;
+				case 3:
+					if(!this.rhs.get_loaded()) {
+						this.set_status(3);
+						tink_core_Future.handle(tink_core_Signal.nextTime(this.rhs.get_signal()),function(_) {
+							_gthis.get_trigger().trigger(null);
+						});
+					} else {
+						this.set_status(4);
+					}
+					break;
+				case 4:
+					this.loaded = true;
+					this.set_status(4);
+					break;
+				}
+			} else {
+				switch(this.lhs.get_status()) {
+				case -1:
+					break;
+				case 0:
+					this.lhs.pursue();
+					break;
+				case 1:
+					this.sel = true;
+					break;
+				case 2:
+					break;
+				case 3:
+					if(!this.lhs.get_loaded()) {
+						this.set_status(3);
+						tink_core_Future.handle(tink_core_Signal.nextTime(this.lhs.get_signal()),function(_) {
+							_gthis.get_trigger().trigger(null);
+						});
+					} else {
+						this.sel = true;
+					}
+					break;
+				case 4:
+					this.sel = true;
+					break;
+				}
+			}
+		}
+	}
+	,escape: function() {
+		this.lhs.escape();
+		this.rhs.escape();
+	}
+	,update: function() {
+		this.lhs.update();
+		this.rhs.update();
+	}
+	,toString: function() {
+		return "goal.Seq(" + Std.string(this.lhs) + " " + Std.string(this.rhs) + ")";
+	}
+	,__class__: stx_async_goal_term_Seq
+	,__properties__: $extend(stx_async_goal_term_Delegate.prototype.__properties__,{set_status:"set_status",get_status:"get_status"})
+});
+function stx_async_loop_term_Event_log(wildcard) {
+	return stx_Log.tag(stx_async_Log.log(stx_nano_Wildcard.__),stx_nano_PositionLift.identifier(stx_nano_lift_LiftNano.toPosition(stx_nano_lift_LiftNano.here(stx_nano_Wildcard.__,{ fileName : "stx/async/loop/term/Event.hx", lineNumber : 6, className : "stx.async.loop.term._Event.Event_Fields_", methodName : "log"}))));
+}
+var stx_async_task_Util = function() { };
+stx_async_task_Util.__name__ = "stx.async.task.Util";
+stx_async_task_Util.toString = function(self) {
+	return "" + stx_pico_Identifier.get_name(stx_nano_lift_LiftNano.identifier(stx_nano_lift_LiftNano.definition(stx_nano_Wildcard.__,self))) + "[" + self.get_id() + ":" + stx_async_GoalStatusLift.toString(self.get_status()) + "]@(" + stx_nano_PositionLift.toString_name_method_line(stx_LiftPos.lift(self.pos)) + ")";
+};
+var stx_async_task_term_Delegation = function(delegation,pos) {
+	stx_async_task_Delegate.call(this,pos);
+	this.delegation = delegation;
+};
+stx_async_task_term_Delegation.__name__ = "stx.async.task.term.Delegation";
+stx_async_task_term_Delegation.__super__ = stx_async_task_Delegate;
+stx_async_task_term_Delegation.prototype = $extend(stx_async_task_Delegate.prototype,{
+	delegation: null
+	,__class__: stx_async_task_term_Delegation
+});
+var stx_async_task_term_Filter = function(delegation,pos) {
+	stx_async_task_term_Delegation.call(this,delegation,pos);
+};
+stx_async_task_term_Filter.__name__ = "stx.async.task.term.Filter";
+stx_async_task_term_Filter.__super__ = stx_async_task_term_Delegation;
+stx_async_task_term_Filter.prototype = $extend(stx_async_task_term_Delegation.prototype,{
+	filter: null
+	,pursue: function() {
+		this.delegation.pursue();
+	}
+	,escape: function() {
+		this.delegation.escape();
+	}
+	,update: function() {
+		this.delegation.update();
+	}
+	,get_loaded: function() {
+		return this.delegation.get_loaded();
+	}
+	,get_status: function() {
+		return this.delegation.get_status();
+	}
+	,get_result: function() {
+		return this.filter(this.delegation.get_result());
+	}
+	,get_defect: function() {
+		return this.delegation.get_defect();
+	}
+	,__class__: stx_async_task_term_Filter
+});
+var stx_async_task_term_After = function(next,work,pos) {
+	stx_async_task_term_Filter.call(this,stx_async_Task.lift(new stx_async_task_term_Seq(next,stx_async_Work.latch(work),{ fileName : "stx/async/task/term/After.hx", lineNumber : 7, className : "stx.async.task.term.After", methodName : "new"}).toTaskApi()),pos);
+};
+stx_async_task_term_After.__name__ = "stx.async.task.term.After";
+stx_async_task_term_After.__super__ = stx_async_task_term_Filter;
+stx_async_task_term_After.prototype = $extend(stx_async_task_term_Filter.prototype,{
+	filter: function(tp) {
+		return stx_nano_CoupleLift.fst(tp);
+	}
+	,toString: function() {
+		return "After:" + this.get_id() + "[" + stx_async_GoalStatusLift.toString(this.get_status()) + "](" + this.delegation.toString() + ")";
+	}
+	,__class__: stx_async_task_term_After
+});
+var stx_async_task_term_FlatMap = function(deferred,pos) {
+	stx_async_task_Direct.call(this,pos);
+	this.deferred = deferred;
+};
+stx_async_task_term_FlatMap.__name__ = "stx.async.task.term.FlatMap";
+stx_async_task_term_FlatMap.__super__ = stx_async_task_Direct;
+stx_async_task_term_FlatMap.prototype = $extend(stx_async_task_Direct.prototype,{
+	deferred: null
+	,further: null
+	,flat_map: null
+	,pursue: function() {
+		var _gthis = this;
+		if(!stx_lift_ArrayLift.is_defined(this.get_defect()) && !this.get_loaded()) {
 			if(this.further == null) {
 				switch(this.deferred.get_status()) {
 				case -1:
-					this.defect = this.deferred.get_defect();
 					this.status = -1;
 					break;
 				case 0:
@@ -15484,12 +12429,8 @@ stx_async_task_term_FlatMap.prototype = $extend(stx_async_TaskCls.prototype,{
 					break;
 				case 3:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.deferred.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.deferred.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				default:
@@ -15498,7 +12439,6 @@ stx_async_task_term_FlatMap.prototype = $extend(stx_async_TaskCls.prototype,{
 				switch(this.further.get_status()) {
 				case -1:
 					this.status = -1;
-					this.defect = this.further.get_defect();
 					break;
 				case 0:
 					this.further.pursue();
@@ -15507,73 +12447,221 @@ stx_async_task_term_FlatMap.prototype = $extend(stx_async_TaskCls.prototype,{
 					this.further.pursue();
 					this.loaded = true;
 					this.status = 4;
-					this.result = this.further.get_result();
 					break;
 				case 2:
 					break;
 				case 3:
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/FlatMap.hx", lineNumber : 49, className : "stx.async.task.term.FlatMap", methodName : "pursue"}).exists(this.further.get_signal());
+					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/FlatMap.hx", lineNumber : 46, className : "stx.async.task.term.FlatMap", methodName : "pursue"}).exists(this.further.get_signal());
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					tink_core_Signal.nextTime(this.further.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.further.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				}
 			} else {
-				this.result = this.further.get_result();
 				this.loaded = true;
 				this.status = 4;
 			}
 		}
 	}
+	,update: function() {
+		this.deferred.update();
+		if(stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further))) {
+			this.further.update();
+		}
+	}
 	,toString: function() {
 		return "FlatMap(" + Std.string(this.deferred) + " -> " + Std.string(this.further) + ")";
 	}
+	,get_defect: function() {
+		return stx_nano_Defect.concat(this.deferred.get_defect(),stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_defect();
+		}),stx_nano_Defect.unit));
+	}
+	,get_result: function() {
+		return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_result();
+		}),null);
+	}
 	,__class__: stx_async_task_term_FlatMap
 });
-var stx_async_task_term_FutureOutcome = function(delegate,pos) {
-	stx_async_TaskCls.call(this);
-	this.pos = pos;
+var stx_async_task_term_AnonFlatMap = function(deferred,__flat_map,pos) {
+	stx_async_task_term_FlatMap.call(this,deferred,pos);
+	this.__flat_map = __flat_map;
+};
+stx_async_task_term_AnonFlatMap.__name__ = "stx.async.task.term.AnonFlatMap";
+stx_async_task_term_AnonFlatMap.__super__ = stx_async_task_term_FlatMap;
+stx_async_task_term_AnonFlatMap.prototype = $extend(stx_async_task_term_FlatMap.prototype,{
+	__flat_map: function(t) {
+		throw haxe_Exception.thrown("Constructor not called");
+	}
+	,flat_map: function(t) {
+		return this.__flat_map(t);
+	}
+	,__class__: stx_async_task_term_AnonFlatMap
+});
+var stx_async_task_term_ThroughBind = function(delegate) {
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/task/term/ThroughBind.hx", lineNumber : 11, className : "stx.async.task.term.ThroughBind", methodName : "new"});
 	this.delegate = delegate;
-	this.delegate.handle($bind(this,this.handler));
+};
+stx_async_task_term_ThroughBind.__name__ = "stx.async.task.term.ThroughBind";
+stx_async_task_term_ThroughBind.__super__ = stx_async_task_Direct;
+stx_async_task_term_ThroughBind.prototype = $extend(stx_async_task_Direct.prototype,{
+	delegate: null
+	,further: null
+	,through_bind: null
+	,pursue: function() {
+		var _gthis = this;
+		if(!stx_lift_ArrayLift.is_defined(this.get_defect()) && !this.get_loaded()) {
+			if(this.further == null) {
+				switch(this.delegate.get_status()) {
+				case -1:
+					this.status = -1;
+					break;
+				case 0:
+					this.delegate.pursue();
+					this.status = this.delegate.get_status();
+					break;
+				case 1:
+					this.delegate.pursue();
+					this.further = this.through_bind(stx_nano_lift_LiftNano.if_else(stx_lift_ArrayLift.is_defined(this.delegate.get_defect()),function() {
+						return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect());
+					},function() {
+						return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result());
+					}));
+					this.status = 0;
+					break;
+				case 3:
+					this.status = 3;
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.delegate.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
+					});
+					break;
+				case 4:
+					this.further = this.through_bind(stx_nano_lift_LiftNano.if_else(stx_lift_ArrayLift.is_defined(this.delegate.get_defect()),function() {
+						return stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect());
+					},function() {
+						return stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result());
+					}));
+					this.status = 0;
+					break;
+				default:
+				}
+			} else if(!this.further.get_loaded()) {
+				switch(this.further.get_status()) {
+				case -1:
+					this.status = -1;
+					break;
+				case 0:
+					this.further.pursue();
+					break;
+				case 1:
+					this.further.pursue();
+					this.status = 4;
+					break;
+				case 2:
+					break;
+				case 3:
+					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/ThroughBind.hx", lineNumber : 56, className : "stx.async.task.term.ThroughBind", methodName : "pursue"}).exists(this.further.get_signal());
+					this.status = 3;
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.further.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
+					});
+					break;
+				case 4:
+					this.status = 4;
+					break;
+				}
+			} else {
+				this.status = 4;
+			}
+		}
+	}
+	,toString: function() {
+		return "ThroughBind:" + this.get_id() + "(" + Std.string(this.delegate) + ")";
+	}
+	,get_defect: function() {
+		return stx_nano_Defect.concat(this.delegate.get_defect(),stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_defect();
+		}),stx_nano_Defect.unit));
+	}
+	,get_result: function() {
+		return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_result();
+		}),null);
+	}
+	,__class__: stx_async_task_term_ThroughBind
+});
+var stx_async_task_term_AnonThroughBind = function(delegate,__through_bind) {
+	stx_async_task_term_ThroughBind.call(this,delegate);
+	this.__through_bind = __through_bind;
+};
+stx_async_task_term_AnonThroughBind.__name__ = "stx.async.task.term.AnonThroughBind";
+stx_async_task_term_AnonThroughBind.__super__ = stx_async_task_term_ThroughBind;
+stx_async_task_term_AnonThroughBind.prototype = $extend(stx_async_task_term_ThroughBind.prototype,{
+	__through_bind: function(outcome) {
+		return new stx_async_task_term_Fail([],{ fileName : "stx/async/task/term/AnonThroughBind.hx", lineNumber : 9, className : "stx.async.task.term.AnonThroughBind", methodName : "__through_bind"});
+	}
+	,through_bind: function(outcome) {
+		return this.__through_bind(outcome);
+	}
+	,__class__: stx_async_task_term_AnonThroughBind
+});
+var stx_async_task_term_At = function(delegate,pos) {
+	stx_async_task_term_Delegate.call(this,delegate,{ fileName : "stx/async/task/term/At.hx", lineNumber : 5, className : "stx.async.task.term.At", methodName : "new"});
+	this.pos = pos;
+};
+stx_async_task_term_At.__name__ = "stx.async.task.term.At";
+stx_async_task_term_At.__super__ = stx_async_task_term_Delegate;
+stx_async_task_term_At.prototype = $extend(stx_async_task_term_Delegate.prototype,{
+	get_status: function() {
+		return this.get_delegate().get_status();
+	}
+	,__class__: stx_async_task_term_At
+});
+var stx_async_task_term_Fail = function(defect,pos) {
+	stx_async_task_Direct.call(this,pos);
+	this.set_defect(defect);
+	this.status = -1;
+};
+stx_async_task_term_Fail.__name__ = "stx.async.task.term.Fail";
+stx_async_task_term_Fail.__super__ = stx_async_task_Direct;
+stx_async_task_term_Fail.prototype = $extend(stx_async_task_Direct.prototype,{
+	__class__: stx_async_task_term_Fail
+});
+var stx_async_task_term_FutureOutcome = function(delegate,pos) {
+	stx_async_task_Direct.call(this,pos);
+	this.delegate = delegate;
+	tink_core_Future.handle(this.delegate,$bind(this,this.handler));
 	this.started = false;
 	this.finished = false;
 };
 stx_async_task_term_FutureOutcome.__name__ = "stx.async.task.term.FutureOutcome";
-stx_async_task_term_FutureOutcome.__super__ = stx_async_TaskCls;
-stx_async_task_term_FutureOutcome.prototype = $extend(stx_async_TaskCls.prototype,{
-	pos: null
-	,delegate: null
+stx_async_task_term_FutureOutcome.__super__ = stx_async_task_Direct;
+stx_async_task_term_FutureOutcome.prototype = $extend(stx_async_task_Direct.prototype,{
+	delegate: null
 	,started: null
 	,finished: null
 	,handler: function(outcome) {
-		if(this.trigger == null) {
-			this.trigger = tink_core_Signal.trigger();
-			this.signal = this.trigger;
-		}
+		var _gthis = this;
 		this.finished = true;
-		switch(outcome._hx_index) {
-		case 0:
-			this.result = outcome.t;
-			this.status = 4;
-			this.loaded = true;
-			break;
-		case 1:
-			this.defect = outcome.e;
-			this.status = -1;
-			break;
-		}
-		this.trigger.handlers.invoke(null);
+		stx_pico_OutcomeLift.fold(outcome,function(ok) {
+			_gthis.set_result(ok);
+			_gthis.status = 4;
+			_gthis.loaded = true;
+			return null;
+		},function(no) {
+			_gthis.set_defect(no);
+			_gthis.status = -1;
+			return null;
+		});
+		this.get_trigger().trigger(null);
 	}
 	,pursue: function() {
 		if(!this.started) {
 			this.started = true;
 			this.status = 2;
-			this.delegate.handle($bind(this,this.handler));
+			tink_core_Future.handle(this.delegate,$bind(this,this.handler));
 		} else if(this.get_status() == 2) {
 			this.status = 3;
 		}
@@ -15586,8 +12674,8 @@ stx_async_task_term_FutureOutcome.prototype = $extend(stx_async_TaskCls.prototyp
 	,__class__: stx_async_task_term_FutureOutcome
 });
 var stx_async_task_term_Handler = function(delegate,handler) {
-	stx_async_task_term_Delegate.call(this,delegate);
-	this.delegate = delegate;
+	stx_async_task_term_Delegate.call(this,delegate,{ fileName : "stx/async/task/term/Handler.hx", lineNumber : 7, className : "stx.async.task.term.Handler", methodName : "new"});
+	this.set_delegate(delegate);
 	this.handler = handler;
 	this.called = false;
 };
@@ -15606,26 +12694,21 @@ stx_async_task_term_Handler.prototype = $extend(stx_async_task_term_Delegate.pro
 		var _gthis = this;
 		switch(this.get_status()) {
 		case -1:
-			this.handle(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,this.delegate.get_defect()));
+			this.handle(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,this.get_delegate().get_defect()));
 			break;
 		case 0:
-			this.delegate.pursue();
+			this.get_delegate().pursue();
 			break;
 		case 1:
-			this.delegate.pursue();
-			this.delegate.status = 4;
+			this.get_delegate().pursue();
 			this.loaded = true;
 			this.handle(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,this.get_result()));
 			break;
 		case 2:
 			break;
 		case 3:
-			if(this.trigger == null) {
-				this.trigger = tink_core_Signal.trigger();
-				this.signal = this.trigger;
-			}
-			this.delegate.get_signal().listen(function(_) {
-				_gthis.trigger.handlers.invoke(null);
+			tink_core_Signal.handle(this.get_delegate().get_signal(),function(_) {
+				_gthis.get_trigger().trigger(null);
 			});
 			break;
 		case 4:
@@ -15635,76 +12718,112 @@ stx_async_task_term_Handler.prototype = $extend(stx_async_task_term_Delegate.pro
 		}
 	}
 	,toString: function() {
-		return "Handler(" + stx_LiftTToString.toString(this.delegate) + ")";
+		return "Handler(" + this.get_delegate().toString() + ")";
+	}
+	,get_status: function() {
+		return this.get_delegate().get_status();
 	}
 	,__class__: stx_async_task_term_Handler
 });
 var stx_async_task_term_Later = function(delegate) {
-	stx_async_TaskCls.call(this);
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/task/term/Later.hx", lineNumber : 9, className : "stx.async.task.term.Later", methodName : "new"});
 	this.delegate = delegate;
 	this.started = false;
 };
 stx_async_task_term_Later.__name__ = "stx.async.task.term.Later";
-stx_async_task_term_Later.__super__ = stx_async_TaskCls;
-stx_async_task_term_Later.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_task_term_Later.__super__ = stx_async_task_Direct;
+stx_async_task_term_Later.prototype = $extend(stx_async_task_Direct.prototype,{
 	delegate: null
 	,further: null
 	,started: null
 	,pursue: function() {
 		var _gthis = this;
-		if(this.get_status() != 4 && this.get_defect().length <= 0) {
+		if(!this.get_loaded() && !stx_lift_ArrayLift.is_defined(this.get_defect())) {
 			if(!this.started) {
 				this.started = true;
-				this.delegate.handle(function(next) {
+				tink_core_Future.handle(this.delegate,function(next) {
 					_gthis.further = next;
 				});
 				if(this.further == null) {
-					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					this.delegate.handle(function(next) {
-						_gthis.status = _gthis.further.get_status();
-						_gthis.defect = _gthis.further.get_defect();
-						_gthis.loaded = _gthis.further.get_loaded();
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(this.delegate,function(next) {
+						_gthis.get_trigger().trigger(null);
 					});
-				} else {
-					if(this.further.get_status() == 0) {
-						this.further.pursue();
-					}
-					this.status = this.further.get_status();
-					this.defect = this.further.get_defect();
-					this.loaded = this.further.get_loaded();
+				} else if(this.further.get_status() == 0) {
+					this.further.pursue();
 				}
 			} else {
 				if(this.further.get_status() == 0) {
 					this.further.pursue();
 				}
 				this.status = this.further.get_status();
-				this.defect = this.further.get_defect();
-				this.loaded = this.further.get_loaded();
 			}
 		}
 	}
 	,toString: function() {
-		if(this.further == null) {
-			return "Later(?)";
+		return "Later(" + (this.further == null ? "?" : this.further.toString()) + ")";
+	}
+	,get_defect: function() {
+		return stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_defect();
+		}),stx_nano_Defect.unit);
+	}
+	,get_result: function() {
+		return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_result();
+		}),null);
+	}
+	,get_status: function() {
+		if(this.started) {
+			return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+				return _.get_status();
+			}),3);
 		} else {
-			return stx_LiftTToString.toString(this.further);
+			return 0;
 		}
+	}
+	,get_loaded: function() {
+		return stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.further),function(_) {
+			return _.get_loaded();
+		}),false);
 	}
 	,__class__: stx_async_task_term_Later
 });
+var stx_async_task_term_Logging = function(delegate,logging,showing,pos) {
+	stx_async_task_term_Delegate.call(this,delegate,pos);
+	this.logging = stx_pico_OptionLift.def(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,logging),function() {
+		return stx_async_Log.log(stx_nano_Wildcard.__);
+	});
+	this.showing = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,showing),function(t) {
+		return t.toString();
+	});
+};
+stx_async_task_term_Logging.__name__ = "stx.async.task.term.Logging";
+stx_async_task_term_Logging.__super__ = stx_async_task_term_Delegate;
+stx_async_task_term_Logging.prototype = $extend(stx_async_task_term_Delegate.prototype,{
+	logging: null
+	,showing: null
+	,pursue: function() {
+		this.get_delegate().pursue();
+	}
+	,escape: function() {
+		this.get_delegate().escape();
+	}
+	,toString: function() {
+		return "Logging(" + Std.string(this.get_delegate()) + ")";
+	}
+	,get_status: function() {
+		return this.get_delegate().get_status();
+	}
+	,__class__: stx_async_task_term_Logging
+});
 var stx_async_task_term_Map = function(delegate,transform) {
-	stx_async_TaskCls.call(this);
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/task/term/Map.hx", lineNumber : 8, className : "stx.async.task.term.Map", methodName : "new"});
 	this.delegate = delegate;
 	this.transform = transform;
 };
 stx_async_task_term_Map.__name__ = "stx.async.task.term.Map";
-stx_async_task_term_Map.__super__ = stx_async_TaskCls;
-stx_async_task_term_Map.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_task_term_Map.__super__ = stx_async_task_Direct;
+stx_async_task_term_Map.prototype = $extend(stx_async_task_Direct.prototype,{
 	delegate: null
 	,transform: null
 	,get_signal: function() {
@@ -15718,133 +12837,111 @@ stx_async_task_term_Map.prototype = $extend(stx_async_TaskCls.prototype,{
 	}
 	,pursue: function() {
 		this.delegate.pursue();
-		if(this.delegate.get_loaded()) {
-			this.result = this.transform(this.delegate.get_result());
-		}
 	}
 	,escape: function() {
-		this.delegate.escape();
+		this.delegate.pursue();
+	}
+	,update: function() {
+		this.delegate.update();
+	}
+	,get_result: function() {
+		return this.transform(this.delegate.get_result());
 	}
 	,__class__: stx_async_task_term_Map
 });
-var stx_async_task_term_Par = function(fst,snd) {
-	stx_async_TaskCls.call(this);
-	this.fst = fst;
-	this.snd = snd;
+var stx_async_task_term_Par = function(lhs,rhs) {
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 8, className : "stx.async.task.term.Par", methodName : "new"});
+	this.lhs = lhs;
+	this.rhs = rhs;
 };
 stx_async_task_term_Par.__name__ = "stx.async.task.term.Par";
-stx_async_task_term_Par.__super__ = stx_async_TaskCls;
-stx_async_task_term_Par.prototype = $extend(stx_async_TaskCls.prototype,{
-	fst: null
-	,snd: null
+stx_async_task_term_Par.__super__ = stx_async_task_Direct;
+stx_async_task_term_Par.prototype = $extend(stx_async_task_Direct.prototype,{
+	lhs: null
+	,rhs: null
 	,pursue: function() {
 		var _gthis = this;
-		if(this.get_defect().length <= 0 && this.get_status() != 4) {
-			this.fst.pursue();
-			this.snd.pursue();
-			var _g = this.snd.get_status();
-			switch(this.fst.get_status()) {
+		if(!stx_lift_ArrayLift.is_defined(this.get_defect()) && !this.get_loaded()) {
+			this.lhs.pursue();
+			this.rhs.pursue();
+			var _g = this.lhs.get_status();
+			var _g1 = this.rhs.get_status();
+			switch(_g) {
 			case -1:
-				this.defect = this.fst.get_defect();
+				this.set_defect(this.lhs.get_defect());
 				this.status = -1;
 				break;
 			case 1:
-				switch(_g) {
+				switch(_g1) {
 				case -1:
-					this.defect = this.snd.get_defect();
+					this.set_defect(this.rhs.get_defect());
 					this.status = -1;
 					break;
 				case 1:
 					this.status = 4;
-					this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.fst.get_result(),this.snd.get_result());
+					this.set_result(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.get_result()));
 					this.loaded = true;
 					break;
 				case 3:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 53, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.snd.get_signal());
-					tink_core_Signal.nextTime(this.snd.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.rhs.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				default:
 				}
 				break;
 			case 3:
-				switch(_g) {
+				switch(_g1) {
 				case -1:
-					this.defect = this.snd.get_defect();
+					this.set_defect(this.rhs.get_defect());
 					this.status = -1;
 					break;
 				case 3:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 34, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.fst.get_signal());
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 35, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.snd.get_signal());
-					tink_core_Future.merge(tink_core_Signal.nextTime(this.fst.get_signal()),tink_core_Signal.nextTime(this.snd.get_signal()),function(_,_1) {
+					tink_core_Future.handle(tink_core_Future.merge(tink_core_Signal.nextTime(this.lhs.get_signal()),tink_core_Signal.nextTime(this.rhs.get_signal()),function(_,_1) {
 						return null;
-					}).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					}),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				default:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 46, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.fst.get_signal());
-					tink_core_Signal.nextTime(this.fst.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.lhs.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 				}
 				break;
 			case 4:
-				switch(_g) {
+				switch(_g1) {
 				case -1:
-					this.defect = this.snd.get_defect();
+					this.set_defect(this.rhs.get_defect());
 					this.status = -1;
 					break;
 				case 3:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 53, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.snd.get_signal());
-					tink_core_Signal.nextTime(this.snd.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.rhs.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				case 4:
 					this.loaded = true;
 					this.status = 4;
-					this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.fst.get_result(),this.snd.get_result());
+					this.set_result(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs.get_result(),this.rhs.get_result()));
 					break;
 				default:
 				}
 				break;
 			default:
-				switch(_g) {
+				switch(_g1) {
 				case -1:
-					this.defect = this.snd.get_defect();
+					this.set_defect(this.rhs.get_defect());
 					this.status = -1;
 					break;
 				case 3:
 					this.status = 3;
-					if(this.trigger == null) {
-						this.trigger = tink_core_Signal.trigger();
-						this.signal = this.trigger;
-					}
-					stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Par.hx", lineNumber : 53, className : "stx.async.task.term.Par", methodName : "pursue"}).exists(this.snd.get_signal());
-					tink_core_Signal.nextTime(this.snd.get_signal()).handle(function(_) {
-						_gthis.trigger.handlers.invoke(null);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.rhs.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
 					});
 					break;
 				default:
@@ -15854,171 +12951,424 @@ stx_async_task_term_Par.prototype = $extend(stx_async_TaskCls.prototype,{
 	}
 	,__class__: stx_async_task_term_Par
 });
-var stx_async_task_term_Pause = function(work,next) {
-	stx_async_task_term_FlatMap.call(this,stx_async_Work.latch(work),function(_) {
-		return next;
-	});
+var stx_async_task_term_Pause = function(work,next,pos) {
+	stx_async_task_term_Filter.call(this,stx_async_Task.Seq(stx_async_Work.latch(work),next),pos);
 };
 stx_async_task_term_Pause.__name__ = "stx.async.task.term.Pause";
-stx_async_task_term_Pause.__super__ = stx_async_task_term_FlatMap;
-stx_async_task_term_Pause.prototype = $extend(stx_async_task_term_FlatMap.prototype,{
-	toString: function() {
-		return "Pause(" + stx_async_task_term_FlatMap.prototype.toString.call(this) + ")";
+stx_async_task_term_Pause.__super__ = stx_async_task_term_Filter;
+stx_async_task_term_Pause.prototype = $extend(stx_async_task_term_Filter.prototype,{
+	filter: function(tp) {
+		return stx_nano_CoupleLift.snd(tp);
 	}
 	,__class__: stx_async_task_term_Pause
 });
-var stx_async_task_term_Seq = function(fst,snd) {
-	stx_async_TaskCls.call(this);
-	this.fst = fst;
-	this.snd = snd;
+var stx_async_task_term_Seq = function(lhs,rhs,pos) {
+	stx_async_goal_term_Seq.call(this,lhs,rhs,pos);
+	this.set_status(0);
+	this.lhs_task = lhs;
+	this.rhs_task = rhs;
 	this.sel = false;
 };
 stx_async_task_term_Seq.__name__ = "stx.async.task.term.Seq";
-stx_async_task_term_Seq.__super__ = stx_async_TaskCls;
-stx_async_task_term_Seq.prototype = $extend(stx_async_TaskCls.prototype,{
-	fst: null
-	,snd: null
-	,sel: null
+stx_async_task_term_Seq.__interfaces__ = [stx_async_task_Api];
+stx_async_task_term_Seq.__super__ = stx_async_goal_term_Seq;
+stx_async_task_term_Seq.prototype = $extend(stx_async_goal_term_Seq.prototype,{
+	lhs_task: null
+	,rhs_task: null
 	,pursue: function() {
 		var _gthis = this;
-		if(this.get_defect().length <= 0 && this.get_status() != 4) {
+		if(!stx_lift_ArrayLift.is_defined(this.get_defect()) && !this.get_loaded()) {
 			if(this.sel) {
-				switch(this.snd.get_status()) {
-				case -1:
-					this.defect = this.snd.get_defect();
-					break;
+				switch(this.rhs.get_status()) {
 				case 0:
-					this.snd.pursue();
 					break;
 				case 1:
 					this.loaded = true;
-					this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.fst.get_result(),this.snd.get_result());
-					this.status = 4;
-					break;
-				case 2:
+					this.set_status(4);
 					break;
 				case 3:
-					if(!this.snd.get_loaded()) {
-						if(this.trigger == null) {
-							this.trigger = tink_core_Signal.trigger();
-							this.signal = this.trigger;
-						}
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 54, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(this.snd.get_signal());
-						this.status = 3;
-						tink_core_Signal.nextTime(this.snd.get_signal()).handle(function(_) {
-							_gthis.trigger.handlers.invoke(null);
+					if(!this.rhs.get_loaded()) {
+						this.set_status(3);
+						tink_core_Future.handle(tink_core_Signal.nextTime(this.rhs.get_signal()),function(_) {
+							_gthis.get_trigger().trigger(null);
 						});
 					} else {
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 63, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(this.fst.get_result());
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 64, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(this.snd.get_result());
-						this.status = 4;
-						this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.fst.get_result(),this.snd.get_result());
+						this.set_status(4);
 					}
 					break;
 				case 4:
 					this.loaded = true;
-					this.status = 4;
-					this.result = stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.fst.get_result(),this.snd.get_result());
+					this.set_status(4);
 					break;
+				default:
 				}
-			} else {
-				switch(this.fst.get_status()) {
-				case -1:
-					this.defect = this.fst.get_defect();
-					break;
-				case 0:
-					this.fst.pursue();
-					break;
-				case 1:
-					this.sel = true;
-					break;
-				case 2:
-					break;
-				case 3:
-					if(!this.fst.get_loaded()) {
-						if(this.trigger == null) {
-							this.trigger = tink_core_Signal.trigger();
-							this.signal = this.trigger;
-						}
-						stx_LiftAssert.assert(stx_nano_Wildcard.__,{ fileName : "stx/async/task/term/Seq.hx", lineNumber : 30, className : "stx.async.task.term.Seq", methodName : "pursue"}).exists(this.fst.get_signal());
-						this.status = 3;
-						tink_core_Signal.nextTime(this.fst.get_signal()).handle(function(_) {
-							_gthis.trigger.handlers.invoke(null);
-						});
-					} else {
-						this.sel = true;
-					}
-					break;
-				case 4:
-					this.sel = true;
-					break;
+			} else if(this.lhs.get_status() == 3) {
+				if(!this.lhs.get_loaded()) {
+					this.set_status(3);
+					tink_core_Future.handle(tink_core_Signal.nextTime(this.lhs.get_signal()),function(_) {
+						_gthis.get_trigger().trigger(null);
+					});
 				}
 			}
 		}
+		stx_async_goal_term_Seq.prototype.pursue.call(this);
 	}
 	,toString: function() {
-		return "Seq(" + Std.string(this.sel) + " of " + Std.string(this.fst) + " -> " + Std.string(this.snd) + ")";
+		var name = stx_pico_Identifier.get_name(this.identifier());
+		var self_status = this.get_status() == null ? "<auto>" : "";
+		return "task." + name + "[" + this.get_id() + ":" + self_status + stx_async_GoalStatusLift.toString(this.get_status()) + "](" + Std.string(this.sel) + " of " + Std.string(this.lhs) + " ==> " + Std.string(this.rhs) + ")";
+	}
+	,get_defect: function() {
+		return stx_nano_Defect.concat(this.lhs_task.get_defect(),this.rhs_task.get_defect());
+	}
+	,get_result: function() {
+		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,this.lhs_task.get_result(),this.rhs_task.get_result());
+	}
+	,toWork: function(pos) {
+		return this;
+	}
+	,toTaskApi: function() {
+		return this;
 	}
 	,__class__: stx_async_task_term_Seq
 });
 var stx_async_task_term_Stamp = function(outcome) {
-	stx_async_TaskCls.call(this);
-	this.loaded = true;
+	stx_async_task_Delegate.call(this,{ fileName : "stx/async/task/term/Stamp.hx", lineNumber : 6, className : "stx.async.task.term.Stamp", methodName : "new"});
 	this.delegate = outcome;
-	this.status = 4;
 };
 stx_async_task_term_Stamp.__name__ = "stx.async.task.term.Stamp";
-stx_async_task_term_Stamp.__super__ = stx_async_TaskCls;
-stx_async_task_term_Stamp.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_task_term_Stamp.__super__ = stx_async_task_Delegate;
+stx_async_task_term_Stamp.prototype = $extend(stx_async_task_Delegate.prototype,{
 	delegate: null
 	,get_defect: function() {
-		var self = this.delegate;
-		switch(self._hx_index) {
-		case 0:
+		return stx_pico_OutcomeLift.fold(this.delegate,function(_) {
 			return null;
-		case 1:
-			return self.e;
-		}
+		},function(e) {
+			return e;
+		});
 	}
 	,get_result: function() {
-		var self = this.delegate;
-		switch(self._hx_index) {
-		case 0:
-			return self.t;
-		case 1:
+		return stx_pico_OutcomeLift.fold(this.delegate,function(r) {
+			return r;
+		},function(_) {
 			return null;
-		}
+		});
 	}
 	,toString: function() {
 		return "Stamp(" + Std.string(this.delegate) + ")";
 	}
+	,get_loaded: function() {
+		return true;
+	}
+	,get_status: function() {
+		return 4;
+	}
+	,pursue: function() {
+	}
+	,escape: function() {
+	}
+	,update: function() {
+	}
 	,__class__: stx_async_task_term_Stamp
 });
 var stx_async_task_term_Thunk = function(delegate) {
-	stx_async_TaskCls.call(this);
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/task/term/Thunk.hx", lineNumber : 6, className : "stx.async.task.term.Thunk", methodName : "new"});
 	this.delegate = delegate;
 };
 stx_async_task_term_Thunk.__name__ = "stx.async.task.term.Thunk";
-stx_async_task_term_Thunk.__super__ = stx_async_TaskCls;
-stx_async_task_term_Thunk.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_task_term_Thunk.__super__ = stx_async_task_Direct;
+stx_async_task_term_Thunk.prototype = $extend(stx_async_task_Direct.prototype,{
 	delegate: null
 	,pursue: function() {
-		this.result = this.delegate();
+		this.set_result(this.delegate());
 		this.status = 4;
 		this.loaded = true;
 	}
 	,__class__: stx_async_task_term_Thunk
 });
+var stx_async_terminal_Receiver = {};
+stx_async_terminal_Receiver.lift = function(self) {
+	return stx_async_terminal_Receiver._new(self);
+};
+stx_async_terminal_Receiver._new = function(self) {
+	return self;
+};
+stx_async_terminal_Receiver.after = function(this1,res) {
+	return stx_async_WorkLift.seq(res,stx_async_terminal_Receiver.serve(stx_async_terminal_Receiver.lift(this1)));
+};
+stx_async_terminal_Receiver.listen = function(this1,fn) {
+	return stx_async_terminal_Receiver.lift(stx_async_Task.Handler(this1,fn));
+};
+stx_async_terminal_Receiver.serve = function(this1) {
+	return this1.toWork(this1.pos);
+};
+stx_async_terminal_Receiver.prj = function(this1) {
+	return this1;
+};
+stx_async_terminal_Receiver.toString = function(this1) {
+	return "Receiver(" + Std.string(this1) + ")";
+};
+var stx_async_terminal_Task = function(delegate,joiner,pos) {
+	this.delegate = delegate;
+	this.deferred = new stx_async_goal_term_DeferredDelegated(null,{ fileName : "stx/async/terminal/Task.hx", lineNumber : 22, className : "stx.async.terminal.Task", methodName : "new"});
+	stx_async_goal_term_Seq.call(this,delegate,this.deferred,pos);
+	this.joiner = joiner;
+	this.state = false;
+};
+stx_async_terminal_Task.__name__ = "stx.async.terminal.Task";
+stx_async_terminal_Task.__interfaces__ = [stx_async_task_Api];
+stx_async_terminal_Task.__super__ = stx_async_goal_term_Seq;
+stx_async_terminal_Task.prototype = $extend(stx_async_goal_term_Seq.prototype,{
+	delegate: null
+	,state: null
+	,deferred: null
+	,work: null
+	,get_work: function() {
+		return this.work;
+	}
+	,set_work: function(v) {
+		var goal = v.toGoalApi();
+		this.deferred.delegate = goal;
+		return this.work = v;
+	}
+	,joiner: function(outcome) {
+		return stx_async_Work.Unit();
+	}
+	,join: function(oc) {
+		var _gthis = this;
+		this.set_work(stx_pico_OutcomeLift.fold(oc,function(ok) {
+			return _gthis.joiner(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,ok));
+		},function(no) {
+			return _gthis.joiner(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,no));
+		}));
+	}
+	,pursue: function() {
+		var _gthis = this;
+		haxe_Log.trace("terminal.Task.pursue()",{ fileName : "stx/async/terminal/Task.hx", lineNumber : 40, className : "stx.async.terminal.Task", methodName : "pursue"});
+		stx_async_goal_term_Seq.prototype.pursue.call(this);
+		switch(this.lhs.get_status()) {
+		case -1:
+			this.join(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,this.delegate.get_defect()));
+			break;
+		case 0:
+			break;
+		case 1:
+			stx_nano_lift_LiftNano.if_else(stx_lift_ArrayLift.is_defined(this.delegate.get_defect()),function() {
+				_gthis.join(stx_nano_lift_LiftNano.failure(stx_nano_Wildcard.__,_gthis.delegate.get_defect()));
+			},function() {
+				_gthis.join(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,_gthis.delegate.get_result()));
+			});
+			break;
+		case 2:
+			break;
+		case 3:
+			tink_core_Future.handle(tink_core_Signal.nextTime(this.delegate.get_signal()),function(_) {
+				_gthis.get_trigger().trigger(null);
+			});
+			break;
+		case 4:
+			this.join(stx_nano_lift_LiftNano.success(stx_nano_Wildcard.__,this.delegate.get_result()));
+			break;
+		}
+	}
+	,get_defect: function() {
+		var that = stx_pico_OptionLift.def(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this.get_work()),function(_) {
+			return _.get_defect();
+		}),stx_nano_Defect.unit);
+		return stx_nano_Defect.concat(this.delegate.get_defect(),stx_nano_Defect.entype(that));
+	}
+	,get_result: function() {
+		return this.delegate.get_result();
+	}
+	,toString: function() {
+		var b = this.deferred.toString();
+		return "" + stx_pico_Identifier.get_name(this.identifier()) + "[" + this.get_id() + ":" + stx_async_GoalStatusLift.toString(this.get_status()) + "](" + Std.string(this.delegate) + " >>> " + b + ")";
+	}
+	,toTaskApi: function() {
+		return this;
+	}
+	,toWork: function(pos) {
+		return this;
+	}
+	,__class__: stx_async_terminal_Task
+	,__properties__: $extend(stx_async_goal_term_Seq.prototype.__properties__,{set_work:"set_work",get_work:"get_work"})
+});
+var stx_async_terminal_term_Delegate = function(term,pos) {
+	stx_async_task_term_Delegate.call(this,term.toTask(),pos);
+	this.term = term;
+};
+stx_async_terminal_term_Delegate.__name__ = "stx.async.terminal.term.Delegate";
+stx_async_terminal_term_Delegate.__interfaces__ = [stx_async_terminal_Api];
+stx_async_terminal_term_Delegate.__super__ = stx_async_task_term_Delegate;
+stx_async_terminal_term_Delegate.prototype = $extend(stx_async_task_term_Delegate.prototype,{
+	term: null
+	,resolve: function(receiver) {
+		return this.term.resolve(receiver);
+	}
+	,issue: function(res,pos) {
+		return this.term.issue(res,pos);
+	}
+	,value: function(r,pos) {
+		return this.term.value(r,pos);
+	}
+	,error: function(err,pos) {
+		return this.term.error(err,pos);
+	}
+	,later: function(ft,pos) {
+		return this.term.later(ft,pos);
+	}
+	,lense: function(t,pos) {
+		return this.term.lense(t,pos);
+	}
+	,release: function(next) {
+		return this.term.release(next);
+	}
+	,pause: function(n,pos) {
+		return this.term.pause(n,pos);
+	}
+	,joint: function(joiner,pos) {
+		return this.term.joint(joiner,pos);
+	}
+	,inner: function(join,pos) {
+		return this.term.inner(join,pos);
+	}
+	,toTerminalApi: function() {
+		return this;
+	}
+	,toTask: function() {
+		return stx_async_Task.lift(this);
+	}
+	,get_status: function() {
+		return this.term.toWork({ fileName : "stx/async/terminal/term/Delegate.hx", lineNumber : 49, className : "stx.async.terminal.term.Delegate", methodName : "get_status"}).get_status();
+	}
+	,__class__: stx_async_terminal_term_Delegate
+});
+var stx_async_terminal_term_Joint = function(joiner,pos) {
+	stx_async_terminal_Cls.call(this,pos);
+	this.called = false;
+	this.joiner = joiner;
+};
+stx_async_terminal_term_Joint.__name__ = "stx.async.terminal.term.Joint";
+stx_async_terminal_term_Joint.__super__ = stx_async_terminal_Cls;
+stx_async_terminal_term_Joint.prototype = $extend(stx_async_terminal_Cls.prototype,{
+	joiner: function(outcome) {
+		return stx_async_Work.Unit();
+	}
+	,called: null
+	,resolve: function(receiver) {
+		return stx_async_terminal_Cls.prototype.resolve.call(this,stx_async_terminal_Receiver.lift(new stx_async_terminal_Task(stx_async_terminal_Receiver.prj(receiver),$bind(this,this.joining),{ fileName : "stx/async/terminal/term/Joint.hx", lineNumber : 18, className : "stx.async.terminal.term.Joint", methodName : "resolve"})));
+	}
+	,joining: function(outcome) {
+		if(!this.called) {
+			this.called = true;
+			return this.joiner(outcome);
+		} else {
+			throw haxe_Exception.thrown("rejoin");
+		}
+	}
+	,__class__: stx_async_terminal_term_Joint
+});
+var stx_async_terminal_term_Logging = function(term,pos) {
+	stx_async_terminal_term_Delegate.call(this,term,pos);
+};
+stx_async_terminal_term_Logging.__name__ = "stx.async.terminal.term.Logging";
+stx_async_terminal_term_Logging.__interfaces__ = [stx_async_terminal_Api];
+stx_async_terminal_term_Logging.__super__ = stx_async_terminal_term_Delegate;
+stx_async_terminal_term_Logging.prototype = $extend(stx_async_terminal_term_Delegate.prototype,{
+	issue: function(res,pos) {
+		return this.term.issue(res,pos);
+	}
+	,value: function(r,pos) {
+		return this.term.value(r,pos);
+	}
+	,error: function(e,pos) {
+		return this.term.error(e,pos);
+	}
+	,later: function(ft,pos) {
+		tink_core_Future.handle(ft,function(_) {
+		});
+		return this.term.later(ft,pos);
+	}
+	,lense: function(t,pos) {
+		return this.term.lense(t,pos);
+	}
+	,inner: function(join,pos) {
+		return this.term.inner(join,pos);
+	}
+	,joint: function(joiner,pos) {
+		return this.term.joint(function(outcome) {
+			return joiner(outcome);
+		},pos);
+	}
+	,pause: function(work,pos) {
+		return this.term.pause(work,pos);
+	}
+	,toTerminalApi: function() {
+		return this;
+	}
+	,ident: function() {
+		return "" + this.get_id() + ":id(" + stx_nano_PositionLift.toString_name_method_line(stx_LiftPos.lift(this.pos)) + ")";
+	}
+	,toWork: function(pos) {
+		return this.term.toWork(pos);
+	}
+	,toGoalApi: function() {
+		return this;
+	}
+	,__class__: stx_async_terminal_term_Logging
+});
+var stx_async_terminal_term_Pause = function(work,pos) {
+	stx_async_terminal_Cls.call(this,pos);
+	this.work = work;
+};
+stx_async_terminal_term_Pause.__name__ = "stx.async.terminal.term.Pause";
+stx_async_terminal_term_Pause.__super__ = stx_async_terminal_Cls;
+stx_async_terminal_term_Pause.prototype = $extend(stx_async_terminal_Cls.prototype,{
+	work: null
+	,resolve: function(receiver) {
+		return stx_async_terminal_Cls.prototype.resolve.call(this,stx_async_terminal_Receiver.lift(stx_async_Task.Pause(this.work,stx_async_terminal_Receiver.prj(receiver)).toTaskApi()));
+	}
+	,__class__: stx_async_terminal_term_Pause
+});
+var stx_async_terminal_term_Release = function(delegate,work,pos) {
+	stx_async_terminal_term_Delegate.call(this,delegate,pos);
+	this.work = work;
+};
+stx_async_terminal_term_Release.__name__ = "stx.async.terminal.term.Release";
+stx_async_terminal_term_Release.__super__ = stx_async_terminal_term_Delegate;
+stx_async_terminal_term_Release.prototype = $extend(stx_async_terminal_term_Delegate.prototype,{
+	work: null
+	,resolve: function(receiver) {
+		return stx_async_terminal_term_Delegate.prototype.resolve.call(this,stx_async_terminal_Receiver.lift(stx_async_Task.After(stx_async_terminal_Receiver.prj(receiver),this.work).toTaskApi()));
+	}
+	,pursue: function() {
+		haxe_Log.trace(this.get_delegate(),{ fileName : "stx/async/terminal/term/Release.hx", lineNumber : 16, className : "stx.async.terminal.term.Release", methodName : "pursue"});
+		stx_async_terminal_term_Delegate.prototype.pursue.call(this);
+	}
+	,__class__: stx_async_terminal_term_Release
+});
+var stx_async_terminal_term_Sub = function(handler,pos) {
+	stx_async_terminal_Cls.call(this,pos);
+	this.handler = handler;
+};
+stx_async_terminal_term_Sub.__name__ = "stx.async.terminal.term.Sub";
+stx_async_terminal_term_Sub.__super__ = stx_async_terminal_Cls;
+stx_async_terminal_term_Sub.prototype = $extend(stx_async_terminal_Cls.prototype,{
+	handler: null
+	,resolve: function(receiver) {
+		return stx_async_terminal_Cls.prototype.resolve.call(this,stx_async_terminal_Receiver.listen(receiver,this.handler));
+	}
+	,__class__: stx_async_terminal_term_Sub
+});
 var stx_async_work_Crunch = function() { };
 stx_async_work_Crunch.__name__ = "stx.async.work.Crunch";
 stx_async_work_Crunch.apply = function(self,loop) {
-	var self1 = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop);
-	loop = self1._hx_index == 0 ? self1.v : stx_async_Loop.ZERO;
+	loop = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,loop),stx_async_Loop.ZERO);
 	var cont = true;
 	var suspended = false;
 	var backoff = 0.2;
 	while(true == cont) {
-		if(self.get_defect().length > 0) {
+		if(stx_lift_ArrayLift.is_defined(self.get_defect())) {
 			loop.fail(self.get_defect());
 			cont = false;
 		}
@@ -16038,7 +13388,7 @@ stx_async_work_Crunch.apply = function(self,loop) {
 					break;
 				case 3:
 					suspended = true;
-					tink_core_Signal.nextTime(self.get_signal()).handle(function(_) {
+					tink_core_Future.handle(tink_core_Signal.nextTime(self.get_signal()),function(_) {
 						backoff = 1.22;
 						suspended = false;
 					});
@@ -16049,81 +13399,102 @@ stx_async_work_Crunch.apply = function(self,loop) {
 	}
 };
 function stx_async_work_Crunch_log(wildcard) {
-	var this1 = stx_Log.unit();
-	var tag = stx_nano_lift_LiftNano.identifier(stx_async_work_Crunch);
-	var this2 = this1;
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag(tag);
-		});
-	};
-	return function(value,pos) {
-		this2(value,fn(pos));
-	};
+	return stx_Log.tag(stx_Log.unit(),stx_nano_lift_LiftNano.identifier(stx_async_work_Crunch));
 }
+var stx_async_work_term_Delegate = function(delegate,pos) {
+	stx_async_task_Direct.call(this,delegate.pos);
+	this.delegate = delegate;
+	this.pos = pos;
+};
+stx_async_work_term_Delegate.__name__ = "stx.async.work.term.Delegate";
+stx_async_work_term_Delegate.__super__ = stx_async_task_Direct;
+stx_async_work_term_Delegate.prototype = $extend(stx_async_task_Direct.prototype,{
+	delegate: null
+	,get_signal: function() {
+		return this.delegate.get_signal();
+	}
+	,get_defect: function() {
+		return this.delegate.get_defect();
+	}
+	,get_result: function() {
+		return this.delegate.get_result();
+	}
+	,get_status: function() {
+		return this.delegate.get_status();
+	}
+	,pursue: function() {
+		this.delegate.pursue();
+	}
+	,escape: function() {
+		this.delegate.escape();
+	}
+	,update: function() {
+		this.delegate.update();
+	}
+	,__class__: stx_async_work_term_Delegate
+});
+var stx_async_work_term_At = function(delegate,pos) {
+	stx_async_work_term_Delegate.call(this,delegate,{ fileName : "stx/async/work/term/At.hx", lineNumber : 5, className : "stx.async.work.term.At", methodName : "new"});
+	this.pos = pos;
+};
+stx_async_work_term_At.__name__ = "stx.async.work.term.At";
+stx_async_work_term_At.__super__ = stx_async_work_term_Delegate;
+stx_async_work_term_At.prototype = $extend(stx_async_work_term_Delegate.prototype,{
+	__class__: stx_async_work_term_At
+});
 var stx_async_work_term_Block = function(deferred) {
-	stx_async_TaskCls.call(this);
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/work/term/Block.hx", lineNumber : 6, className : "stx.async.work.term.Block", methodName : "new"});
 	this.deferred = deferred;
 };
 stx_async_work_term_Block.__name__ = "stx.async.work.term.Block";
-stx_async_work_term_Block.__super__ = stx_async_TaskCls;
-stx_async_work_term_Block.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_work_term_Block.__super__ = stx_async_task_Direct;
+stx_async_work_term_Block.prototype = $extend(stx_async_task_Direct.prototype,{
 	deferred: null
 	,pursue: function() {
 		this.deferred();
-		this.result = null;
+		this.set_result(null);
 		this.loaded = true;
 		this.status = 4;
 	}
 	,__class__: stx_async_work_term_Block
 });
-var stx_async_work_term_Canceller = function(delegate,canceller) {
-	stx_async_TaskCls.call(this);
-	this.delegate = delegate;
+var stx_async_work_term_Canceller = function(work,canceller,pos) {
+	stx_async_task_term_Delegate.call(this,work.toTaskApi(),pos);
 	this.canceller = canceller;
 };
 stx_async_work_term_Canceller.__name__ = "stx.async.work.term.Canceller";
-stx_async_work_term_Canceller.__super__ = stx_async_TaskCls;
-stx_async_work_term_Canceller.prototype = $extend(stx_async_TaskCls.prototype,{
-	delegate: null
-	,canceller: null
-	,get_signal: function() {
-		return this.delegate.get_signal();
-	}
-	,get_defect: function() {
-		return this.delegate.get_defect();
-	}
-	,get_result: function() {
-		return this.delegate.get_result();
+stx_async_work_term_Canceller.__super__ = stx_async_task_term_Delegate;
+stx_async_work_term_Canceller.prototype = $extend(stx_async_task_term_Delegate.prototype,{
+	canceller: null
+	,escape: function() {
+		this.get_delegate().escape();
+		this.canceller();
 	}
 	,get_status: function() {
-		return this.delegate.get_status();
-	}
-	,pursue: function() {
-		this.delegate.pursue();
-	}
-	,escape: function() {
-		this.delegate.escape();
-		this.canceller();
+		return this.get_delegate().get_status();
 	}
 	,__class__: stx_async_work_term_Canceller
 });
-var stx_async_work_term_Delegate = function(delegate) {
-	stx_async_TaskCls.call(this);
+var stx_async_work_term_Goal = function(delegate,pos) {
+	stx_async_task_Delegate.call(this,pos);
 	this.delegate = delegate;
+	this.pos = pos;
 };
-stx_async_work_term_Delegate.__name__ = "stx.async.work.term.Delegate";
-stx_async_work_term_Delegate.__super__ = stx_async_TaskCls;
-stx_async_work_term_Delegate.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_work_term_Goal.__name__ = "stx.async.work.term.Goal";
+stx_async_work_term_Goal.__super__ = stx_async_task_Delegate;
+stx_async_work_term_Goal.prototype = $extend(stx_async_task_Delegate.prototype,{
 	delegate: null
 	,get_signal: function() {
 		return this.delegate.get_signal();
 	}
 	,get_defect: function() {
-		return this.delegate.get_defect();
+		return stx_nano_Defect.unit();
 	}
 	,get_result: function() {
-		return this.delegate.get_result();
+		return null;
+	}
+	,get_loaded: function() {
+		return this.delegate.get_loaded();
 	}
 	,get_status: function() {
 		return this.delegate.get_status();
@@ -16134,84 +13505,66 @@ stx_async_work_term_Delegate.prototype = $extend(stx_async_TaskCls.prototype,{
 	,escape: function() {
 		this.delegate.escape();
 	}
-	,__class__: stx_async_work_term_Delegate
+	,update: function() {
+		this.delegate.update();
+	}
+	,toString: function() {
+		return "Goal(" + this.delegate.toString() + ")";
+	}
+	,__class__: stx_async_work_term_Goal
 });
-var stx_async_work_term_Shim = function(task) {
+var stx_async_work_term_Shim = function(task,pos) {
+	stx_async_goal_term_Delegated.call(this,task.toGoalApi(),pos);
 	this.task = task;
 };
 stx_async_work_term_Shim.__name__ = "stx.async.work.term.Shim";
-stx_async_work_term_Shim.__interfaces__ = [stx_async_TaskApi];
-stx_async_work_term_Shim.prototype = {
+stx_async_work_term_Shim.__interfaces__ = [stx_async_task_Api];
+stx_async_work_term_Shim.__super__ = stx_async_goal_term_Delegated;
+stx_async_work_term_Shim.prototype = $extend(stx_async_goal_term_Delegated.prototype,{
 	task: null
-	,id: null
-	,get_id: function() {
-		return this.task.get_id();
-	}
-	,loaded: null
-	,get_loaded: function() {
-		return this.get_status() == 4;
-	}
-	,toWork: function() {
-		return this;
+	,toWork: function(pos) {
+		return stx_async_Work.lift(this);
 	}
 	,toTaskApi: function() {
 		return this;
 	}
-	,signal: null
-	,get_signal: function() {
-		return this.task.get_signal();
-	}
-	,defect: null
 	,get_defect: function() {
 		return stx_nano_Defect.elide(this.task.get_defect());
 	}
-	,result: null
 	,get_result: function() {
 		return null;
 	}
-	,status: null
-	,get_status: function() {
-		return this.task.get_status();
-	}
-	,pursue: function() {
-		this.task.pursue();
-	}
-	,escape: function() {
-		this.task.escape();
-	}
 	,equals: function(that) {
-		return this.get_id() == that.id;
+		return this.task.get_id() == that.get_id();
+	}
+	,toString: function() {
+		return this.task.toString();
 	}
 	,__class__: stx_async_work_term_Shim
-	,__properties__: {get_status:"get_status",get_result:"get_result",get_defect:"get_defect",get_signal:"get_signal",get_loaded:"get_loaded",get_id:"get_id"}
-};
+});
 var stx_async_work_term_Stamp = function(outcome) {
-	stx_async_TaskCls.call(this);
+	stx_async_task_Direct.call(this,{ fileName : "stx/async/work/term/Stamp.hx", lineNumber : 6, className : "stx.async.work.term.Stamp", methodName : "new"});
 	this.loaded = true;
 	this.delegate = outcome;
 	this.status = 4;
 };
 stx_async_work_term_Stamp.__name__ = "stx.async.work.term.Stamp";
-stx_async_work_term_Stamp.__super__ = stx_async_TaskCls;
-stx_async_work_term_Stamp.prototype = $extend(stx_async_TaskCls.prototype,{
+stx_async_work_term_Stamp.__super__ = stx_async_task_Direct;
+stx_async_work_term_Stamp.prototype = $extend(stx_async_task_Direct.prototype,{
 	delegate: null
 	,get_defect: function() {
-		var self = this.delegate;
-		switch(self._hx_index) {
-		case 0:
+		return stx_pico_OutcomeLift.fold(this.delegate,function(_) {
 			return null;
-		case 1:
-			return self.e;
-		}
+		},function(e) {
+			return e;
+		});
 	}
 	,get_result: function() {
-		var self = this.delegate;
-		switch(self._hx_index) {
-		case 0:
-			return self.t;
-		case 1:
+		return stx_pico_OutcomeLift.fold(this.delegate,function(r) {
+			return r;
+		},function(_) {
 			return null;
-		}
+		});
 	}
 	,__class__: stx_async_work_term_Stamp
 });
@@ -16313,12 +13666,10 @@ stx_ext_Cell._new = function(self) {
 	return self;
 };
 stx_ext_Cell.fromT = function(v) {
-	var ret = new Array(1);
-	ret[0] = v;
-	return stx_ext_Cell._new(ret);
+	return stx_ext_Cell._new(tink_core_Ref.to(v));
 };
 stx_ext_Cell.get_value = function(this1) {
-	return this1[0];
+	return tink_core_Ref.get_value(this1);
 };
 stx_ext_Cell.prj = function(this1) {
 	return this1;
@@ -16365,12 +13716,12 @@ stx_ext_CharsLift.parse_bool = function(self) {
 };
 stx_ext_CharsLift.parse_int = function(self) {
 	return stx_pico_OptionLift.filter(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,Std.parseInt(self)),function(i) {
-		return !isNaN(i);
+		return !stx_ext_Math.isNaN(i);
 	});
 };
 stx_ext_CharsLift.parse_float = function(self) {
-	return stx_pico_OptionLift.filter(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,parseFloat(self)),function(i) {
-		return !isNaN(i);
+	return stx_pico_OptionLift.filter(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,Std.parseFloat(self)),function(i) {
+		return !stx_ext_Math.isNaN(i);
 	});
 };
 stx_ext_CharsLift.starts_with = function(self,frag) {
@@ -16432,14 +13783,14 @@ stx_ext_CharsLift.split = function(self,sep) {
 stx_ext_CharsLift.strip_white = function(self) {
 	var l = self.length;
 	var i = 0;
-	var sb_b = "";
+	var sb = new StringBuf();
 	while(i < l) {
 		if(!stx_ext_CharsLift.is_space(self,i)) {
-			sb_b += Std.string(self.charAt(i));
+			sb.add(self.charAt(i));
 		}
 		++i;
 	}
-	return sb_b;
+	return sb.toString();
 };
 stx_ext_CharsLift.replace_recurse = function(self,sub,by) {
 	if(sub.length == 0) {
@@ -16467,8 +13818,7 @@ stx_ext_CharsLift.iterator = function(self) {
 			index += 1;
 			return HxOverrides.substr(self,index - 1,1);
 		} else {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Chars.hx", lineNumber : 184, className : "stx.ext.CharsLift", methodName : "iterator"});
-			throw haxe_Exception.thrown(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF("E_IndexOutOfBounds")),haxe_ds_Option.None,this1));
+			throw haxe_Exception.thrown(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Chars.hx", lineNumber : 184, className : "stx.ext.CharsLift", methodName : "iterator"}),"E_IndexOutOfBounds"));
 		}
 	}};
 };
@@ -16484,14 +13834,10 @@ stx_ext_CharsLift.chr = function(i) {
 	return String.fromCodePoint(i);
 };
 stx_ext_CharsLift.underscore = function(s) {
-	var _this_r = new RegExp("::","g".split("u").join(""));
-	s = s.replace(_this_r,"/");
-	var _this_r = new RegExp("([A-Z]+)([A-Z][a-z])","g".split("u").join(""));
-	s = s.replace(_this_r,"$1_$2");
-	var _this_r = new RegExp("([a-z\\d])([A-Z])","g".split("u").join(""));
-	s = s.replace(_this_r,"$1_$2");
-	var _this_r = new RegExp("-","g".split("u").join(""));
-	s = s.replace(_this_r,"_");
+	s = new EReg("::","g").replace(s,"/");
+	s = new EReg("([A-Z]+)([A-Z][a-z])","g").replace(s,"$1_$2");
+	s = new EReg("([a-z\\d])([A-Z])","g").replace(s,"$1_$2");
+	s = new EReg("-","g").replace(s,"_");
 	return s.toLowerCase();
 };
 stx_ext_CharsLift.after = function(self,sub) {
@@ -16776,10 +14122,9 @@ stx_ext_Chunk.all = function(arr,TapFail) {
 			var _g = memo.err;
 			switch(next._hx_index) {
 			case 1:
-				var self = stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,_g),function(e) {
+				return stx_ext_ChunkSum.End(stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,_g),function(e) {
 					return e.next(TapFail);
-				});
-				return stx_ext_ChunkSum.End(self._hx_index == 0 ? self.v : TapFail);
+				}),TapFail));
 			case 2:
 				return stx_ext_ChunkSum.End(Lambda.fold(stx_pico_OptionLift.toArray(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,_g)).concat(stx_pico_OptionLift.toArray(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,next.err))),function(nx,mm) {
 					return mm.next(nx);
@@ -16848,7 +14193,7 @@ stx_ext_ContractLift.flat_map = function(self,fn) {
 		case 0:
 			return stx_ext_Contract.prj(fn(x.v));
 		case 1:
-			return stx_ext_Contract.prj(stx_ext_Contract._new(new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(stx_ext_ChunkSum.Tap))));
+			return stx_ext_Contract.prj(stx_ext_Contract._new(tink_core_Future.sync(stx_ext_ChunkSum.Tap)));
 		case 2:
 			return stx_ext_Contract.prj(stx_ext_Contract.fromChunk(stx_ext_ChunkSum.End(x.err)));
 		}
@@ -16896,7 +14241,7 @@ stx_ext_ContractLift.receive = function(self,fn) {
 };
 stx_ext_ContractLift.now = function(self) {
 	var out = null;
-	stx_ext_Contract.prj(self).handle(function(v) {
+	tink_core_Future.handle(stx_ext_Contract.prj(self),function(v) {
 		out = v;
 	});
 	if(out == null) {
@@ -16929,7 +14274,6 @@ stx_ext_Contract.pure = function(ch) {
 	});
 };
 stx_ext_Contract.bind_fold = function(it,start,fm) {
-	var tmp = new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(stx_ext_ChunkSum.Val(start)));
 	return stx_ext_Contract._new(stx_Ext.core(stx_nano_Wildcard.__).Future().bind_fold(it,function(next,memo) {
 		switch(memo._hx_index) {
 		case 0:
@@ -16939,7 +14283,7 @@ stx_ext_Contract.bind_fold = function(it,start,fm) {
 		case 2:
 			return stx_ext_Contract.prj(stx_ext_Contract.end(memo.err));
 		}
-	},tmp));
+	},tink_core_Future.ofAny(stx_ext_ChunkSum.Val(start))));
 };
 stx_ext_Contract.lazy = function(fn) {
 	return stx_ext_Contract.lift(tink_core_Future.irreversible(function(f) {
@@ -16968,16 +14312,11 @@ stx_ext_Contract.fromChunk = function(chk) {
 	});
 };
 stx_ext_Contract.fromOption = function(m) {
-	var val;
-	switch(m._hx_index) {
-	case 0:
-		val = stx_ext_ChunkSum.Val(m.v);
-		break;
-	case 1:
-		val = stx_ext_ChunkSum.Tap;
-		break;
-	}
-	return stx_ext_Contract.fromChunk(val);
+	return stx_ext_Contract.fromChunk(stx_pico_OptionLift.fold(m,function(x) {
+		return stx_ext_ChunkSum.Val(x);
+	},function() {
+		return stx_ext_ChunkSum.Tap;
+	}));
 };
 stx_ext_Contract.prj = function(this1) {
 	return this1;
@@ -17031,18 +14370,10 @@ stx_ext_Enum._new = function(self) {
 	return self;
 };
 stx_ext_Enum.constructs = function(this1) {
-	var _this = this1.__constructs__;
-	var result = new Array(_this.length);
-	var _g = 0;
-	var _g1 = _this.length;
-	while(_g < _g1) {
-		var i = _g++;
-		result[i] = _this[i]._hx_name;
-	}
-	return result;
+	return Type.getEnumConstructs(this1);
 };
 stx_ext_Enum.$name = function(this1) {
-	return this1.__ename__;
+	return Type.getEnumName(this1);
 };
 stx_ext_Enum.construct = function(this1,cons,args) {
 	switch(cons._hx_index) {
@@ -17063,10 +14394,10 @@ stx_ext_EnumValue.params = function(this1) {
 	return Type.enumParameters(this1);
 };
 stx_ext_EnumValue.constructor = function(this1) {
-	return $hxEnums[this1.__enum__].__constructs__[this1._hx_index]._hx_name;
+	return Type.enumConstructor(this1);
 };
 stx_ext_EnumValue.index = function(this1) {
-	return this1._hx_index;
+	return Type.enumIndex(this1);
 };
 stx_ext_EnumValue.alike = function(this1,that) {
 	if(stx_ext_EnumValue.constructor(this1) == stx_ext_EnumValue.constructor(that)) {
@@ -17131,13 +14462,13 @@ stx_ext_Floats.delta = function(n0,n1) {
 	return n1 - n0;
 };
 stx_ext_Floats.normalize = function(v,n0,n1) {
-	return (v - n0) / (n1 - n0);
+	return (v - n0) / stx_ext_Floats.delta(n0,n1);
 };
 stx_ext_Floats.interpolate = function(v,n0,n1) {
-	return n0 + (n1 - n0) * v;
+	return n0 + stx_ext_Floats.delta(n0,n1) * v;
 };
 stx_ext_Floats.map = function(v,min0,max0,min1,max1) {
-	return min1 + (max1 - min1) * ((v - min0) / (max0 - min0));
+	return stx_ext_Floats.interpolate(stx_ext_Floats.normalize(v,min0,max0),min1,max1);
 };
 stx_ext_Floats.round = function(n,c) {
 	if(c == null) {
@@ -17190,7 +14521,7 @@ stx_ext_Floats.min = function(v1,v2) {
 	}
 };
 stx_ext_Floats.int = function(v) {
-	return v | 0;
+	return Std.int(v);
 };
 stx_ext_Floats.compare = function(v1,v2) {
 	if(v1 < v2) {
@@ -17208,7 +14539,7 @@ stx_ext_Floats.toString = function(v) {
 	return "" + v;
 };
 stx_ext_Floats.toInt = function(v) {
-	return v | 0;
+	return Std.int(v);
 };
 stx_ext_Floats.add = function(a,b) {
 	return a + b;
@@ -17359,7 +14690,7 @@ stx_ext_Ints.isOdd = function(n) {
 	}
 };
 stx_ext_Ints.isEven = function(n) {
-	return (n % 2 == 0 ? false : true) == false;
+	return stx_ext_Ints.isOdd(n) == false;
 };
 stx_ext_Ints.isInteger = function(n) {
 	return n % 1 == 0;
@@ -17381,10 +14712,9 @@ stx_ext_Ints.isPrime = function(n) {
 	if(n % 2 == 0) {
 		return false;
 	}
-	var max = Math.ceil(Math.sqrt(n)) + 1;
-	var itr_min = 3;
-	while(itr_min < max) {
-		++itr_min;
+	var itr = new IntIterator(3,Math.ceil(Math.sqrt(n)) + 1);
+	while(itr.hasNext()) {
+		itr.next();
 		if(n % 1 == 0) {
 			return false;
 		}
@@ -17392,7 +14722,7 @@ stx_ext_Ints.isPrime = function(n) {
 	return true;
 };
 stx_ext_Ints.factorial = function(n) {
-	if(!(n > 0 && n % 1 == 0)) {
+	if(!stx_ext_Ints.isNatural(n)) {
 		throw haxe_Exception.thrown("function factorial requires natural number as input");
 	}
 	if(n == 0) {
@@ -17407,10 +14737,9 @@ stx_ext_Ints.factorial = function(n) {
 };
 stx_ext_Ints.divisors = function(n) {
 	var r = [];
-	var max = Math.ceil(n / 2 + 1);
-	var iter_min = 1;
-	while(iter_min < max) {
-		var i = iter_min++;
+	var iter = new IntIterator(1,Math.ceil(n / 2 + 1));
+	while(iter.hasNext()) {
+		var i = iter.next();
 		if(n % i == 0) {
 			r.push(i);
 		}
@@ -17486,7 +14815,7 @@ stx_ext_Ints.shr = function(v,bits) {
 	return v >> bits;
 };
 stx_ext_Ints.abs = function(v) {
-	return Math.abs(v) | 0;
+	return Std.int(Math.abs(v));
 };
 stx_ext_Ints.toString = function(a) {
 	return "" + a;
@@ -17552,7 +14881,7 @@ stx_ext_Math.rndOne = function(weight) {
 	if(weight == null) {
 		weight = 0.5;
 	}
-	return stx_ext_Math.random(null,null) - weight | 0;
+	return Std.int(stx_ext_Math.random() - weight);
 };
 stx_ext_Math.radians = function(v) {
 	return v * (Math.PI / 180);
@@ -17567,7 +14896,7 @@ stx_ext_Math.random = function(max,min) {
 	if(max == null) {
 		max = 1;
 	}
-	return stx_ext_Math.random(null,null) * (max - min) + min;
+	return stx_ext_Math.random() * (max - min) + min;
 };
 stx_ext_Math.isNaN = function(fl) {
 	return isNaN(fl);
@@ -17606,7 +14935,7 @@ stx_ext__$Module_Map.__name__ = "stx.ext._Module.Map";
 stx_ext__$Module_Map.__super__ = stx_pico_Clazz;
 stx_ext__$Module_Map.prototype = $extend(stx_pico_Clazz.prototype,{
 	String: function() {
-		return new haxe_ds_StringMap();
+		return haxe_ds_Map.toStringMap(null);
 	}
 	,__class__: stx_ext__$Module_Map
 });
@@ -17626,63 +14955,32 @@ stx_ext_PledgeLift.lift = function(self) {
 };
 stx_ext_PledgeLift.zip = function(self,that) {
 	return tink_core_Future.map(stx_ext_lift_LiftFuture.zip(stx_ext_Pledge.prj(self),stx_ext_Pledge.prj(that)),function(tp) {
-		var self = stx_nano_CoupleLift.fst(tp);
-		var that = stx_nano_CoupleLift.snd(tp);
-		switch(self._hx_index) {
-		case 0:
-			var _g = self.t;
-			switch(that._hx_index) {
-			case 0:
-				return stx_nano_ResSum.Accept(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,_g,that.t));
-			case 1:
-				return stx_nano_ResSum.Reject(that.e);
-			}
-			break;
-		case 1:
-			var _g = self.e;
-			if(that._hx_index == 1) {
-				return stx_nano_ResSum.Reject(_g.next(that.e));
-			} else {
-				return stx_nano_ResSum.Reject(_g);
-			}
-			break;
-		}
+		return stx_nano_ResLift.zip(stx_nano_CoupleLift.fst(tp),stx_nano_CoupleLift.snd(tp));
 	});
 };
 stx_ext_PledgeLift.map = function(self,fn) {
 	return stx_ext_PledgeLift.lift(tink_core_Future.map(stx_ext_Pledge.prj(self),function(x) {
-		var tmp;
-		switch(x._hx_index) {
-		case 0:
-			tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(x.t));
-			break;
-		case 1:
-			tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,x.e);
-			break;
-		}
-		return tmp;
+		return stx_nano_ResLift.fold(x,function(s) {
+			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn(s));
+		},function(e) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+		});
 	}));
 };
 stx_ext_PledgeLift.flat_map = function(self,fn) {
 	return tink_core_Future.flatMap(stx_ext_Pledge.prj(self),function(x) {
-		switch(x._hx_index) {
-		case 0:
-			return stx_ext_Pledge.prj(fn(x.t));
-		case 1:
-			return stx_ext_Pledge.prj(stx_ext_Pledge.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,x.e)));
-		}
+		return stx_nano_ResLift.fold(x,function(v) {
+			return stx_ext_Pledge.prj(fn(v));
+		},function(err) {
+			return stx_ext_Pledge.prj(stx_ext_Pledge.fromRes(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,err)));
+		});
 	});
 };
 stx_ext_PledgeLift.fold = function(self,val,ers) {
 	var fn = val;
 	var er = ers;
 	var tmp = function(self) {
-		switch(self._hx_index) {
-		case 0:
-			return fn(self.t);
-		case 1:
-			return er(self.e);
-		}
+		return stx_nano_Res._.fold(self,fn,er);
 	};
 	return tink_core_Future.map(stx_ext_Pledge.prj(self),tmp);
 };
@@ -17702,26 +15000,21 @@ stx_ext_PledgeLift.attempt = function(self,fn) {
 };
 stx_ext_PledgeLift.receive = function(self,fn) {
 	return tink_core_Future.map(stx_ext_Pledge.prj(self),function(res) {
-		var tmp;
-		switch(res._hx_index) {
-		case 0:
-			fn(res.t);
-			tmp = haxe_ds_Option.None;
-			break;
-		case 1:
-			tmp = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,res.e);
-			break;
-		}
-		return tmp;
+		return stx_nano_ResLift.fold(res,function(v) {
+			fn(v);
+			return haxe_ds_Option.None;
+		},function(v) {
+			return stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,v);
+		});
 	});
 };
 stx_ext_PledgeLift.now = function(self) {
 	var out = null;
-	stx_ext_Pledge.prj(self).handle(function(v) {
+	tink_core_Future.handle(stx_ext_Pledge.prj(self),function(v) {
 		out = v;
 	});
 	if(out == null) {
-		throw haxe_Exception.thrown(new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_ValueNotReady")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Pledge.hx", lineNumber : 143, className : "stx.ext.PledgeLift", methodName : "now"})));
+		throw haxe_Exception.thrown(stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Pledge.hx", lineNumber : 143, className : "stx.ext.PledgeLift", methodName : "now"}),"E_ValueNotReady"));
 	}
 	return out;
 };
@@ -17745,13 +15038,12 @@ stx_ext_Pledge.pure = function(ch) {
 };
 stx_ext_Pledge.bind_fold = function(it,start,fm) {
 	return stx_ext_Pledge._new(stx_Ext.core(stx_nano_Wildcard.__).Future().bind_fold(it,function(next,memo) {
-		switch(memo._hx_index) {
-		case 0:
-			return stx_ext_Pledge.prj(fm(memo.t,next));
-		case 1:
-			return stx_ext_Pledge.pure(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,memo.e));
-		}
-	},new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,start)))));
+		return stx_nano_ResLift.fold(memo,function(v) {
+			return stx_ext_Pledge.prj(fm(v,next));
+		},function(e) {
+			return stx_ext_Pledge.pure(stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e));
+		});
+	},tink_core_Future.ofAny(stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,start))));
 };
 stx_ext_Pledge.lazy = function(fn) {
 	return stx_ext_Pledge.lift(tink_core_Future.irreversible(function(f) {
@@ -17764,7 +15056,7 @@ stx_ext_Pledge.fromLazyError = function(fn) {
 	});
 };
 stx_ext_Pledge.fromTinkPromise = function(promise) {
-	return stx_ext_Pledge.lift(tink_core_Future.map(promise,function(outcome) {
+	return stx_ext_Pledge.lift(tink_core_Promise.map(promise,function(outcome) {
 		switch(outcome._hx_index) {
 		case 0:
 			return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,outcome.data);
@@ -17787,16 +15079,11 @@ stx_ext_Pledge.fromRes = function(chk) {
 	});
 };
 stx_ext_Pledge.fromOption = function(m) {
-	var val;
-	switch(m._hx_index) {
-	case 0:
-		val = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,m.v);
-		break;
-	case 1:
-		val = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_UnexpectedNullValueEncountered")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Pledge.hx", lineNumber : 67, className : "stx.ext._Pledge.Pledge_Impl_", methodName : "fromOption"})));
-		break;
-	}
-	return stx_ext_Pledge.fromRes(val);
+	return stx_ext_Pledge.fromRes(stx_pico_OptionLift.fold(m,function(x) {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,x);
+	},function() {
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/ext/Pledge.hx", lineNumber : 67, className : "stx.ext._Pledge.Pledge_Impl_", methodName : "fromOption"}),"E_UnexpectedNullValueEncountered"));
+	}));
 };
 stx_ext_Pledge.prj = function(this1) {
 	return this1;
@@ -17847,55 +15134,52 @@ stx_ext_SourceIdent.eq = function(this1,that) {
 		return false;
 	} else if(this1.pack.length != that.pack.length) {
 		return false;
-	} else {
-		var self = stx_pico_OptionLift.map(stx_nano_lift_LiftOptionNano.zip(this1.module,that.module),function(tp) {
-			return stx_nano_CoupleLift.decouple(tp,function(l,r) {
-				return l.toString().length != r.toString().length;
-			});
+	} else if(stx_pico_OptionLift.defv(stx_pico_OptionLift.map(stx_nano_lift_LiftOptionNano.zip(this1.module,that.module),function(tp) {
+		return stx_nano_CoupleLift.decouple(tp,function(l,r) {
+			return l.toString().length != r.toString().length;
 		});
-		if(self._hx_index == 0 && self.v) {
-			return false;
-		} else {
+	}),false)) {
+		return false;
+	} else {
+		var _g = 0;
+		var _g1 = this1.pack.length - 1;
+		while(_g < _g1) {
+			var i = _g++;
+			if(this1.pack[i] != that.pack[i]) {
+				return false;
+			}
+		}
+		if(stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this1.module)) && stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,that.module))) {
+			var this_string = stx_pico_OptionLift.fudge(this1.module).toString();
+			var that_string = stx_pico_OptionLift.fudge(that.module).toString();
 			var _g = 0;
-			var _g1 = this1.pack.length - 1;
+			var _g1 = this_string.length;
 			while(_g < _g1) {
 				var i = _g++;
-				if(this1.pack[i] != that.pack[i]) {
+				if(this_string.charAt(i) != that_string.charAt(i)) {
 					return false;
 				}
 			}
-			if(stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,this1.module)) && stx_pico_OptionLift.is_defined(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,that.module))) {
-				var this_string = stx_pico_OptionLift.fudge(this1.module).toString();
-				var that_string = stx_pico_OptionLift.fudge(that.module).toString();
-				var _g = 0;
-				var _g1 = this_string.length;
-				while(_g < _g1) {
-					var i = _g++;
-					if(this_string.charAt(i) != that_string.charAt(i)) {
-						return false;
-					}
-				}
-			}
-			return true;
 		}
+		return true;
 	}
 };
 stx_ext_SourceIdent.toString = function(this1) {
-	var _g = this1.pack;
-	var _g1 = this1.module;
-	if(_g1 == null) {
-		if(_g.length == 0) {
+	var _g = this1.module;
+	var _g1 = this1.pack;
+	if(_g == null) {
+		if(_g1.length == 0) {
 			return this1.name;
 		} else {
 			var next = [this1.name];
 			var _g2 = 0;
-			while(_g2 < _g.length) next.push(_g[_g2++]);
+			while(_g2 < _g1.length) next.push(_g1[_g2++]);
 			return next.join(".");
 		}
-	} else if(_g.length == 0) {
-		return "" + (_g1 == null ? "null" : stx_pico_Option.toString(_g1)) + "." + this1.name;
+	} else if(_g1.length == 0) {
+		return "" + (_g == null ? "null" : stx_pico_Option.toString(_g)) + "." + this1.name;
 	} else {
-		return "" + (_g1 == null ? "null" : stx_pico_Option.toString(_g1)) + "." + this1.name;
+		return "" + (_g == null ? "null" : stx_pico_Option.toString(_g)) + "." + this1.name;
 	}
 };
 var stx_ext_SymbolApi = function() { };
@@ -17911,38 +15195,7 @@ var stx_ext_Unfold = {};
 stx_ext_Unfold.fromFunction = function(fn) {
 	var unfolder = fn;
 	return function(initial) {
-		var initial1 = initial;
-		var unfolder1 = unfolder;
-		return { iterator : function() {
-			var _next = haxe_ds_Option.None;
-			var _progress = initial1;
-			var precomputeNext = function() {
-				var _g = unfolder1(_progress);
-				switch(_g._hx_index) {
-				case 0:
-					var tup = _g.v;
-					_progress = stx_nano_CoupleLift.fst(tup);
-					_next = haxe_ds_Option.Some(stx_nano_CoupleLift.snd(tup));
-					break;
-				case 1:
-					_progress = null;
-					_next = haxe_ds_Option.None;
-					break;
-				}
-			};
-			precomputeNext();
-			return { hasNext : function() {
-				if(_next._hx_index == 0) {
-					return true;
-				} else {
-					return false;
-				}
-			}, next : function() {
-				var n = _next._hx_index == 0 ? _next.v : null;
-				precomputeNext();
-				return n;
-			}};
-		}};
+		return stx_ext_Unfold.unfold(initial,unfolder);
 	};
 };
 stx_ext_Unfold._new = function(v) {
@@ -18015,12 +15268,10 @@ var stx_ext_lift_LiftDynamicAccessToArrayKV = function() { };
 stx_ext_lift_LiftDynamicAccessToArrayKV.__name__ = "stx.ext.lift.LiftDynamicAccessToArrayKV";
 stx_ext_lift_LiftDynamicAccessToArrayKV.toIter = function(obj) {
 	var arr = [];
-	var _g_keys = Reflect.fields(obj);
-	var _g_index = 0;
-	while(_g_index < _g_keys.length) {
-		var key = _g_keys[_g_index++];
-		var _g = { value : obj[key], key : key};
-		arr.push(stx_nano_KV.fromObj({ key : _g.key, val : _g.value}));
+	var _g = $keyValueIterator(haxe_DynamicAccess)(obj);
+	while(_g.hasNext()) {
+		var _g1 = _g.next();
+		arr.push(stx_nano_KV.fromObj({ key : _g1.key, val : _g1.value}));
 	}
 	return arr;
 };
@@ -18039,29 +15290,27 @@ stx_ext_lift_LiftFuture.__name__ = "stx.ext.lift.LiftFuture";
 stx_ext_lift_LiftFuture.zip = function(self,that) {
 	var left = haxe_ds_Option.None;
 	var right = haxe_ds_Option.None;
-	var trigger = new tink_core_FutureTrigger();
+	var trigger = tink_core_Future.trigger();
 	var on_done = function() {
 	};
 	var r_handler = function(r) {
 		right = haxe_ds_Option.Some(r);
 		on_done();
 	};
-	self.handle(function(l) {
+	tink_core_Future.handle(self,function(l) {
 		left = haxe_ds_Option.Some(l);
 		on_done();
 	});
-	that.handle(r_handler);
-	return trigger;
+	tink_core_Future.handle(that,r_handler);
+	return trigger.asFuture();
 };
 stx_ext_lift_LiftFuture.tryAndThenCancelIfNotAvailable = function(ft) {
 	var output = haxe_ds_Option.None;
-	var canceller = ft.handle(function(x) {
+	var canceller = tink_core_Future.handle(ft,function(x) {
 		output = haxe_ds_Option.Some(x);
 	});
 	if(!stx_pico_OptionLift.is_defined(output)) {
-		if(canceller != null) {
-			canceller.cancel();
-		}
+		tink_core_CallbackLink.cancel(canceller);
 	}
 	return output;
 };
@@ -18110,7 +15359,7 @@ var stx_ext_lift__$LiftMapConstructors_LiftedMapConstructors = function() {
 };
 stx_ext_lift__$LiftMapConstructors_LiftedMapConstructors.__name__ = "stx.ext.lift._LiftMapConstructors.LiftedMapConstructors";
 stx_ext_lift__$LiftMapConstructors_LiftedMapConstructors.String = function() {
-	return new haxe_ds_StringMap();
+	return haxe_ds_Map.toStringMap(null);
 };
 stx_ext_lift__$LiftMapConstructors_LiftedMapConstructors.__super__ = stx_pico_Clazz;
 stx_ext_lift__$LiftMapConstructors_LiftedMapConstructors.prototype = $extend(stx_pico_Clazz.prototype,{
@@ -18120,10 +15369,10 @@ var stx_ext_lift_LiftMapMap = function() { };
 stx_ext_lift_LiftMapMap.__name__ = "stx.ext.lift.LiftMapMap";
 stx_ext_lift_LiftMapMap.map_arw = function(map,fn) {
 	return function(next) {
-		var _g = map.keyValueIterator();
+		var _g = $keyValueIterator(haxe_ds_Map)(map);
 		while(_g.hasNext()) {
 			var _g1 = _g.next();
-			next.set(_g1.key,fn(_g1.value));
+			haxe_ds_Map.set(next,_g1.key,fn(_g1.value));
 		}
 		return next;
 	};
@@ -18132,7 +15381,7 @@ var stx_ext_lift_LiftMapToIter = function() { };
 stx_ext_lift_LiftMapToIter.__name__ = "stx.ext.lift.LiftMapToIter";
 stx_ext_lift_LiftMapToIter.toIter = function(map) {
 	return { iterator : function() {
-		var source = map.keyValueIterator();
+		var source = $keyValueIterator(haxe_ds_Map)(map);
 		return { next : function() {
 			var out = source.next();
 			return stx_nano_KV.fromObj({ key : out.key, val : out.value});
@@ -18164,16 +15413,11 @@ stx_ext_lift_LiftPath.split = function(path) {
 var stx_ext_lift_LiftResToChunk = function() { };
 stx_ext_lift_LiftResToChunk.__name__ = "stx.ext.lift.LiftResToChunk";
 stx_ext_lift_LiftResToChunk.toChunk = function(self) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_ext_ChunkSum.Val(self.t);
-		break;
-	case 1:
-		tmp = stx_ext_ChunkSum.End(self.e);
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,function(o) {
+		return stx_ext_ChunkSum.Val(o);
+	},function(e) {
+		return stx_ext_ChunkSum.End(e);
+	});
 };
 var stx_ext_lift_LiftStringMapToIter = function() { };
 stx_ext_lift_LiftStringMapToIter.__name__ = "stx.ext.lift.LiftStringMapToIter";
@@ -18348,10 +15592,10 @@ stx_fn_DualLift.pass = function(self,fn) {
 	return stx_fn_Dual.fromUnary(stx_fn_DualLift.then(self,stx_nano_lift_LiftNano.decouple(stx_nano_Wildcard.__,fn)));
 };
 stx_fn_DualLift.first = function(self,fn) {
-	return stx_fn_Dual.fromUnary(stx_fn_DualLift.then(self,stx_fn_UnaryLift.first(fn)));
+	return stx_fn_Dual.fromUnary(stx_fn_DualLift.then(self,stx_fn_UnaryLift.first(stx_LiftUnary.fn(fn))));
 };
 stx_fn_DualLift.second = function(self,fn) {
-	return stx_fn_Dual.fromUnary(stx_fn_DualLift.then(self,stx_fn_UnaryLift.second(fn)));
+	return stx_fn_Dual.fromUnary(stx_fn_DualLift.then(self,stx_fn_UnaryLift.second(stx_LiftUnary.fn(fn))));
 };
 var stx_fn_Dual = {};
 stx_fn_Dual.unit = function() {
@@ -18368,6 +15612,14 @@ stx_fn_Dual.fromUnary = function(self) {
 stx_fn_Dual.toUnary = function(this1) {
 	return this1;
 };
+var stx_fn_Module = function() {
+	stx_pico_Clazz.call(this);
+};
+stx_fn_Module.__name__ = "stx.fn.Module";
+stx_fn_Module.__super__ = stx_pico_Clazz;
+stx_fn_Module.prototype = $extend(stx_pico_Clazz.prototype,{
+	__class__: stx_fn_Module
+});
 var stx_fn_Perhaps = {};
 stx_fn_Perhaps._new = function(self) {
 	return self;
@@ -18395,6 +15647,17 @@ stx_fn_Pick.rightPickToSwitch = function(fn) {
 			return fn(e.v);
 		}
 	};
+};
+var stx_fn_SinkLift = function() { };
+stx_fn_SinkLift.__name__ = "stx.fn.SinkLift";
+stx_fn_SinkLift.then = function(self,that) {
+	return stx_fn_Sink.lift(function(p) {
+		self(p);
+		that(p);
+	});
+};
+stx_fn_SinkLift.bind = function(self,p) {
+	return stx_fn_Block.lift(stx_fn_SinkLift.bind(self,p));
 };
 var stx_fn_Sink = {};
 stx_fn_Sink._new = function(self) {
@@ -18473,10 +15736,10 @@ stx_fn_Thunk._new = function(self) {
 	return self;
 };
 stx_fn_Thunk.then = function(this1,that) {
-	return stx_fn__$Thunk_Constructor.ZERO._.then(that,this1);
+	return stx_fn_Thunk._()._.then(that,this1);
 };
 stx_fn_Thunk.cache = function(this1) {
-	return stx_fn__$Thunk_Constructor.ZERO._.cache(this1);
+	return stx_fn_Thunk._()._.cache(this1);
 };
 stx_fn_Thunk.prj = function(this1) {
 	return this1;
@@ -18609,7 +15872,7 @@ stx_fn_UnaryLift.split = function(self,that) {
 	};
 };
 stx_fn_UnaryLift.fan = function(a) {
-	return stx_fn_UnaryLift.then(a,function(x) {
+	return stx_fn_UnaryLift.then(stx_LiftUnary.fn(a),function(x) {
 		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,x,x);
 	});
 };
@@ -18624,6 +15887,12 @@ stx_fn_UnaryLift.bindI = function(fn,p) {
 	return function() {
 		return _g(a1);
 	};
+};
+stx_fn_UnaryLift.sink = function(fn,handler) {
+	return stx_fn_Sink.lift(function(p) {
+		var val = fn(p);
+		handler(val);
+	});
 };
 var stx_fn_Unary = {};
 stx_fn_Unary._new = function(self) {
@@ -18907,6 +16176,515 @@ stx_fp_StateLift.flat_map = function(self,fn) {
 		});
 	};
 };
+var stx_lift_ArrayLift = function() { };
+stx_lift_ArrayLift.__name__ = "stx.lift.ArrayLift";
+stx_lift_ArrayLift.flatten = function(arrs) {
+	var res = [];
+	var _g = 0;
+	while(_g < arrs.length) {
+		var arr = arrs[_g];
+		++_g;
+		var _g1 = 0;
+		while(_g1 < arr.length) res.push(arr[_g1++]);
+	}
+	return res;
+};
+stx_lift_ArrayLift.interleave = function(alls) {
+	var res = [];
+	if(alls.length > 0) {
+		var minLength = alls[0].length;
+		var _g = 0;
+		while(_g < alls.length) minLength = Std.int(Math.min(minLength,alls[_g++].length));
+		var length = minLength;
+		var i = 0;
+		while(i < length) {
+			var _g = 0;
+			while(_g < alls.length) res.push(alls[_g++][i]);
+			++i;
+		}
+	}
+	return res;
+};
+stx_lift_ArrayLift.is_defined = function(self) {
+	return self.length > 0;
+};
+stx_lift_ArrayLift.cons = function(self,t) {
+	var copy = stx_lift_ArrayLift.copy(self);
+	copy.unshift(t);
+	return copy;
+};
+stx_lift_ArrayLift.snoc = function(self,t) {
+	var copy = stx_lift_ArrayLift.copy(self);
+	copy.push(t);
+	return copy;
+};
+stx_lift_ArrayLift.set = function(self,i,v) {
+	var arr0 = self.slice();
+	arr0[i] = v;
+	return arr0;
+};
+stx_lift_ArrayLift.get = function(self,i) {
+	return self[i];
+};
+stx_lift_ArrayLift.head = function(self) {
+	if(self.length == 0) {
+		return haxe_ds_Option.None;
+	} else if(self[0] == null) {
+		return haxe_ds_Option.None;
+	} else {
+		return haxe_ds_Option.Some(self[0]);
+	}
+};
+stx_lift_ArrayLift.tail = function(self) {
+	return self.slice(1);
+};
+stx_lift_ArrayLift.last = function(self) {
+	var v = self[self.length > 0 ? self.length - 1 : 0];
+	if(v == null) {
+		return haxe_ds_Option.None;
+	} else {
+		return haxe_ds_Option.Some(v);
+	}
+};
+stx_lift_ArrayLift.copy = function(self) {
+	return [].concat(self);
+};
+stx_lift_ArrayLift.concat = function(self,that) {
+	var acc = stx_lift_ArrayLift.copy(self);
+	var _g = 0;
+	while(_g < self.length) acc.push(self[_g++]);
+	return acc;
+};
+stx_lift_ArrayLift.bind_fold = function(self,pure,init,bind,fold) {
+	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
+		return bind(memo,function(b) {
+			return pure(fold(next,b));
+		});
+	},pure(init));
+};
+stx_lift_ArrayLift.reduce = function(self,unit,pure,plus) {
+	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
+		return plus(memo,pure(next));
+	},unit());
+};
+stx_lift_ArrayLift.map = function(self,fn) {
+	var n = [];
+	var _g = 0;
+	while(_g < self.length) n.push(fn(self[_g++]));
+	return n;
+};
+stx_lift_ArrayLift.mapi = function(self,fn) {
+	var n = [];
+	var e = null;
+	var _g = 0;
+	var _g1 = self.length;
+	while(_g < _g1) {
+		var i = _g++;
+		e = self[i];
+		n.push(fn(i,e));
+	}
+	return n;
+};
+stx_lift_ArrayLift.flat_map = function(self,fn) {
+	var n = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var e2 = $getIterator(fn(self[_g++]));
+		while(e2.hasNext()) n.push(e2.next());
+	}
+	return n;
+};
+stx_lift_ArrayLift.lfold = function(self,fn,memo) {
+	var r = memo;
+	var _g = 0;
+	while(_g < self.length) r = fn(self[_g++],r);
+	return r;
+};
+stx_lift_ArrayLift.lfold1 = function(self,fn) {
+	var folded = stx_lift_ArrayLift.head(self);
+	var tail = stx_lift_ArrayLift.tail(self);
+	return stx_pico_OptionLift.map(folded,function(memo) {
+		var _g = 0;
+		while(_g < tail.length) memo = fn(memo,tail[_g++]);
+		return memo;
+	});
+};
+stx_lift_ArrayLift.rfold = function(self,fn,z) {
+	var r = z;
+	var _g = 0;
+	var _g1 = self.length;
+	while(_g < _g1) r = fn(self[self.length - 1 - _g++],r);
+	return r;
+};
+stx_lift_ArrayLift.rfold1 = function(self,fn) {
+	return stx_lift_ArrayLift.lfold1(stx_lift_ArrayLift.reversed(self),fn);
+};
+stx_lift_ArrayLift.lscan = function(self,f,init) {
+	var result = [init];
+	var _g = 0;
+	while(_g < self.length) result.push(f(self[_g++],init));
+	return result;
+};
+stx_lift_ArrayLift.lscan1 = function(self,f) {
+	var result = [];
+	if(0 == self.length) {
+		return result;
+	}
+	var accum = self[0];
+	result.push(accum);
+	var _g = 1;
+	var _g1 = self.length;
+	while(_g < _g1) result.push(f(self[_g++],accum));
+	return result;
+};
+stx_lift_ArrayLift.rscan = function(self,init,f) {
+	var a = self.slice();
+	a.reverse();
+	return stx_lift_ArrayLift.lscan(a,f,init);
+};
+stx_lift_ArrayLift.rscan1 = function(self,f) {
+	var a = self.slice();
+	a.reverse();
+	return stx_lift_ArrayLift.lscan1(a,f);
+};
+stx_lift_ArrayLift.filter = function(self,fn) {
+	var n = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var e = self[_g];
+		++_g;
+		if(fn(e)) {
+			n.push(e);
+		}
+	}
+	return n;
+};
+stx_lift_ArrayLift.map_filter = function(self,fn) {
+	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
+		var _g = fn(next);
+		if(_g._hx_index == 0) {
+			return stx_lift_ArrayLift.snoc(memo,_g.v);
+		} else {
+			return memo;
+		}
+	},[]);
+};
+stx_lift_ArrayLift.whilst = function(self,fn) {
+	var r = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var e = self[_g];
+		++_g;
+		if(fn(e)) {
+			r.push(e);
+		} else {
+			break;
+		}
+	}
+	return r;
+};
+stx_lift_ArrayLift.ltaken = function(self,n) {
+	return self.slice(0,Std.int(Math.min(n,self.length)));
+};
+stx_lift_ArrayLift.ldropn = function(self,n) {
+	if(n >= self.length) {
+		return [];
+	} else {
+		return self.slice(n);
+	}
+};
+stx_lift_ArrayLift.rdropn = function(self,n) {
+	if(self != null && n >= self.length) {
+		return [];
+	} else {
+		return self.splice(0,self.length - n);
+	}
+};
+stx_lift_ArrayLift.ldrop = function(self,p) {
+	var r = [].concat(self);
+	var _g = 0;
+	while(_g < self.length) if(p(self[_g++])) {
+		r.shift();
+	} else {
+		break;
+	}
+	return r;
+};
+stx_lift_ArrayLift.search = function(self,fn) {
+	var out = haxe_ds_Option.None;
+	var _g = 0;
+	while(_g < self.length) {
+		var el = self[_g];
+		++_g;
+		if(fn(el)) {
+			out = haxe_ds_Option.Some(el);
+			break;
+		}
+	}
+	return out;
+};
+stx_lift_ArrayLift.all = function(self,fn) {
+	return stx_lift_ArrayLift.lfold(self,function(b,a) {
+		if(a) {
+			return fn(b);
+		} else {
+			return false;
+		}
+	},true);
+};
+stx_lift_ArrayLift.any = function(self,fn) {
+	return stx_lift_ArrayLift.lfold(self,function(b,a) {
+		if(a) {
+			return true;
+		} else {
+			return fn(b);
+		}
+	},false);
+};
+stx_lift_ArrayLift.zip_with = function(self,that,fn) {
+	var next = [];
+	var lower = Std.int(Math.min(self.length,that.length));
+	var _g = 0;
+	while(_g < lower) {
+		var i = _g++;
+		next.push(fn(self[i],that[i]));
+	}
+	return next;
+};
+stx_lift_ArrayLift.cross_with = function(self,that,fn) {
+	var r = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var va = self[_g++];
+		var _g1 = 0;
+		while(_g1 < that.length) r.push(fn(va,that[_g1++]));
+	}
+	return r;
+};
+stx_lift_ArrayLift.difference_with = function(self,that,eq) {
+	var res = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var e = [self[_g]];
+		++_g;
+		if(!stx_lift_ArrayLift.any(that,(function(e) {
+			return function(x) {
+				return eq(x,e[0]);
+			};
+		})(e))) {
+			res.push(e[0]);
+		}
+	}
+	return res;
+};
+stx_lift_ArrayLift.union_with = function(self,that,eq) {
+	var res = [];
+	var _g = 0;
+	while(_g < self.length) res.push(self[_g++]);
+	var _g = 0;
+	while(_g < that.length) {
+		var e = [that[_g]];
+		++_g;
+		if(!stx_lift_ArrayLift.any(res,(function(e) {
+			return function(x) {
+				return eq(x,e[0]);
+			};
+		})(e))) {
+			res.push(e[0]);
+		}
+	}
+	return res;
+};
+stx_lift_ArrayLift.unique_with = function(self,eq) {
+	var r = [];
+	var _g = 0;
+	while(_g < self.length) {
+		var e = self[_g];
+		++_g;
+		var exists = stx_lift_ArrayLift.any(r,(function(_g,a1) {
+			return function(a2) {
+				return _g[0](a1[0],a2);
+			};
+		})([eq],[e]));
+		stx_lift_ArrayLift.search(r,(function(_g,a1) {
+			return function(a2) {
+				return _g[0](a1[0],a2);
+			};
+		})([eq],[e]));
+		if(!exists) {
+			r.push(e);
+		}
+	}
+	return r;
+};
+stx_lift_ArrayLift.nub_with = function(self,f) {
+	return stx_lift_ArrayLift.lfold(self,function(b,a) {
+		var _g = f;
+		var a1 = b;
+		if(stx_lift_ArrayLift.any(a,function(a2) {
+			return _g(a1,a2);
+		})) {
+			return a;
+		} else {
+			return stx_lift_ArrayLift.snoc(a,b);
+		}
+	},[]);
+};
+stx_lift_ArrayLift.intersect_with = function(self,that,f) {
+	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
+		var _g = f;
+		var a1 = next;
+		var _g1 = function(a2) {
+			return _g(a1,a2);
+		};
+		if(stx_lift_ArrayLift.any(that,_g1) == true) {
+			return stx_lift_ArrayLift.snoc(memo,next);
+		} else {
+			return memo;
+		}
+	},[]);
+};
+stx_lift_ArrayLift.reversed = function(self) {
+	return stx_lift_ArrayLift.lfold(self,function(b,a) {
+		a.unshift(b);
+		return a;
+	},[]);
+};
+stx_lift_ArrayLift.count = function(self,f) {
+	return stx_lift_ArrayLift.lfold(self,function(b,a) {
+		return a + (f(b) ? 1 : 0);
+	},0);
+};
+stx_lift_ArrayLift.size = function(self) {
+	return self.length;
+};
+stx_lift_ArrayLift.index_of = function(self,t) {
+	var index = 0;
+	var ok = false;
+	var _g = 0;
+	while(_g < self.length) {
+		if(t(self[_g++])) {
+			ok = true;
+			break;
+		}
+		++index;
+	}
+	if(ok) {
+		return index;
+	} else {
+		return -1;
+	}
+};
+stx_lift_ArrayLift.has = function(self,obj) {
+	var index = self.indexOf(obj);
+	if(index == -1) {
+		return haxe_ds_Option.None;
+	} else {
+		return haxe_ds_Option.Some(index);
+	}
+};
+stx_lift_ArrayLift.partition = function(self,f) {
+	return stx_lift_ArrayLift.lfold(self,function(next,memo) {
+		if(f(next)) {
+			memo.a.push(next);
+		} else {
+			memo.b.push(next);
+		}
+		return memo;
+	},{ a : [], b : []});
+};
+stx_lift_ArrayLift.chunk = function(self,size) {
+	var slices = [];
+	var rest = 0;
+	var _g = 0;
+	while(_g < size.length) {
+		var next = rest + size[_g++];
+		slices.push(self.slice(rest,next));
+		rest = next;
+	}
+	return slices;
+};
+stx_lift_ArrayLift.pad = function(self,len,val) {
+	var len0 = len - self.length;
+	var arr0 = [];
+	var _g = 0;
+	while(_g < len0) {
+		++_g;
+		arr0.push(val);
+	}
+	return self.concat(arr0);
+};
+stx_lift_ArrayLift.fill = function(self,def) {
+	var result = new Array(self.length);
+	var _g = 0;
+	var _g1 = self.length;
+	while(_g < _g1) {
+		var i = _g++;
+		var x = self[i];
+		result[i] = x == null ? def : x;
+	}
+	return result;
+};
+stx_lift_ArrayLift.toIterable = function(self) {
+	return self;
+};
+stx_lift_ArrayLift.toMap = function(self) {
+	var mp = new haxe_ds_StringMap();
+	var _g = 0;
+	while(_g < self.length) {
+		var val = self[_g++]();
+		mp.set(val.a,val.b);
+	}
+	return mp;
+};
+stx_lift_ArrayLift.random = function(self) {
+	var len = self.length;
+	return self[Math.round(Math.random() * (len - 1))];
+};
+stx_lift_ArrayLift.shuffle = function(self) {
+	var res = [];
+	var cp = self.slice();
+	while(cp.length > 0) res.push(cp.splice(Math.floor(Math.random() * cp.length),1)[0]);
+	return res;
+};
+stx_lift_ArrayLift.and_with = function(self,that,eq) {
+	return stx_lift_ArrayLift.lfold(stx_lift_ArrayLift.zip_with(self,that,function(l,r) {
+		return { a : l, b : r};
+	}),function(next,memo) {
+		if(memo) {
+			if(eq(next.a,next.b)) {
+				return eq(next.a,next.b);
+			} else {
+				return false;
+			}
+		} else {
+			return memo;
+		}
+	},true);
+};
+stx_lift_ArrayLift.rotate = function(self,num) {
+	num %= self.length;
+	var l = stx_lift_ArrayLift.ltaken(self,num);
+	var r = stx_lift_ArrayLift.ldropn(self,num);
+	if(num < 0) {
+		return stx_lift_ArrayLift.concat(l,r);
+	} else if(num > 1) {
+		return stx_lift_ArrayLift.concat(l,r);
+	} else {
+		return self;
+	}
+};
+stx_lift_ArrayLift.iterator = function(self) {
+	return new haxe_iterators_ArrayIterator(self);
+};
+stx_lift_ArrayLift.elide = function(self) {
+	return stx_lift_ArrayLift.map(self,function(v) {
+		return v;
+	});
+};
+stx_lift_ArrayLift.prj = function(self) {
+	return self;
+};
 var stx_log_Includes = {};
 stx_log_Includes.clear = function(this1) {
 	while(this1.length > 0) this1.pop();
@@ -18935,6 +16713,47 @@ stx_log_Level.toString = function(this1) {
 	case 6:
 		return "FATAL";
 	}
+};
+var stx_log_LogCustomParameters = {};
+stx_log_LogCustomParameters.__properties__ = {get_stamp:"get_stamp"};
+stx_log_LogCustomParameters._new = function(self) {
+	return stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,self),[]);
+};
+stx_log_LogCustomParameters.get_stamp = function(this1) {
+	var obj = null;
+	var _g = 0;
+	while(_g < this1.length) {
+		var x = this1[_g];
+		++_g;
+		if(Type.getClass(x) == stx_log_Stamp) {
+			obj = x;
+			break;
+		}
+	}
+	if(obj == null) {
+		obj = new stx_log_Stamp();
+		this1.push(obj);
+	}
+	return obj;
+};
+stx_log_LogCustomParameters.restamp = function(this1,fn) {
+	var indexed = stx_pico_OptionLift.def(stx_lift_ArrayLift.search(stx_lift_ArrayLift.mapi(this1,function(tI,tII) {
+		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
+	}),function(tp) {
+		return stx_log_LogCustomParameters.is_stamp(stx_nano_CoupleLift.snd(tp));
+	}),function() {
+		var stamp = new stx_log_Stamp();
+		var index = this1.length;
+		this1[index] = stamp;
+		return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,index,stamp);
+	});
+	var next_stamp = fn(stx_nano_CoupleLift.snd(indexed));
+	var copy = this1.slice();
+	copy[stx_nano_CoupleLift.fst(indexed)] = next_stamp;
+	return copy;
+};
+stx_log_LogCustomParameters.is_stamp = function(v) {
+	return Type.getClass(v) == stx_log_Stamp;
 };
 var stx_log_LogFileName = {};
 stx_log_LogFileName.__properties__ = {get_self:"get_self"};
@@ -18975,12 +16794,7 @@ stx_log_Scoping.prototype = {
 	,type: null
 	,module: null
 	,copy: function(method,type,module) {
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,method);
-		var tmp = self._hx_index == 0 ? self.v : this.method;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,type);
-		var tmp1 = self._hx_index == 0 ? self.v : this.type;
-		var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,module);
-		return new stx_log_Scoping(tmp,tmp1,self._hx_index == 0 ? self.v : this.module);
+		return new stx_log_Scoping(stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,method),this.method),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,type),this.type),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,module),this.module));
 	}
 	,with_method: function(name) {
 		return this.copy(name);
@@ -18998,6 +16812,47 @@ stx_log_DebugLogger.__super__ = stx_log_Logger;
 stx_log_DebugLogger.prototype = $extend(stx_log_Logger.prototype,{
 	__class__: stx_log_DebugLogger
 });
+var stx_log_Stamp = function(id,level,timestamp,tags,hidden) {
+	if(hidden == null) {
+		hidden = false;
+	}
+	var _g = function(value) {
+		return stx_nano_lift_LiftNano.uuid(stx_nano_Wildcard.__,value);
+	};
+	var value = "xxxxx";
+	var tmp = function() {
+		return _g(value);
+	};
+	this.id = stx_pico_OptionLift.def(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,id),tmp);
+	this.level = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,level),0);
+	this.timestamp = stx_pico_OptionLift.def(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,timestamp),Date.now);
+	this.tags = stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,tags),[]);
+	this.hidden = hidden;
+};
+stx_log_Stamp.__name__ = "stx.log.Stamp";
+stx_log_Stamp.prototype = {
+	id: null
+	,level: null
+	,timestamp: null
+	,tags: null
+	,hidden: null
+	,copy: function(id,level,timestamp,tags,hidden) {
+		return new stx_log_Stamp(stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,id),this.id),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,level),this.level),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,timestamp),this.timestamp),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,tags),this.tags),stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,hidden),this.hidden));
+	}
+	,relevel: function(level) {
+		return this.copy(null,level);
+	}
+	,tag: function(tag) {
+		return this.copy(null,null,null,stx_lift_ArrayLift.snoc(this.tags,tag));
+	}
+	,hide: function() {
+		return this.copy(this.id,this.level,this.timestamp,this.tags,true);
+	}
+	,is_zero: function() {
+		return this == stx_log_Stamp.ZERO;
+	}
+	,__class__: stx_log_Stamp
+};
 var stx_log_filter_term_PosPredicate = function(delegate) {
 	stx_log_Filter.call(this);
 	this.delegate = delegate;
@@ -19021,21 +16876,15 @@ stx_log_filter_term_Race.prototype = $extend(stx_log_Filter.prototype,{
 	races: null
 	,applyI: function(value) {
 		var race = Lambda.fold(this.races,function(next,memo) {
-			var race;
-			switch(memo._hx_index) {
-			case 0:
-				var v = memo.v;
-				race = stx_nano_lift_LiftNano.if_else(next.timestamp > v.timestamp,function() {
+			return stx_pico_OptionLift.fold(memo,function(v) {
+				return stx_nano_lift_LiftNano.if_else(next.timestamp > v.timestamp,function() {
 					return haxe_ds_Option.Some(next);
 				},function() {
 					return haxe_ds_Option.Some(v);
 				});
-				break;
-			case 1:
-				race = haxe_ds_Option.Some(next);
-				break;
-			}
-			return race;
+			},function() {
+				return haxe_ds_Option.Some(next);
+			});
 		},haxe_ds_Option.None);
 		if(race._hx_index == 0) {
 			haxe_Log.trace("wins race",{ fileName : "stx/log/filter/term/Race.hx", lineNumber : 24, className : "stx.log.filter.term.Race", methodName : "applyI"});
@@ -19046,12 +16895,10 @@ stx_log_filter_term_Race.prototype = $extend(stx_log_Filter.prototype,{
 			return stx_nano_lift_LiftNano.if_else(out,function() {
 				return stx_nano_Report.unit();
 			},function() {
-				var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/filter/term/Race.hx", lineNumber : 29, className : "stx.log.filter.term.Race", methodName : "applyI"});
-				return stx_nano_Report.pure(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_LosesRace)),haxe_ds_Option.None,this1));
+				return stx_nano_Report.pure(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/filter/term/Race.hx", lineNumber : 29, className : "stx.log.filter.term.Race", methodName : "applyI"}),stx_fail_LogFailure.E_Log_LosesRace));
 			});
 		} else {
-			var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/filter/term/Race.hx", lineNumber : 30, className : "stx.log.filter.term.Race", methodName : "applyI"});
-			return stx_nano_Report.pure(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(stx_fail_LogFailure.E_Log_LosesRace)),haxe_ds_Option.None,this1));
+			return stx_nano_Report.pure(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/log/filter/term/Race.hx", lineNumber : 30, className : "stx.log.filter.term.Race", methodName : "applyI"}),stx_fail_LogFailure.E_Log_LosesRace));
 		}
 	}
 	,__class__: stx_log_filter_term_Race
@@ -19065,8 +16912,7 @@ stx_log_filter_term_race_Stamp.lift = function(self) {
 	return stx_log_filter_term_race_Stamp._new(self);
 };
 stx_log_filter_term_race_Stamp.make = function(scoping,timestamp,scope) {
-	var self = stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scope);
-	return { scoping : scoping, timestamp : timestamp, scope : self._hx_index == 0 ? self.v : stx_log_ScopeSum.ScopeMethod};
+	return { scoping : scoping, timestamp : timestamp, scope : stx_pico_OptionLift.defv(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,scope),stx_log_ScopeSum.ScopeMethod)};
 };
 stx_log_filter_term_race_Stamp.prj = function(this1) {
 	return this1;
@@ -19100,6 +16946,78 @@ stx_log_output_term_Js.prototype = $extend(stx_pico_Clazz.prototype,{
 	}
 	,__class__: stx_log_output_term_Js
 });
+var stx_nano_CoupleLift = function() { };
+stx_nano_CoupleLift.__name__ = "stx.nano.CoupleLift";
+stx_nano_CoupleLift.map = function(self,fn) {
+	return function(tp) {
+		self(function(ti,tii) {
+			tp(ti,fn(tii));
+		});
+	};
+};
+stx_nano_CoupleLift.mapl = function(self,fn) {
+	return function(tp) {
+		self(function(ti,tii) {
+			tp(fn(ti),tii);
+		});
+	};
+};
+stx_nano_CoupleLift.mapr = function(self,fn) {
+	return stx_nano_CoupleLift.map(self,fn);
+};
+stx_nano_CoupleLift.fst = function(self) {
+	return stx_nano_CoupleLift.decouple(self,function(tI,_) {
+		return tI;
+	});
+};
+stx_nano_CoupleLift.snd = function(self) {
+	return stx_nano_CoupleLift.decouple(self,function(_,tII) {
+		return tII;
+	});
+};
+stx_nano_CoupleLift.swap = function(self) {
+	return function(tp) {
+		self(function(ti,tii) {
+			tp(tii,ti);
+		});
+	};
+};
+stx_nano_CoupleLift.equals = function(lhs,rhs) {
+	return stx_nano_CoupleLift.decouple(lhs,function(t0l,t0r) {
+		return stx_nano_CoupleLift.decouple(rhs,function(t1l,t1r) {
+			if(t0l == t1l) {
+				return t0r == t1r;
+			} else {
+				return false;
+			}
+		});
+	});
+};
+stx_nano_CoupleLift.reduce = function(self,flhs,frhs,plus) {
+	return stx_nano_CoupleLift.decouple(self,function(tI,tII) {
+		return plus(flhs(tI),frhs(tII));
+	});
+};
+stx_nano_CoupleLift.decouple = function(self,fn) {
+	var out = null;
+	self(function(ti,tii) {
+		out = fn(ti,tii);
+	});
+	return out;
+};
+stx_nano_CoupleLift.cat = function(self) {
+	return stx_nano_CoupleLift.decouple(self,function(l,r) {
+		return [haxe_ds_Either.Left(l),haxe_ds_Either.Right(r)];
+	});
+};
+stx_nano_CoupleLift.tup = function(self) {
+	return stx_nano_CoupleLift.decouple(self,stx_Tup2.tuple2);
+};
+stx_nano_CoupleLift.toString = function(self) {
+	return stx_nano_CoupleLift.decouple(self,function(l,r) {
+		return "(" + Std.string(l) + " " + Std.string(r) + ")";
+	});
+};
 var stx_nano_Couple = {};
 stx_nano_Couple.toString = function(this1) {
 	return stx_nano_CoupleLift.toString(this1);
@@ -19119,6 +17037,9 @@ stx_nano_Defect.elide = function(this1) {
 };
 stx_nano_Defect.entype = function(this1) {
 	return this1;
+};
+stx_nano_Defect.concat = function(this1,that) {
+	return this1.concat(that);
 };
 var stx_nano_FailCode = {};
 stx_nano_FailCode._new = function(self) {
@@ -19169,7 +17090,7 @@ stx_nano_Failure.prj = function(this1) {
 	return this1;
 };
 stx_nano_Failure.get_self = function(this1) {
-	return stx_nano_Failure._new(this1);
+	return stx_nano_Failure.lift(this1);
 };
 var stx_nano_Fault = {};
 stx_nano_Fault._new = function(self) {
@@ -19371,6 +17292,76 @@ stx_nano_KV.into = function(this1,fn) {
 stx_nano_KV.decouple = function(this1,fn) {
 	return fn(this1.key,this1.val);
 };
+var stx_nano_PositionLift = function() { };
+stx_nano_PositionLift.__name__ = "stx.nano.PositionLift";
+stx_nano_PositionLift.toString = function(pos) {
+	if(pos == null) {
+		return ":pos ()";
+	}
+	var fn = pos.methodName;
+	return ":pos (object :file_name " + fn + " :class_name " + pos.className + " :method_name " + fn + "  :line_number " + pos.lineNumber + ")";
+};
+stx_nano_PositionLift.clone = function(p) {
+	return stx_nano_Position.make(p.fileName,p.className,p.methodName,p.lineNumber,p.customParams);
+};
+stx_nano_PositionLift.withFragmentName = function(pos) {
+	return "" + pos.className + "." + pos.methodName;
+};
+stx_nano_PositionLift.toStringClassMethodLine = function(pos) {
+	return "(" + stx_nano_PositionLift.withFragmentName(pos) + "@" + pos.lineNumber + ")";
+};
+stx_nano_PositionLift.to_vscode_clickable_link = function(pos) {
+	return "" + pos.fileName + ":" + pos.lineNumber;
+};
+stx_nano_PositionLift.toString_name_method_line = function(pos) {
+	return "" + stx_pico_Identifier.get_name(stx_nano_PositionLift.identifier(stx_LiftPos.lift(pos))) + "." + pos.methodName + "@" + pos.lineNumber;
+};
+stx_nano_PositionLift.withCustomParams = function(p,v) {
+	p = stx_nano_PositionLift.clone(p);
+	if(p.customParams == null) {
+		p.customParams = [];
+	}
+	p.customParams.push(v);
+	return p;
+};
+stx_nano_PositionLift.identifier = function(self) {
+	return stx_pico_Identifier._new(stx_lift_ArrayLift.get(stx_nano_Position.get_fileName(stx_nano_lift_LiftNano.toPosition(self)).split("."),0).split(stx_nano_lift_LiftNano.sep(stx_nano_Wildcard.__)).join("."));
+};
+var stx_nano_Position = {};
+stx_nano_Position.__properties__ = {get_customParams:"get_customParams",get_lineNummber:"get_lineNummber",get_methodName:"get_methodName",get_className:"get_className",get_fileName:"get_fileName"};
+stx_nano_Position._new = function(self) {
+	return self;
+};
+stx_nano_Position.lift = function(pos) {
+	return stx_nano_Position.fromPos(pos);
+};
+stx_nano_Position.make = function(fileName,className,methodName,lineNumber,customParams) {
+	return { fileName : fileName, className : className, methodName : methodName, lineNumber : lineNumber, customParams : customParams};
+};
+stx_nano_Position.fromPos = function(pos) {
+	return stx_nano_Position._new(pos);
+};
+stx_nano_Position.toString = function(this1) {
+	return stx_nano_Position._.toStringClassMethodLine(this1);
+};
+stx_nano_Position.here = function(pos) {
+	return pos;
+};
+stx_nano_Position.get_fileName = function(this1) {
+	return this1.fileName;
+};
+stx_nano_Position.get_className = function(this1) {
+	return this1.className;
+};
+stx_nano_Position.get_methodName = function(this1) {
+	return this1.methodName;
+};
+stx_nano_Position.get_lineNummber = function(this1) {
+	return this1.lineNumber;
+};
+stx_nano_Position.get_customParams = function(this1) {
+	return this1.customParams;
+};
 var stx_nano_PrimitiveDef = $hxEnums["stx.nano.PrimitiveDef"] = { __ename__:"stx.nano.PrimitiveDef",__constructs__:null
 	,PNull: {_hx_name:"PNull",_hx_index:0,__enum__:"stx.nano.PrimitiveDef",toString:$estr}
 	,PBool: ($_=function(b) { return {_hx_index:1,b:b,__enum__:"stx.nano.PrimitiveDef",toString:$estr}; },$_._hx_name="PBool",$_.__params__ = ["b"],$_)
@@ -19435,37 +17426,37 @@ stx_nano_Primitive.lt = function(l,r) {
 					return false;
 				}
 			} else {
-				return l._hx_index < r._hx_index;
+				return Type.enumIndex(l) < Type.enumIndex(r);
 			}
 		} else if(r._hx_index == 1) {
 			return false;
 		} else {
-			return l._hx_index < r._hx_index;
+			return Type.enumIndex(l) < Type.enumIndex(r);
 		}
 		break;
 	case 2:
 		if(r._hx_index == 2) {
 			return l.int < r.int;
 		} else {
-			return l._hx_index < r._hx_index;
+			return Type.enumIndex(l) < Type.enumIndex(r);
 		}
 		break;
 	case 3:
 		if(r._hx_index == 3) {
 			return l.fl < r.fl;
 		} else {
-			return l._hx_index < r._hx_index;
+			return Type.enumIndex(l) < Type.enumIndex(r);
 		}
 		break;
 	case 4:
 		if(r._hx_index == 4) {
 			return l.str < r.str;
 		} else {
-			return l._hx_index < r._hx_index;
+			return Type.enumIndex(l) < Type.enumIndex(r);
 		}
 		break;
 	default:
-		return l._hx_index < r._hx_index;
+		return Type.enumIndex(l) < Type.enumIndex(r);
 	}
 };
 stx_nano_Primitive.eq = function(l,r) {
@@ -19529,8 +17520,7 @@ stx_nano_Report.lift = function(self) {
 	return stx_nano_Report._new(self);
 };
 stx_nano_Report.make = function(data,pos) {
-	var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos);
-	return stx_nano_Report.pure(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(data)),haxe_ds_Option.None,this1));
+	return stx_nano_Report.pure(stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos),data));
 };
 stx_nano_Report.unit = function() {
 	return stx_nano_Report._new(haxe_ds_Option.None);
@@ -19542,18 +17532,13 @@ stx_nano_Report.pure = function(e) {
 	return stx_nano_Report._new(haxe_ds_Option.Some(e));
 };
 stx_nano_Report.effects = function(this1,success,failure) {
-	var tmp;
-	switch(this1._hx_index) {
-	case 0:
+	return stx_pico_OptionLift.fold(this1,function(e) {
 		failure();
-		tmp = stx_nano_Report.pure(this1.v);
-		break;
-	case 1:
+		return stx_nano_Report.pure(e);
+	},function() {
 		success();
-		tmp = stx_nano_Report.unit();
-		break;
-	}
-	return tmp;
+		return stx_nano_Report.unit();
+	});
 };
 stx_nano_Report.crunch = function(this1) {
 	if(this1._hx_index == 0) {
@@ -19567,19 +17552,14 @@ stx_nano_Report.prj = function(this1) {
 	return this1;
 };
 stx_nano_Report.value = function(this1) {
-	switch(this1._hx_index) {
-	case 0:
-		return this1.v.value();
-	case 1:
+	return stx_pico_OptionLift.fold(this1,function(err) {
+		return err.value();
+	},function() {
 		return haxe_ds_Option.None;
-	}
+	});
 };
 stx_nano_Report.defv = function(this1,error) {
-	if(this1._hx_index == 0) {
-		return this1.v;
-	} else {
-		return error;
-	}
+	return stx_pico_OptionLift.defv(this1,error);
 };
 stx_nano_Report.merge = function(this1,that) {
 	return stx_nano_Report.fromStdOption(stx_pico_OptionLift.merge(this1,stx_nano_Report.prj(that),function(lhs,rhs) {
@@ -19587,16 +17567,9 @@ stx_nano_Report.merge = function(this1,that) {
 	}));
 };
 stx_nano_Report.or = function(this1,that) {
-	var tmp;
-	switch(this1._hx_index) {
-	case 0:
-		tmp = stx_nano_Report.pure(this1.v);
-		break;
-	case 1:
-		tmp = that();
-		break;
-	}
-	return tmp;
+	return stx_pico_OptionLift.fold(this1,function(x) {
+		return stx_nano_Report.pure(x);
+	},that);
 };
 stx_nano_Report.errata = function(this1,fn) {
 	var tmp;
@@ -19618,16 +17591,11 @@ stx_nano_Report.ok = function(this1) {
 	}
 };
 stx_nano_Report.populate = function(this1,fn) {
-	var tmp;
-	switch(this1._hx_index) {
-	case 0:
-		tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,this1.v);
-		break;
-	case 1:
-		tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn());
-		break;
-	}
-	return tmp;
+	return stx_pico_OptionLift.fold(this1,function(e) {
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+	},function() {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,fn());
+	});
 };
 var stx_nano_ResSum = $hxEnums["stx.nano.ResSum"] = { __ename__:"stx.nano.ResSum",__constructs__:null
 	,Accept: ($_=function(t) { return {_hx_index:0,t:t,__enum__:"stx.nano.ResSum",toString:$estr}; },$_._hx_name="Accept",$_.__params__ = ["t"],$_)
@@ -19642,36 +17610,23 @@ stx_nano_ResSumLift.toString = function(self) {
 var stx_nano_ResLift = function() { };
 stx_nano_ResLift.__name__ = "stx.nano.ResLift";
 stx_nano_ResLift.toString = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return "Accept(" + Std.string(self.t) + ")";
-	case 1:
-		return "Reject(" + self.e.toString() + ")";
-	}
+	return stx_nano_ResLift.fold(self,function(x) {
+		return "Accept(" + Std.string(x) + ")";
+	},function(e) {
+		return "Reject(" + e.toString() + ")";
+	});
 };
 stx_nano_ResLift.errata = function(self,fn) {
-	var self1;
-	switch(self._hx_index) {
-	case 0:
-		self1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,self.t);
-		break;
-	case 1:
-		self1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(self.e));
-		break;
-	}
-	return stx_nano_Res._new(self1);
+	return stx_nano_Res.lift(stx_nano_ResLift.fold(self,function(t) {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
+	},function(e) {
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,fn(e));
+	}));
 };
 stx_nano_ResLift.errate = function(self,fn) {
-	var self1;
-	switch(self._hx_index) {
-	case 0:
-		self1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,self.t);
-		break;
-	case 1:
-		self1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,self.e.map(fn));
-		break;
-	}
-	return stx_nano_Res._new(self1);
+	return stx_nano_ResLift.errata(self,function(e) {
+		return e.map(fn);
+	});
 };
 stx_nano_ResLift.zip = function(self,that) {
 	switch(self._hx_index) {
@@ -19695,28 +17650,16 @@ stx_nano_ResLift.zip = function(self,that) {
 	}
 };
 stx_nano_ResLift.map = function(self,fn) {
-	var self1;
-	switch(self._hx_index) {
-	case 0:
-		self1 = stx_nano_ResSum.Accept(fn(self.t));
-		break;
-	case 1:
-		self1 = stx_nano_ResSum.Reject(self.e);
-		break;
-	}
-	return stx_nano_Res._new(self1);
+	return stx_nano_ResLift.flat_map(self,function(x) {
+		return stx_nano_ResSum.Accept(fn(x));
+	});
 };
 stx_nano_ResLift.flat_map = function(self,fn) {
-	var self1;
-	switch(self._hx_index) {
-	case 0:
-		self1 = fn(self.t);
-		break;
-	case 1:
-		self1 = stx_nano_ResSum.Reject(self.e);
-		break;
-	}
-	return stx_nano_Res._new(self1);
+	return stx_nano_Res.lift(stx_nano_ResLift.fold(self,function(t) {
+		return fn(t);
+	},function(e) {
+		return stx_nano_ResSum.Reject(e);
+	}));
 };
 stx_nano_ResLift.fold = function(self,fn,er) {
 	switch(self._hx_index) {
@@ -19727,84 +17670,51 @@ stx_nano_ResLift.fold = function(self,fn,er) {
 	}
 };
 stx_nano_ResLift.fudge = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return self.t;
-	case 1:
-		throw haxe_Exception.thrown(self.e);
-	}
+	return stx_nano_ResLift.fold(self,function(t) {
+		return t;
+	},function(e) {
+		throw haxe_Exception.thrown(e);
+	});
 };
 stx_nano_ResLift.elide = function(self) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_nano_ResSum.Reject(self.t);
-		break;
-	case 1:
-		tmp = stx_nano_ResSum.Accept(self.e);
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,function(t) {
+		return stx_nano_ResSum.Reject(t);
+	},function(e) {
+		return stx_nano_ResSum.Accept(e);
+	});
 };
 stx_nano_ResLift.value = function(self) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = haxe_ds_Option.Some(self.t);
-		break;
-	case 1:
-		tmp = haxe_ds_Option.None;
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,haxe_ds_Option.Some,function(_) {
+		return haxe_ds_Option.None;
+	});
 };
 stx_nano_ResLift.report = function(self) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_nano_Report.unit();
-		break;
-	case 1:
-		tmp = stx_nano_Report.pure(self.e);
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,function(_) {
+		return stx_nano_Report.unit();
+	},stx_nano_Report.pure);
 };
 stx_nano_ResLift.rectify = function(self,fn) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,self.t);
-		break;
-	case 1:
-		tmp = fn(self.e);
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,function(ok) {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok);
+	},function(no) {
+		return fn(no);
+	});
 };
 stx_nano_ResLift.effects = function(self,success,failure) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		var _g = self.t;
-		success(_g);
-		tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,_g);
-		break;
-	case 1:
-		var _g = self.e;
-		failure(_g);
-		tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,_g);
-		break;
-	}
-	return tmp;
+	return stx_nano_ResLift.fold(self,function(ok) {
+		success(ok);
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,ok);
+	},function(e) {
+		failure(e);
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,e);
+	});
 };
 stx_nano_ResLift.ok = function(self) {
-	switch(self._hx_index) {
-	case 0:
+	return stx_nano_ResLift.fold(self,function(_) {
 		return true;
-	case 1:
+	},function(_) {
 		return false;
-	}
+	});
 };
 var stx_nano_Res = {};
 stx_nano_Res.__properties__ = {get_self:"get_self"};
@@ -19812,28 +17722,23 @@ stx_nano_Res._new = function(self) {
 	return self;
 };
 stx_nano_Res.get_self = function(this1) {
-	return stx_nano_Res._new(this1);
+	return stx_nano_Res.lift(this1);
 };
 stx_nano_Res.lift = function(self) {
 	return stx_nano_Res._new(self);
 };
 stx_nano_Res.accept = function(t) {
-	return stx_nano_Res._new(stx_nano_ResSum.Accept(t));
+	return stx_nano_Res.lift(stx_nano_ResSum.Accept(t));
 };
 stx_nano_Res.reject = function(e) {
-	return stx_nano_Res._new(stx_nano_ResSum.Reject(e));
+	return stx_nano_Res.lift(stx_nano_ResSum.Reject(e));
 };
 stx_nano_Res.fromReport = function(self) {
-	var self1;
-	switch(self._hx_index) {
-	case 0:
-		self1 = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,self.v);
-		break;
-	case 1:
-		self1 = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,null);
-		break;
-	}
-	return stx_nano_Res._new(self1);
+	return stx_nano_Res.lift(stx_pico_OptionLift.fold(self,function(ok) {
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,ok);
+	},function() {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,null);
+	}));
 };
 stx_nano_Res.prj = function(this1) {
 	return this1;
@@ -19848,7 +17753,7 @@ stx_nano_Res.fromOutcome = function(self) {
 		ocd = stx_nano_ResSum.Reject(self.e);
 		break;
 	}
-	return stx_nano_Res._new(ocd);
+	return stx_nano_Res.lift(ocd);
 };
 stx_nano_Res.toOutcome = function(this1) {
 	switch(this1._hx_index) {
@@ -19860,12 +17765,11 @@ stx_nano_Res.toOutcome = function(this1) {
 };
 stx_nano_Res.bind_fold = function(arr,fn,init) {
 	return stx_lift_ArrayLift.lfold(arr,function(next,memo) {
-		switch(memo._hx_index) {
-		case 0:
-			return fn(next,memo.t);
-		case 1:
-			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,memo.e);
-		}
+		return stx_nano_ResLift.fold(memo,function(ok) {
+			return fn(next,ok);
+		},function(no) {
+			return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,no);
+		});
 	},stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,init));
 };
 stx_nano_Res.toStringable = function(this1) {
@@ -19882,8 +17786,7 @@ stx_nano_Resource.exists = function(str) {
 };
 stx_nano_Resource._new = function(str,pos) {
 	if(!stx_nano_Resource.exists(str)) {
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos);
-		throw haxe_Exception.thrown(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF("E_ResourceNotFound")),haxe_ds_Option.None,this1));
+		stx_nano_lift_LiftNano.crack(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos),"E_ResourceNotFound",str));
 	}
 	return str;
 };
@@ -19903,7 +17806,7 @@ var stx_nano_SlotCls = function(data,guard,pos) {
 	if(guard != null) {
 		this.ready = false;
 		this.guard = guard;
-		guard.handle($bind(this,this.handler));
+		tink_core_Future.handle(guard,$bind(this,this.handler));
 	}
 };
 stx_nano_SlotCls.__name__ = "stx.nano.SlotCls";
@@ -19917,7 +17820,7 @@ stx_nano_SlotCls.prototype = {
 	,ready: null
 	,pos: null
 	,toString: function() {
-		return "Slot(" + Std.string(this.ready) + " " + stx_nano_PositionLift.to_vscode_clickable_link(stx_nano_Position.fromPos(this.pos)) + ")";
+		return "Slot(" + Std.string(this.ready) + " " + stx_nano_PositionLift.to_vscode_clickable_link(stx_nano_Position.lift(this.pos)) + ")";
 	}
 	,step: function() {
 		return -1;
@@ -19942,7 +17845,7 @@ stx_nano_SlotLift.flat_map = function(self,fn) {
 		return stx_nano_Slot.Guard(tink_core_Future.flatMap(self.guard,function(t) {
 			var val = fn(t);
 			if(val.ready) {
-				return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyFunc(function() {
+				return tink_core_Future.lazy(tink_core_Lazy.ofFunc(function() {
 					return val.data;
 				}));
 			} else {
@@ -19962,12 +17865,12 @@ stx_nano_SlotLift.handle = function(self,fn) {
 	if(self.ready) {
 		fn(self.data);
 	} else {
-		self.guard.handle(fn);
+		tink_core_Future.handle(self.guard,fn);
 	}
 };
 stx_nano_SlotLift.toFuture = function(self) {
 	if(self.ready) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyFunc(function() {
+		return tink_core_Future.lazy(tink_core_Lazy.ofFunc(function() {
 			return self.data;
 		}));
 	} else {
@@ -19980,28 +17883,14 @@ stx_nano_SlotLift.zip = function(self,that) {
 		if(_g) {
 			return stx_nano_Slot.Ready(stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,self.data,that.data),{ fileName : "stx/nano/Slot.hx", lineNumber : 113, className : "stx.nano.SlotLift", methodName : "zip"});
 		} else {
-			var fn = function(rhs) {
+			return stx_nano_SlotLift.map(that,function(rhs) {
 				return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,self.data,rhs);
-			};
-			if(that.ready) {
-				return stx_nano_Slot.Ready(fn(that.data),that.pos);
-			} else {
-				return stx_nano_Slot.Guard(tink_core_Future.map(that.guard,function(t) {
-					return fn(t);
-				}),that.pos);
-			}
+			});
 		}
 	} else if(_g) {
-		var fn1 = function(lhs) {
+		return stx_nano_SlotLift.map(self,function(lhs) {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,lhs,that.data);
-		};
-		if(self.ready) {
-			return stx_nano_Slot.Ready(fn1(self.data),self.pos);
-		} else {
-			return stx_nano_Slot.Guard(tink_core_Future.map(self.guard,function(t) {
-				return fn1(t);
-			}),self.pos);
-		}
+		});
 	} else {
 		return stx_nano_Slot.Guard(tink_core_Future.merge(self.guard,that.guard,function(tI,tII) {
 			return stx_nano_lift_LiftNano.couple(stx_nano_Wildcard.__,tI,tII);
@@ -20020,7 +17909,7 @@ stx_nano_Slot.prj = function(this1) {
 	return this1;
 };
 stx_nano_Slot.get_self = function(this1) {
-	return stx_nano_Slot._new(this1);
+	return stx_nano_Slot.lift(this1);
 };
 stx_nano_Slot.Ready = function(v,pos) {
 	return new stx_nano_SlotCls(v,null,pos);
@@ -20122,13 +18011,13 @@ stx_nano_Unique.pure = function(data) {
 	});
 };
 stx_nano_Unique.make = function(data,rtid) {
-	return stx_nano_Unique._new({ data : data, rtid : rtid});
+	return stx_nano_Unique.lift({ data : data, rtid : rtid});
 };
 stx_nano_Unique.prj = function(this1) {
 	return this1;
 };
 stx_nano_Unique.get_self = function(this1) {
-	return stx_nano_Unique._new(this1);
+	return stx_nano_Unique.lift(this1);
 };
 stx_nano_Unique.equals = function(this1,that) {
 	return this1.rtid == that.rtid;
@@ -20170,9 +18059,7 @@ stx_nano_lift_LiftOptionNano.zip = function(self,that) {
 	}
 };
 stx_nano_lift_LiftOptionNano.fudge = function(self,err) {
-	var self1 = stx_pico_Option.make(err);
-	var v = new stx_nano_Err(haxe_ds_Option.Some(stx_nano_FailureSum.ERR("E_OptionForcedError")),null,stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/nano/lift/LiftOptionNano.hx", lineNumber : 11, className : "stx.nano.lift.LiftOptionNano", methodName : "fudge"}));
-	err = self1._hx_index == 0 ? self1.v : v;
+	err = stx_pico_OptionLift.defv(stx_pico_Option.make(err),stx_nano_Fault.err(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,{ fileName : "stx/nano/lift/LiftOptionNano.hx", lineNumber : 11, className : "stx.nano.lift.LiftOptionNano", methodName : "fudge"}),"E_OptionForcedError"));
 	if(self == null) {
 		throw haxe_Exception.thrown(err);
 	} else {
@@ -20185,26 +18072,16 @@ stx_nano_lift_LiftOptionNano.fudge = function(self,err) {
 	}
 };
 stx_nano_lift_LiftOptionNano.resolve = function(self,err,pos) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,self.v);
-		break;
-	case 1:
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos);
-		tmp = stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF(err)),haxe_ds_Option.None,this1));
-		break;
-	}
-	return tmp;
+	return stx_pico_OptionLift.fold(self,function(t) {
+		return stx_nano_lift_LiftNano.accept(stx_nano_Wildcard.__,t);
+	},function() {
+		return stx_nano_lift_LiftNano.reject(stx_nano_Wildcard.__,stx_nano_Fault.of(stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos),err));
+	});
 };
 var stx_nano_lift_LiftStringToResource = function() { };
 stx_nano_lift_LiftStringToResource.__name__ = "stx.nano.lift.LiftStringToResource";
 stx_nano_lift_LiftStringToResource.resource = function(stx,str,pos) {
-	if(!stx_nano_Resource.exists(str)) {
-		var this1 = stx_nano_lift_LiftNano.fault(stx_nano_Wildcard.__,pos);
-		throw haxe_Exception.thrown(new stx_nano_Err(stx_nano_lift_LiftNano.option(stx_nano_Wildcard.__,stx_nano_FailureSum.ERR_OF("E_ResourceNotFound")),haxe_ds_Option.None,this1));
-	}
-	return str;
+	return stx_nano_Resource._new(str,pos);
 };
 var stx_pico_EitherLift = function() { };
 stx_pico_EitherLift.__name__ = "stx.pico.EitherLift";
@@ -20270,6 +18147,17 @@ stx_pico_Either.right = function(tII) {
 stx_pico_Either.prj = function(this1) {
 	return this1;
 };
+var stx_pico_Identifier = {};
+stx_pico_Identifier.__properties__ = {get_pack:"get_pack",get_name:"get_name"};
+stx_pico_Identifier._new = function(self) {
+	return self;
+};
+stx_pico_Identifier.get_name = function(this1) {
+	return stx_pico_OptionLift.defv(stx_lift_ArrayLift.last(this1.split(".")),"?");
+};
+stx_pico_Identifier.get_pack = function(this1) {
+	return stx_lift_ArrayLift.rdropn(this1.split("."),1);
+};
 var stx_pico_Option = {};
 stx_pico_Option._new = function(self) {
 	return self;
@@ -20315,16 +18203,11 @@ stx_pico_OutcomeLift.map = function(self,fn) {
 	});
 };
 stx_pico_OutcomeLift.flat_map = function(self,fn) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = fn(self.t);
-		break;
-	case 1:
-		tmp = stx_pico_OutcomeSum.Failure(self.e);
-		break;
-	}
-	return stx_pico_Outcome.lift(tmp);
+	return stx_pico_Outcome.lift(stx_pico_OutcomeLift.fold(self,function(t) {
+		return fn(t);
+	},function(e) {
+		return stx_pico_OutcomeSum.Failure(e);
+	}));
 };
 stx_pico_OutcomeLift.fold = function(self,fn,er) {
 	switch(self._hx_index) {
@@ -20335,24 +18218,18 @@ stx_pico_OutcomeLift.fold = function(self,fn,er) {
 	}
 };
 stx_pico_OutcomeLift.fudge = function(self) {
-	switch(self._hx_index) {
-	case 0:
-		return self.t;
-	case 1:
-		throw haxe_Exception.thrown(self.e);
-	}
+	return stx_pico_OutcomeLift.fold(self,function(t) {
+		return t;
+	},function(e) {
+		throw haxe_Exception.thrown(e);
+	});
 };
 stx_pico_OutcomeLift.elide = function(self) {
-	var tmp;
-	switch(self._hx_index) {
-	case 0:
-		tmp = stx_pico_OutcomeSum.Failure(self.t);
-		break;
-	case 1:
-		tmp = stx_pico_OutcomeSum.Success(self.e);
-		break;
-	}
-	return tmp;
+	return stx_pico_OutcomeLift.fold(self,function(t) {
+		return stx_pico_OutcomeSum.Failure(t);
+	},function(e) {
+		return stx_pico_OutcomeSum.Success(e);
+	});
 };
 var stx_pico_Outcome = {};
 stx_pico_Outcome.__properties__ = {get_self:"get_self"};
@@ -20377,15 +18254,7 @@ stx_pico_Outcome.get_self = function(this1) {
 var stx_test_Log = function() { };
 stx_test_Log.__name__ = "stx.test.Log";
 stx_test_Log.log = function(wildcard) {
-	var this1 = stx_Log.unit();
-	var fn = function(pos) {
-		return stx_log_LogPosition.restamp(pos,function(stamp) {
-			return stamp.tag("stx.test");
-		});
-	};
-	return function(value,pos) {
-		this1(value,fn(pos));
-	};
+	return stx_Log.tag(stx_Log.unit(),"stx.test");
 };
 var tink_core_Annex = function(target) {
 	this.target = target;
@@ -20441,10 +18310,7 @@ tink_core_CallbackLinkRef.__interfaces__ = [tink_core_LinkObject];
 tink_core_CallbackLinkRef.prototype = {
 	link: null
 	,cancel: function() {
-		var this1 = this.link;
-		if(this1 != null) {
-			this1.cancel();
-		}
+		tink_core_CallbackLink.cancel(this.link);
 	}
 	,__class__: tink_core_CallbackLinkRef
 };
@@ -20458,9 +18324,7 @@ tink_core_CallbackLink.cancel = function(this1) {
 	}
 };
 tink_core_CallbackLink.dissolve = function(this1) {
-	if(this1 != null) {
-		this1.cancel();
-	}
+	tink_core_CallbackLink.cancel(this1);
 };
 tink_core_CallbackLink.noop = function() {
 };
@@ -20473,28 +18337,22 @@ tink_core_CallbackLink.toFunction = function(this1) {
 };
 tink_core_CallbackLink.toCallback = function(this1) {
 	if(this1 == null) {
-		return tink_core_CallbackLink.noop;
+		return tink_core_Callback.fromNiladic(tink_core_CallbackLink.noop);
 	} else {
-		return $bind(this1,this1.cancel);
+		return tink_core_Callback.fromNiladic($bind(this1,this1.cancel));
 	}
 };
 tink_core_CallbackLink.fromFunction = function(f) {
-	return new tink_core_SimpleLink(f);
+	return tink_core_CallbackLink._new(f);
 };
 tink_core_CallbackLink.join = function(this1,b) {
 	return new tink_core__$Callback_LinkPair(this1,b);
 };
 tink_core_CallbackLink.fromMany = function(callbacks) {
-	return new tink_core_SimpleLink(function() {
+	return tink_core_CallbackLink.fromFunction(function() {
 		if(callbacks != null) {
 			var _g = 0;
-			while(_g < callbacks.length) {
-				var cb = callbacks[_g];
-				++_g;
-				if(cb != null) {
-					cb.cancel();
-				}
-			}
+			while(_g < callbacks.length) tink_core_CallbackLink.cancel(callbacks[_g++]);
 		} else {
 			callbacks = null;
 		}
@@ -20529,14 +18387,8 @@ tink_core__$Callback_LinkPair.prototype = {
 	,cancel: function() {
 		if(!this.dissolved) {
 			this.dissolved = true;
-			var this1 = this.a;
-			if(this1 != null) {
-				this1.cancel();
-			}
-			var this1 = this.b;
-			if(this1 != null) {
-				this1.cancel();
-			}
+			tink_core_CallbackLink.cancel(this.a);
+			tink_core_CallbackLink.cancel(this.b);
 			this.a = null;
 			this.b = null;
 		}
@@ -20567,11 +18419,8 @@ tink_core__$Callback_ListCell.prototype = {
 	,cancel: function() {
 		if(this.list != null) {
 			var list = this.list;
-			this.cb = null;
-			this.list = null;
-			if(--list.used <= list.cells.length >> 1) {
-				list.compact();
-			}
+			this.clear();
+			list.release();
 		}
 	}
 	,__class__: tink_core__$Callback_ListCell
@@ -20670,24 +18519,12 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 	,destroy: function() {
 		var _g = 0;
 		var _g1 = this.cells;
-		while(_g < _g1.length) {
-			var c = _g1[_g];
-			++_g;
-			c.cb = null;
-			c.list = null;
-		}
+		while(_g < _g1.length) _g1[_g++].clear();
 		this.queue = null;
 		this.cells = null;
 		if(this.used > 0) {
 			this.used = 0;
-			var fn = this.ondrain;
-			if(tink_core_Callback.depth < 500) {
-				tink_core_Callback.depth++;
-				fn();
-				tink_core_Callback.depth--;
-			} else {
-				tink_core_Callback.defer(fn);
-			}
+			this.drain();
 		}
 	}
 	,drain: function() {
@@ -20704,7 +18541,7 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 		if(this.get_disposed()) {
 			return null;
 		}
-		var node = new tink_core__$Callback_ListCell(cb,this);
+		var node = new tink_core__$Callback_ListCell(tink_core_Callback.toFunction(cb),this);
 		this.cells.push(node);
 		if(this.used++ == 0) {
 			var fn = this.onfill;
@@ -20739,12 +18576,7 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 					}
 					var length = _gthis.cells.length;
 					var _g1 = 0;
-					while(_g1 < length) {
-						var _this = _gthis.cells[_g1++];
-						if(_this.list != null) {
-							_this.cb(data);
-						}
-					}
+					while(_g1 < length) _gthis.cells[_g1++].invoke(data);
 					_gthis.busy = false;
 					if(_gthis.get_disposed()) {
 						_gthis.destroy();
@@ -20778,12 +18610,7 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 						}
 						var length = _gthis.cells.length;
 						var _g1 = 0;
-						while(_g1 < length) {
-							var _this = _gthis.cells[_g1++];
-							if(_this.list != null) {
-								_this.cb(data);
-							}
-						}
+						while(_g1 < length) _gthis.cells[_g1++].invoke(data);
 						_gthis.busy = false;
 						if(_gthis.get_disposed()) {
 							_gthis.destroy();
@@ -20805,14 +18632,7 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 			return;
 		} else if(this.used == 0) {
 			this.resize(0);
-			var fn = this.ondrain;
-			if(tink_core_Callback.depth < 500) {
-				tink_core_Callback.depth++;
-				fn();
-				tink_core_Callback.depth--;
-			} else {
-				tink_core_Callback.defer(fn);
-			}
+			this.drain();
 		} else {
 			var compacted = 0;
 			var _g = 0;
@@ -20841,12 +18661,7 @@ tink_core_CallbackList.prototype = $extend(tink_core_SimpleDisposable.prototype,
 		}
 		var _g = 0;
 		var _g1 = this.cells;
-		while(_g < _g1.length) {
-			var cell = _g1[_g];
-			++_g;
-			cell.cb = null;
-			cell.list = null;
-		}
+		while(_g < _g1.length) _g1[_g++].clear();
 		this.resize(0);
 	}
 	,__class__: tink_core_CallbackList
@@ -20902,7 +18717,7 @@ tink_core_TypedError.catchExceptions = function(f,report,pos) {
 	try {
 		return tink_core_Outcome.Success(f());
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 		var e = tink_core_TypedError.asError(haxe_Exception.caught(_g).unwrap());
 		return tink_core_Outcome.Failure(e == null ? report == null ? tink_core_TypedError.withData(null,"Unexpected Error",e,pos) : report(e) : e);
 	}
@@ -20938,14 +18753,13 @@ tink_core_TypedError.prototype = {
 		return ret;
 	}
 	,toPromise: function() {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(this)));
+		return tink_core_Promise.lift(tink_core_Promise.ofError(this));
 	}
 	,throwSelf: function() {
-		throw haxe_Exception.thrown(this);
+		return tink_core_TypedError.rethrow(this);
 	}
 	,toJsError: function() {
-		var value = this.data;
-		var _g = ((value) instanceof Error) ? value : null;
+		var _g = Std.downcast(this.data,Error);
 		if(_g == null) {
 			return new tink_core__$Error_TinkError(this);
 		} else {
@@ -20993,6 +18807,27 @@ tink_core__$Future_NeverFuture.prototype = {
 	}
 	,__class__: tink_core__$Future_NeverFuture
 };
+var tink_core__$Future_SyncFuture = function(value) {
+	this.value = value;
+};
+tink_core__$Future_SyncFuture.__name__ = "tink.core._Future.SyncFuture";
+tink_core__$Future_SyncFuture.__interfaces__ = [tink_core__$Future_FutureObject];
+tink_core__$Future_SyncFuture.prototype = {
+	value: null
+	,getStatus: function() {
+		return tink_core_FutureStatus.Ready(this.value);
+	}
+	,handle: function(cb) {
+		tink_core_Callback.invoke(cb,tink_core_Lazy.get(this.value));
+		return null;
+	}
+	,eager: function() {
+		if(!tink_core_Lazy.get_computed(this.value)) {
+			tink_core_Lazy.get(this.value);
+		}
+	}
+	,__class__: tink_core__$Future_SyncFuture
+};
 var tink_core__$Lazy_Computable = function() { };
 tink_core__$Lazy_Computable.__name__ = "tink.core._Lazy.Computable";
 tink_core__$Lazy_Computable.__isInterface__ = true;
@@ -21031,26 +18866,33 @@ tink_core__$Lazy_LazyConst.prototype = {
 	}
 	,__class__: tink_core__$Lazy_LazyConst
 };
-var tink_core__$Future_SyncFuture = function(value) {
-	this.value = value;
+var tink_core_Lazy = {};
+tink_core_Lazy.__properties__ = {get_computed:"get_computed"};
+tink_core_Lazy.get_computed = function(this1) {
+	return this1.isComputed();
 };
-tink_core__$Future_SyncFuture.__name__ = "tink.core._Future.SyncFuture";
-tink_core__$Future_SyncFuture.__interfaces__ = [tink_core__$Future_FutureObject];
-tink_core__$Future_SyncFuture.prototype = {
-	value: null
-	,getStatus: function() {
-		return tink_core_FutureStatus.Ready(this.value);
-	}
-	,handle: function(cb) {
-		tink_core_Callback.invoke(cb,tink_core_Lazy.get(this.value));
-		return null;
-	}
-	,eager: function() {
-		if(!this.value.isComputed()) {
-			tink_core_Lazy.get(this.value);
-		}
-	}
-	,__class__: tink_core__$Future_SyncFuture
+tink_core_Lazy.get = function(this1) {
+	this1.compute();
+	return this1.get();
+};
+tink_core_Lazy.fromNoise = function(l) {
+	return l;
+};
+tink_core_Lazy.ofFunc = function(f) {
+	return new tink_core__$Lazy_LazyFunc(f);
+};
+tink_core_Lazy.map = function(this1,f) {
+	return new tink_core__$Lazy_LazyFunc(function() {
+		return f(this1.get());
+	},this1);
+};
+tink_core_Lazy.flatMap = function(this1,f) {
+	return new tink_core__$Lazy_LazyFunc(function() {
+		return tink_core_Lazy.get(f(this1.get()));
+	},this1);
+};
+tink_core_Lazy.ofConst = function(c) {
+	return new tink_core__$Lazy_LazyConst(c);
 };
 var tink_core_Future = {};
 tink_core_Future.__properties__ = {get_status:"get_status"};
@@ -21069,9 +18911,9 @@ tink_core_Future.eager = function(this1) {
 };
 tink_core_Future.first = function(this1,that) {
 	var _g = this1;
-	switch(_g.getStatus()._hx_index) {
+	switch(tink_core_Future.get_status(_g)._hx_index) {
 	case 3:
-		switch(that.getStatus()._hx_index) {
+		switch(tink_core_Future.get_status(that)._hx_index) {
 		case 3:
 			return _g;
 		case 4:
@@ -21083,27 +18925,23 @@ tink_core_Future.first = function(this1,that) {
 	case 4:
 		return that;
 	default:
-		switch(that.getStatus()._hx_index) {
+		switch(tink_core_Future.get_status(that)._hx_index) {
 		case 3:
 			return that;
 		case 4:
 			return _g;
 		default:
 			return new tink_core__$Future_SuspendableFuture(function(fire) {
-				return new tink_core__$Callback_LinkPair(this1.handle(fire),that.handle(fire));
+				return tink_core_CallbackLink.join(this1.handle(fire),tink_core_Future.handle(that,fire));
 			});
 		}
 	}
 };
 tink_core_Future.map = function(this1,f,gather) {
-	var _g = this1.getStatus();
+	var _g = tink_core_Future.get_status(this1);
 	switch(_g._hx_index) {
 	case 3:
-		var this2 = _g.result;
-		var f1 = f;
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyFunc(function() {
-			return f1(this2.get());
-		},this2));
+		return new tink_core__$Future_SyncFuture(tink_core_Lazy.map(_g.result,f));
 	case 4:
 		return tink_core_Future.NEVER;
 	default:
@@ -21115,12 +18953,12 @@ tink_core_Future.map = function(this1,f,gather) {
 	}
 };
 tink_core_Future.flatMap = function(this1,next,gather) {
-	var _g = this1.getStatus();
+	var _g = tink_core_Future.get_status(this1);
 	switch(_g._hx_index) {
 	case 3:
 		var l = _g.result;
 		return new tink_core__$Future_SuspendableFuture(function(fire) {
-			return next(tink_core_Lazy.get(l)).handle(function(v) {
+			return tink_core_Future.handle(next(tink_core_Lazy.get(l)),function(v) {
 				fire(v);
 			});
 		});
@@ -21129,9 +18967,9 @@ tink_core_Future.flatMap = function(this1,next,gather) {
 	default:
 		return new tink_core__$Future_SuspendableFuture(function($yield) {
 			var inner = new tink_core_CallbackLinkRef();
-			return new tink_core__$Callback_LinkPair(this1.handle(function(v) {
-				var outer = next(v).handle($yield);
-				inner.link = outer;
+			return tink_core_CallbackLink.join(this1.handle(function(v) {
+				var outer = next(v);
+				inner.link = tink_core_Future.handle(outer,$yield);
 			}),inner);
 		});
 	}
@@ -21143,23 +18981,24 @@ tink_core_Future.gather = function(this1) {
 	return this1;
 };
 tink_core_Future.merge = function(this1,that,combine) {
-	var _g = that.getStatus();
-	if(this1.getStatus()._hx_index == 4) {
+	var _g = tink_core_Future.get_status(this1);
+	var _g1 = tink_core_Future.get_status(that);
+	if(_g._hx_index == 4) {
 		return tink_core_Future.NEVER;
-	} else if(_g._hx_index == 4) {
+	} else if(_g1._hx_index == 4) {
 		return tink_core_Future.NEVER;
 	} else {
 		return new tink_core__$Future_SuspendableFuture(function($yield) {
 			var check = function(v) {
-				var _g = that.getStatus();
-				var _g1 = this1.getStatus();
-				if(_g1._hx_index == 3) {
-					if(_g._hx_index == 3) {
-						$yield(combine(tink_core_Lazy.get(_g1.result),tink_core_Lazy.get(_g.result)));
+				var _g = tink_core_Future.get_status(this1);
+				var _g1 = tink_core_Future.get_status(that);
+				if(_g._hx_index == 3) {
+					if(_g1._hx_index == 3) {
+						$yield(combine(tink_core_Lazy.get(_g.result),tink_core_Lazy.get(_g1.result)));
 					}
 				}
 			};
-			return new tink_core__$Callback_LinkPair(this1.handle(check),that.handle(check));
+			return tink_core_CallbackLink.join(this1.handle(check),tink_core_Future.handle(that,check));
 		});
 	}
 };
@@ -21181,7 +19020,7 @@ tink_core_Future.fromNever = function(l) {
 	return l;
 };
 tink_core_Future.ofAny = function(v) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(v));
+	return tink_core_Future.sync(v);
 };
 tink_core_Future.asPromise = function(s) {
 	return s;
@@ -21202,9 +19041,9 @@ tink_core_Future.many = function(a,concurrency) {
 };
 tink_core_Future.processMany = function(a,concurrency,fn,lift) {
 	if(a.length == 0) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(lift(tink_core_Outcome.Success([]))));
+		return tink_core_Future.sync(lift(tink_core_Outcome.Success([])));
 	} else {
-		return new tink_core__$Future_SuspendableFuture(function($yield) {
+		return tink_core_Future._new(function($yield) {
 			var links = [];
 			var _g = [];
 			var _g1 = 0;
@@ -21255,13 +19094,7 @@ tink_core_Future.processMany = function(a,concurrency,fn,lift) {
 								case 1:
 									var _g1 = _g.failure;
 									var _g = 0;
-									while(_g < links.length) {
-										var l = links[_g];
-										++_g;
-										if(l != null) {
-											l.cancel();
-										}
-									}
+									while(_g < links.length) tink_core_CallbackLink.cancel(links[_g++]);
 									var v = lift(tink_core_Outcome.Failure(_g1));
 									done = true;
 									$yield(v);
@@ -21269,7 +19102,7 @@ tink_core_Future.processMany = function(a,concurrency,fn,lift) {
 								}
 							};
 						})(index1)];
-						var _g = p.getStatus();
+						var _g = tink_core_Future.get_status(p);
 						if(_g._hx_index == 3) {
 							var _hx_tmp;
 							_hx_tmp = tink_core_Lazy.get(_g.result);
@@ -21279,7 +19112,7 @@ tink_core_Future.processMany = function(a,concurrency,fn,lift) {
 							}
 						} else {
 							pending += 1;
-							links.push(p.handle((function(check) {
+							links.push(tink_core_Future.handle(p,(function(check) {
 								return function(o) {
 									pending -= 1;
 									check[0](o);
@@ -21307,7 +19140,7 @@ tink_core_Future.lazy = function(l) {
 	return new tink_core__$Future_SyncFuture(l);
 };
 tink_core_Future.sync = function(v) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(v));
+	return tink_core_Future.lazy(tink_core_Lazy.ofConst(v));
 };
 tink_core_Future.isFuture = function(maybeFuture) {
 	return js_Boot.__implements(maybeFuture,tink_core__$Future_FutureObject);
@@ -21320,8 +19153,7 @@ tink_core_Future.async = function(init,lazy) {
 	if(lazy) {
 		return ret;
 	} else {
-		ret.eager();
-		return ret;
+		return tink_core_Future.eager(ret);
 	}
 };
 tink_core_Future.irreversible = function(init) {
@@ -21338,7 +19170,7 @@ tink_core_Future.either = function(a,b) {
 };
 tink_core_Future.and = function(a,b) {
 	return tink_core_Future.merge(a,b,function(a,b) {
-		return new tink_core_MPair(a,b);
+		return tink_core_Pair._new(a,b);
 	});
 };
 tink_core_Future._tryFailingFlatMap = function(f,map) {
@@ -21347,7 +19179,7 @@ tink_core_Future._tryFailingFlatMap = function(f,map) {
 		case 0:
 			return map(o.data);
 		case 1:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(o.failure)));
+			return tink_core_Future.sync(tink_core_Outcome.Failure(o.failure));
 		}
 	});
 };
@@ -21357,7 +19189,7 @@ tink_core_Future._tryFlatMap = function(f,map) {
 		case 0:
 			return tink_core_Future.map(map(o.data),tink_core_Outcome.Success);
 		case 1:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(o.failure)));
+			return tink_core_Future.sync(tink_core_Outcome.Failure(o.failure));
 		}
 	});
 };
@@ -21381,13 +19213,11 @@ tink_core_Future.trigger = function() {
 	return new tink_core_FutureTrigger();
 };
 tink_core_Future.delay = function(ms,value) {
-	var this1 = tink_core_Future.irreversible(function(cb) {
+	return tink_core_Future.eager(tink_core_Future.irreversible(function(cb) {
 		haxe_Timer.delay(function() {
 			cb(tink_core_Lazy.get(value));
 		},ms);
-	});
-	this1.eager();
-	return this1;
+	}));
 };
 var tink_core_FutureStatus = $hxEnums["tink.core.FutureStatus"] = { __ename__:"tink.core.FutureStatus",__constructs__:null
 	,Suspended: {_hx_name:"Suspended",_hx_index:0,__enum__:"tink.core.FutureStatus",toString:$estr}
@@ -21415,24 +19245,7 @@ tink_core_FutureTrigger.prototype = {
 			tink_core_Callback.invoke(callback,tink_core_Lazy.get(_g.result));
 			return null;
 		} else {
-			var _this = this.list;
-			if(_this.get_disposed()) {
-				return null;
-			} else {
-				var node = new tink_core__$Callback_ListCell(callback,_this);
-				_this.cells.push(node);
-				if(_this.used++ == 0) {
-					var fn = _this.onfill;
-					if(tink_core_Callback.depth < 500) {
-						tink_core_Callback.depth++;
-						fn();
-						tink_core_Callback.depth--;
-					} else {
-						tink_core_Callback.defer(fn);
-					}
-				}
-				return node;
-			}
+			return this.list.add(callback);
 		}
 	}
 	,eager: function() {
@@ -21444,7 +19257,7 @@ tink_core_FutureTrigger.prototype = {
 		if(this.status._hx_index == 3) {
 			return false;
 		} else {
-			this.status = tink_core_FutureStatus.Ready(new tink_core__$Lazy_LazyConst(result));
+			this.status = tink_core_FutureStatus.Ready(tink_core_Lazy.ofConst(result));
 			this.list.invoke(result);
 			return true;
 		}
@@ -21467,10 +19280,7 @@ var tink_core__$Future_SuspendableFuture = function(wakeup) {
 	this.callbacks.ondrain = function() {
 		if(_gthis.status == tink_core_FutureStatus.Awaited) {
 			_gthis.status = tink_core_FutureStatus.Suspended;
-			var this1 = _gthis.link;
-			if(this1 != null) {
-				this1.cancel();
-			}
+			tink_core_CallbackLink.cancel(_gthis.link);
 			_gthis.link = null;
 		}
 	};
@@ -21493,14 +19303,12 @@ tink_core__$Future_SuspendableFuture.prototype = {
 	}
 	,trigger: function(value) {
 		if(this.status._hx_index != 3) {
-			this.status = tink_core_FutureStatus.Ready(new tink_core__$Lazy_LazyConst(value));
+			this.status = tink_core_FutureStatus.Ready(tink_core_Lazy.ofConst(value));
 			var link = this.link;
 			this.link = null;
 			this.wakeup = null;
 			this.callbacks.invoke(value);
-			if(link != null) {
-				link.cancel();
-			}
+			tink_core_CallbackLink.cancel(link);
 		}
 	}
 	,handle: function(callback) {
@@ -21509,24 +19317,7 @@ tink_core__$Future_SuspendableFuture.prototype = {
 			tink_core_Callback.invoke(callback,tink_core_Lazy.get(_g.result));
 			return null;
 		} else {
-			var _this = this.callbacks;
-			if(_this.get_disposed()) {
-				return null;
-			} else {
-				var node = new tink_core__$Callback_ListCell(callback,_this);
-				_this.cells.push(node);
-				if(_this.used++ == 0) {
-					var fn = _this.onfill;
-					if(tink_core_Callback.depth < 500) {
-						tink_core_Callback.depth++;
-						fn();
-						tink_core_Callback.depth--;
-					} else {
-						tink_core_Callback.defer(fn);
-					}
-				}
-				return node;
-			}
+			return this.callbacks.add(callback);
 		}
 	}
 	,arm: function() {
@@ -21548,34 +19339,6 @@ tink_core__$Future_SuspendableFuture.prototype = {
 		}
 	}
 	,__class__: tink_core__$Future_SuspendableFuture
-};
-var tink_core_Lazy = {};
-tink_core_Lazy.__properties__ = {get_computed:"get_computed"};
-tink_core_Lazy.get_computed = function(this1) {
-	return this1.isComputed();
-};
-tink_core_Lazy.get = function(this1) {
-	this1.compute();
-	return this1.get();
-};
-tink_core_Lazy.fromNoise = function(l) {
-	return l;
-};
-tink_core_Lazy.ofFunc = function(f) {
-	return new tink_core__$Lazy_LazyFunc(f);
-};
-tink_core_Lazy.map = function(this1,f) {
-	return new tink_core__$Lazy_LazyFunc(function() {
-		return f(this1.get());
-	},this1);
-};
-tink_core_Lazy.flatMap = function(this1,f) {
-	return new tink_core__$Lazy_LazyFunc(function() {
-		return tink_core_Lazy.get(f(this1.get()));
-	},this1);
-};
-tink_core_Lazy.ofConst = function(c) {
-	return new tink_core__$Lazy_LazyConst(c);
 };
 var tink_core__$Lazy_LazyFunc = function(f,from) {
 	this.f = f;
@@ -21635,11 +19398,7 @@ tink_core_Noise.ofAny = function(t) {
 var tink_core_OptionTools = function() { };
 tink_core_OptionTools.__name__ = "tink.core.OptionTools";
 tink_core_OptionTools.force = function(o,pos) {
-	if(o._hx_index == 0) {
-		return o.v;
-	} else {
-		throw haxe_Exception.thrown(new tink_core_TypedError(404,"Some value expected but none found",pos));
-	}
+	return tink_core_OptionTools.sure(o,pos);
 };
 tink_core_OptionTools.sure = function(o,pos) {
 	if(o._hx_index == 0) {
@@ -21696,11 +19455,9 @@ tink_core_OptionTools.satisfies = function(o,f) {
 	}
 };
 tink_core_OptionTools.equals = function(o,v) {
-	if(o._hx_index == 0) {
-		return o.v == v;
-	} else {
-		return false;
-	}
+	return tink_core_OptionTools.satisfies(o,function(found) {
+		return found == v;
+	});
 };
 tink_core_OptionTools.map = function(o,f) {
 	if(o._hx_index == 0) {
@@ -21843,14 +19600,14 @@ tink_core_OutcomeTools.next = function(outcome,f) {
 	case 0:
 		return f(outcome.data);
 	case 1:
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(outcome.failure)));
+		return tink_core_Promise.ofError(outcome.failure);
 	}
 };
 tink_core_OutcomeTools.attempt = function(f,report) {
 	try {
 		return tink_core_Outcome.Success(f());
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 		return tink_core_Outcome.Failure(report(haxe_Exception.caught(_g).unwrap()));
 	}
 };
@@ -21936,28 +19693,25 @@ tink_core_MPair.prototype = {
 var tink_core_ProgressValue = {};
 tink_core_ProgressValue.__properties__ = {get_total:"get_total",get_value:"get_value"};
 tink_core_ProgressValue._new = function(value,total) {
-	return new tink_core_MPair(value,total);
+	return tink_core_Pair._new(value,total);
 };
 tink_core_ProgressValue.normalize = function(this1) {
-	var o = this1.b;
-	if(o._hx_index == 0) {
-		return haxe_ds_Option.Some(this1.a / o.v);
-	} else {
-		return haxe_ds_Option.None;
-	}
+	return tink_core_OptionTools.map(tink_core_ProgressValue.get_total(this1),function(v) {
+		return tink_core_ProgressValue.get_value(this1) / v;
+	});
 };
 tink_core_ProgressValue.get_value = function(this1) {
-	return this1.a;
+	return tink_core_Pair.get_a(this1);
 };
 tink_core_ProgressValue.get_total = function(this1) {
-	return this1.b;
+	return tink_core_Pair.get_b(this1);
 };
 var tink_core_Progress = {};
 tink_core_Progress.listen = function(this1,cb) {
-	return this1.progressed.listen(cb);
+	return tink_core_Signal.handle(this1.progressed,cb);
 };
 tink_core_Progress.handle = function(this1,cb) {
-	return this1.result.handle(cb);
+	return tink_core_Future.handle(this1.result,cb);
 };
 tink_core_Progress.trigger = function() {
 	return new tink_core_ProgressTrigger();
@@ -21965,7 +19719,7 @@ tink_core_Progress.trigger = function() {
 tink_core_Progress.make = function(f) {
 	return new tink_core__$Progress_SuspendableProgress(function(fire) {
 		return f(function(value,total) {
-			fire(tink_core_ProgressStatus.InProgress(new tink_core_MPair(value,total)));
+			fire(tink_core_ProgressStatus.InProgress(tink_core_ProgressValue._new(value,total)));
 		},function(result) {
 			fire(tink_core_ProgressStatus.Finished(result));
 		});
@@ -21975,7 +19729,7 @@ tink_core_Progress.map = function(this1,f) {
 	return new tink_core__$Progress_ProgressObject(tink_core_Signal.map(this1.changed,function(s) {
 		return tink_core_ProgressStatusTools.map(s,f);
 	}),function() {
-		return tink_core_ProgressStatusTools.map(this1.getStatus(),f);
+		return tink_core_ProgressStatusTools.map(this1.get_status(),f);
 	});
 };
 tink_core_Progress.asFuture = function(this1) {
@@ -21984,13 +19738,12 @@ tink_core_Progress.asFuture = function(this1) {
 tink_core_Progress.promise = function(v) {
 	return new tink_core__$Progress_SuspendableProgress(function(fire) {
 		var inner = new tink_core_CallbackLinkRef();
-		return new tink_core__$Callback_LinkPair(v.handle(function(o) {
+		return tink_core_CallbackLink.join(tink_core_Promise.handle(v,function(o) {
 			switch(o._hx_index) {
 			case 0:
-				var this1 = o.data.changed.listen(function(s) {
+				inner.link = tink_core_Signal.handle(o.data.changed,function(s) {
 					fire(tink_core_ProgressStatusTools.map(s,tink_core_Outcome.Success));
 				});
-				inner.link = this1;
 				break;
 			case 1:
 				fire(tink_core_ProgressStatus.Finished(tink_core_Outcome.Failure(o.failure)));
@@ -22019,32 +19772,31 @@ tink_core_Progress.flatten = function(v) {
 tink_core_Progress.future = function(v) {
 	return new tink_core__$Progress_SuspendableProgress(function(fire) {
 		var inner = new tink_core_CallbackLinkRef();
-		return new tink_core__$Callback_LinkPair(v.handle(function(p) {
-			var this1 = p.changed.listen(fire);
-			inner.link = this1;
+		return tink_core_CallbackLink.join(tink_core_Future.handle(v,function(p) {
+			inner.link = tink_core_Signal.handle(p.changed,fire);
 		}),inner);
 	});
 };
 tink_core_Progress.next = function(this1,f) {
-	return tink_core_Future.flatMap(this1.result,f);
+	return tink_core_Future.next(tink_core_Progress.asFuture(this1),f);
 };
 var tink_core__$Progress_ProgressObject = function(changed,getStatus) {
 	this.changed = changed;
-	this.progressed = new tink_core__$Signal_Suspendable(function(fire) {
-		return changed.listen(function(s) {
+	this.progressed = tink_core_Signal._new(function(fire) {
+		return tink_core_Signal.handle(changed,function(s) {
 			if(s._hx_index == 0) {
 				fire(s.v);
 			}
 		});
-	},null);
+	});
 	this.getStatus = getStatus;
-	this.result = new tink_core__$Future_SuspendableFuture(function(fire) {
+	this.result = tink_core_Future._new(function(fire) {
 		var _g = getStatus();
 		if(_g._hx_index == 1) {
 			fire(_g.v);
 			return null;
 		} else {
-			return changed.listen(function(s) {
+			return tink_core_Signal.handle(changed,function(s) {
 				if(s._hx_index == 1) {
 					fire(s.v);
 				}
@@ -22072,7 +19824,7 @@ var tink_core__$Progress_SuspendableProgress = function(wakeup,status) {
 	var changed;
 	switch(status._hx_index) {
 	case 0:
-		changed = new tink_core__$Signal_Suspendable(function(fire) {
+		changed = tink_core_Signal._new(function(fire) {
 			return wakeup(function(s) {
 				status = s;
 				fire(status);
@@ -22118,12 +19870,12 @@ tink_core_ProgressTrigger.prototype = $extend(tink_core__$Progress_ProgressObjec
 	}
 	,progress: function(v,total) {
 		if(this._status._hx_index != 1) {
-			this._changed.handlers.invoke(this._status = tink_core_ProgressStatus.InProgress(new tink_core_MPair(v,total)));
+			this._changed.trigger(this._status = tink_core_ProgressStatus.InProgress(tink_core_ProgressValue._new(v,total)));
 		}
 	}
 	,finish: function(v) {
 		if(this._status._hx_index != 1) {
-			this._changed.handlers.invoke(this._status = tink_core_ProgressStatus.Finished(v));
+			this._changed.trigger(this._status = tink_core_ProgressStatus.Finished(v));
 		}
 	}
 	,__class__: tink_core_ProgressTrigger
@@ -22184,7 +19936,7 @@ tink_core_ProgressTools.asPromise = function(p) {
 };
 var tink_core_Promise = {};
 tink_core_Promise._new = function(f) {
-	return new tink_core__$Future_SuspendableFuture(function(cb) {
+	return tink_core_Future._new(function(cb) {
 		return f(function(v) {
 			cb(tink_core_Outcome.Success(v));
 		},function(e) {
@@ -22193,8 +19945,7 @@ tink_core_Promise._new = function(f) {
 	});
 };
 tink_core_Promise.eager = function(this1) {
-	this1.eager();
-	return this1;
+	return tink_core_Future.eager(this1);
 };
 tink_core_Promise.map = function(this1,f) {
 	return tink_core_Future.map(this1,f);
@@ -22206,7 +19957,7 @@ tink_core_Promise.tryRecover = function(this1,f) {
 	return tink_core_Future.flatMap(this1,function(o) {
 		switch(o._hx_index) {
 		case 0:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(o));
+			return tink_core_Future.sync(o);
 		case 1:
 			return f(o.failure);
 		}
@@ -22216,7 +19967,7 @@ tink_core_Promise.recover = function(this1,f) {
 	return tink_core_Future.flatMap(this1,function(o) {
 		switch(o._hx_index) {
 		case 0:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(o.data));
+			return tink_core_Future.sync(o.data);
 		case 1:
 			return f(o.failure);
 		}
@@ -22233,11 +19984,11 @@ tink_core_Promise.mapError = function(this1,f) {
 	});
 };
 tink_core_Promise.handle = function(this1,cb) {
-	return this1.handle(cb);
+	return tink_core_Future.handle(this1,cb);
 };
 tink_core_Promise.noise = function(this1) {
 	return tink_core_Promise.next(this1,function(v) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(null)));
+		return tink_core_Promise.ofData(null);
 	});
 };
 tink_core_Promise.isSuccess = function(this1) {
@@ -22251,13 +20002,13 @@ tink_core_Promise.next = function(this1,f,gather) {
 		case 0:
 			return f(o.data);
 		case 1:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(o.failure)));
+			return tink_core_Future.sync(tink_core_Outcome.Failure(o.failure));
 		}
 	});
 };
 tink_core_Promise.swap = function(this1,v) {
 	return tink_core_Promise.next(this1,function(_) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(v)));
+		return tink_core_Promise.ofData(v);
 	});
 };
 tink_core_Promise.swapError = function(this1,e) {
@@ -22274,11 +20025,11 @@ tink_core_Promise.merge = function(this1,other,merger,gather) {
 			case 0:
 				return merger(_g,b.data);
 			case 1:
-				return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(b.failure)));
+				return tink_core_Promise.lift(tink_core_Promise.ofError(b.failure));
 			}
 			break;
 		case 1:
-			return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(a.failure)));
+			return tink_core_Promise.lift(tink_core_Promise.ofError(a.failure));
 		}
 	}),function(o) {
 		return o;
@@ -22286,7 +20037,7 @@ tink_core_Promise.merge = function(this1,other,merger,gather) {
 };
 tink_core_Promise.and = function(a,b) {
 	return tink_core_Promise.merge(a,b,function(a,b) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(new tink_core_MPair(a,b))));
+		return tink_core_Promise.ofData(tink_core_Pair._new(a,b));
 	});
 };
 tink_core_Promise.iterate = function(promises,$yield,fallback) {
@@ -22295,10 +20046,10 @@ tink_core_Promise.iterate = function(promises,$yield,fallback) {
 		var next = null;
 		next = function() {
 			if(iter.hasNext()) {
-				iter.next().handle(function(o) {
+				tink_core_Promise.handle(iter.next(),function(o) {
 					switch(o._hx_index) {
 					case 0:
-						$yield(o.data).handle(function(o) {
+						tink_core_Promise.handle($yield(o.data),function(o) {
 							switch(o._hx_index) {
 							case 0:
 								var _g = o.data;
@@ -22323,7 +20074,7 @@ tink_core_Promise.iterate = function(promises,$yield,fallback) {
 					}
 				});
 			} else {
-				fallback.handle(cb);
+				tink_core_Promise.handle(fallback,cb);
 			}
 		};
 		next();
@@ -22331,23 +20082,15 @@ tink_core_Promise.iterate = function(promises,$yield,fallback) {
 };
 tink_core_Promise.retry = function(gen,next) {
 	var stamp = function() {
-		return HxOverrides.now() / 1000 * 1000;
+		return haxe_Timer.stamp() * 1000;
 	};
 	var start = stamp();
 	var attempt = null;
 	attempt = function(count) {
-		var f = function(error) {
+		return tink_core_Promise.tryRecover(gen(),function(error) {
 			return tink_core_Promise.next(next({ attempt : count, error : error, elapsed : stamp() - start}),function(_) {
 				return attempt(count + 1);
 			});
-		};
-		return tink_core_Future.flatMap(gen(),function(o) {
-			switch(o._hx_index) {
-			case 0:
-				return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(o));
-			case 1:
-				return f(o.failure);
-			}
 		});
 	};
 	return attempt(1);
@@ -22357,7 +20100,7 @@ tink_core_Promise.ofJsPromise = function(promise) {
 };
 tink_core_Promise.toJsPromise = function(this1) {
 	return new Promise(function(resolve,reject) {
-		this1.handle(function(o) {
+		tink_core_Future.handle(this1,function(o) {
 			switch(o._hx_index) {
 			case 0:
 				resolve(o.data);
@@ -22376,26 +20119,26 @@ tink_core_Promise.fromNever = function(l) {
 	return l;
 };
 tink_core_Promise.ofTrigger = function(f) {
-	return f;
+	return f.asFuture();
 };
 tink_core_Promise.ofHappyTrigger = function(f) {
-	return tink_core_Future.map(f,tink_core_Outcome.Success);
+	return tink_core_Promise.ofFuture(f.asFuture());
 };
 tink_core_Promise.ofFuture = function(f) {
 	return tink_core_Future.map(f,tink_core_Outcome.Success);
 };
 tink_core_Promise.ofOutcome = function(o) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(o));
+	return tink_core_Future.sync(o);
 };
 tink_core_Promise.ofError = function(e) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(e)));
+	return tink_core_Promise.ofOutcome(tink_core_Outcome.Failure(e));
 };
 tink_core_Promise.ofData = function(d) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(d)));
+	return tink_core_Promise.ofOutcome(tink_core_Outcome.Success(d));
 };
 tink_core_Promise.lazy = function(p) {
-	return new tink_core__$Future_SuspendableFuture(function(cb) {
-		return tink_core_Lazy.get(p).handle(cb);
+	return tink_core_Future._new(function(cb) {
+		return tink_core_Promise.handle(tink_core_Lazy.get(p),cb);
 	});
 };
 tink_core_Promise.inParallel = function(a,concurrency) {
@@ -22418,17 +20161,17 @@ tink_core_Promise.cache = function(gen) {
 		if(ret == null) {
 			var sync = false;
 			ret = tink_core_Promise.next(gen(),function(o) {
-				o.b.handle(function(_) {
+				tink_core_Future.handle(tink_core_Pair.get_b(o),function(_) {
 					sync = true;
 					p = null;
 				});
-				return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(o.a)));
+				return tink_core_Promise.ofData(tink_core_Pair.get_a(o));
 			});
 			if(!sync) {
 				p = ret;
 			}
 		}
-		return tink_core_Future.map(ret,function(o) {
+		return tink_core_Promise.map(ret,function(o) {
 			if(!tink_core_OutcomeTools.isSuccess(o)) {
 				p = null;
 			}
@@ -22440,28 +20183,28 @@ tink_core_Promise.lift = function(p) {
 	return p;
 };
 tink_core_Promise.trigger = function() {
-	return new tink_core_FutureTrigger();
+	return tink_core_PromiseTrigger._new();
 };
 tink_core_Promise.resolve = function(v) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(v)));
+	return tink_core_Future.sync(tink_core_Outcome.Success(v));
 };
 tink_core_Promise.reject = function(e) {
-	return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Failure(e)));
+	return tink_core_Future.sync(tink_core_Outcome.Failure(e));
 };
 var tink_core_Next = {};
 tink_core_Next.ofSafe = function(f) {
 	return function(x) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(f(x)));
+		return tink_core_Promise.ofOutcome(f(x));
 	};
 };
 tink_core_Next.ofSync = function(f) {
 	return function(x) {
-		return tink_core_Future.map(f(x),tink_core_Outcome.Success);
+		return tink_core_Promise.ofFuture(f(x));
 	};
 };
 tink_core_Next.ofSafeSync = function(f) {
 	return function(x) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(f(x))));
+		return tink_core_Promise.ofData(f(x));
 	};
 };
 tink_core_Next._chain = function(a,b) {
@@ -22472,28 +20215,28 @@ tink_core_Next._chain = function(a,b) {
 var tink_core_Recover = {};
 tink_core_Recover.ofSync = function(f) {
 	return function(e) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(f(e)));
+		return tink_core_Future.sync(f(e));
 	};
 };
 var tink_core_Combiner = {};
 tink_core_Combiner.ofSync = function(f) {
 	return function(x1,x2) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(f(x1,x2)));
+		return tink_core_Promise.ofOutcome(f(x1,x2));
 	};
 };
 tink_core_Combiner.ofSafe = function(f) {
 	return function(x1,x2) {
-		return tink_core_Future.map(f(x1,x2),tink_core_Outcome.Success);
+		return tink_core_Promise.ofFuture(f(x1,x2));
 	};
 };
 tink_core_Combiner.ofSafeSync = function(f) {
 	return function(x1,x2) {
-		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(f(x1,x2))));
+		return tink_core_Promise.ofData(f(x1,x2));
 	};
 };
 var tink_core_PromiseTrigger = {};
 tink_core_PromiseTrigger._new = function() {
-	return new tink_core_FutureTrigger();
+	return tink_core_Future.trigger();
 };
 tink_core_PromiseTrigger.resolve = function(this1,v) {
 	return this1.trigger(tink_core_Outcome.Success(v));
@@ -22502,25 +20245,25 @@ tink_core_PromiseTrigger.reject = function(this1,e) {
 	return this1.trigger(tink_core_Outcome.Failure(e));
 };
 tink_core_PromiseTrigger.asPromise = function(this1) {
-	return this1;
+	return this1.asFuture();
 };
 var tink_core_Ref = {};
 tink_core_Ref.__properties__ = {set_value:"set_value",get_value:"get_value"};
 tink_core_Ref._new = function() {
-	return new Array(1);
+	return haxe_ds_Vector._new(1);
 };
 tink_core_Ref.get_value = function(this1) {
-	return this1[0];
+	return haxe_ds_Vector.get(this1,0);
 };
 tink_core_Ref.set_value = function(this1,param) {
-	return this1[0] = param;
+	return haxe_ds_Vector.set(this1,0,param);
 };
 tink_core_Ref.toString = function(this1) {
-	return "@[" + Std.string(this1[0]) + "]";
+	return "@[" + Std.string(tink_core_Ref.get_value(this1)) + "]";
 };
 tink_core_Ref.to = function(v) {
-	var ret = new Array(1);
-	ret[0] = v;
+	var ret = tink_core_Ref._new();
+	tink_core_Ref.set_value(ret,v);
 	return ret;
 };
 var tink_core_Gather = {};
@@ -22528,7 +20271,7 @@ tink_core_Gather._new = function(v) {
 	return v;
 };
 tink_core_Gather.ofBool = function(b) {
-	return b;
+	return tink_core_Gather._new(b);
 };
 var tink_core_Signal = {};
 tink_core_Signal._new = function(f,init) {
@@ -22539,21 +20282,21 @@ tink_core_Signal.handle = function(this1,handler) {
 };
 tink_core_Signal.map = function(this1,f,gather) {
 	return tink_core__$Signal_Suspendable.over(this1,function(fire) {
-		return this1.listen(function(v) {
+		return tink_core_Signal.handle(this1,function(v) {
 			fire(f(v));
 		});
 	});
 };
 tink_core_Signal.flatMap = function(this1,f,gather) {
 	return tink_core__$Signal_Suspendable.over(this1,function(fire) {
-		return this1.listen(function(v) {
-			f(v).handle(fire);
+		return tink_core_Signal.handle(this1,function(v) {
+			tink_core_Future.handle(f(v),fire);
 		});
 	});
 };
 tink_core_Signal.filter = function(this1,f,gather) {
 	return tink_core__$Signal_Suspendable.over(this1,function(fire) {
-		return this1.listen(function(v) {
+		return tink_core_Signal.handle(this1,function(v) {
 			if(f(v)) {
 				fire(v);
 			}
@@ -22562,7 +20305,7 @@ tink_core_Signal.filter = function(this1,f,gather) {
 };
 tink_core_Signal.select = function(this1,selector,gather) {
 	return tink_core__$Signal_Suspendable.over(this1,function(fire) {
-		return this1.listen(function(v) {
+		return tink_core_Signal.handle(this1,function(v) {
 			var _g = selector(v);
 			if(_g._hx_index == 0) {
 				fire(_g.v);
@@ -22578,7 +20321,7 @@ tink_core_Signal.join = function(this1,that,gather) {
 	} else {
 		return new tink_core__$Signal_Suspendable(function(fire) {
 			var cb = fire;
-			return new tink_core__$Callback_LinkPair(this1.listen(cb),that.listen(cb));
+			return tink_core_CallbackLink.join(tink_core_Signal.handle(this1,cb),tink_core_Signal.handle(that,cb));
 		},function(self) {
 			var release = function() {
 				if(this1.get_disposed() && that.get_disposed()) {
@@ -22600,7 +20343,7 @@ tink_core_Signal.nextTime = function(this1,condition) {
 	});
 };
 tink_core_Signal.pickNext = function(this1,selector) {
-	var ret = new tink_core_FutureTrigger();
+	var ret = tink_core_Future.trigger();
 	var link = null;
 	link = this1.listen(function(v) {
 		var _g = selector(v);
@@ -22612,14 +20355,14 @@ tink_core_Signal.pickNext = function(this1,selector) {
 			break;
 		}
 	});
-	ret.handle(link == null ? tink_core_CallbackLink.noop : ($_=link,$bind($_,$_.cancel)));
-	return ret;
+	ret.handle(tink_core_CallbackLink.toCallback(link));
+	return ret.asFuture();
 };
 tink_core_Signal.until = function(this1,end) {
 	return new tink_core__$Signal_Suspendable(function($yield) {
 		return this1.listen($yield);
 	},function(self) {
-		end.handle($bind(self,self.dispose));
+		tink_core_Future.handle(end,tink_core_Callback.fromNiladic($bind(self,self.dispose)));
 	});
 };
 tink_core_Signal.next = function(this1,condition) {
@@ -22634,10 +20377,10 @@ tink_core_Signal.gather = function(this1) {
 	return this1;
 };
 tink_core_Signal.create = function(f) {
-	return new tink_core__$Signal_Suspendable(f,null);
+	return tink_core_Signal._new(f);
 };
 tink_core_Signal.generate = function(generator,init) {
-	return new tink_core__$Signal_Suspendable(function(fire) {
+	return tink_core_Signal._new(function(fire) {
 		generator(fire);
 		return null;
 	},init);
@@ -22650,7 +20393,7 @@ tink_core_Signal.ofClassical = function(add,remove,gather) {
 		add(fire);
 		var _g = remove;
 		var a1 = fire;
-		return new tink_core_SimpleLink(function() {
+		return tink_core_CallbackLink.fromFunction(function() {
 			_g(a1);
 		});
 	});
@@ -22684,10 +20427,7 @@ var tink_core__$Signal_Suspendable = function(activate,init) {
 	this.activate = activate;
 	this.init = init;
 	this.handlers.ondrain = function() {
-		var this1 = _gthis.subscription;
-		if(this1 != null) {
-			this1.cancel();
-		}
+		tink_core_CallbackLink.cancel(_gthis.subscription);
 	};
 	this.handlers.onfill = function() {
 		if(init != null) {
@@ -22724,24 +20464,7 @@ tink_core__$Signal_Suspendable.prototype = {
 		this.handlers.ondispose(handler);
 	}
 	,listen: function(cb) {
-		var _this = this.handlers;
-		if(_this.get_disposed()) {
-			return null;
-		} else {
-			var node = new tink_core__$Callback_ListCell(cb,_this);
-			_this.cells.push(node);
-			if(_this.used++ == 0) {
-				var fn = _this.onfill;
-				if(tink_core_Callback.depth < 500) {
-					tink_core_Callback.depth++;
-					fn();
-					tink_core_Callback.depth--;
-				} else {
-					tink_core_Callback.defer(fn);
-				}
-			}
-			return node;
-		}
+		return this.handlers.add(cb);
 	}
 	,__class__: tink_core__$Signal_Suspendable
 	,__properties__: {get_disposed:"get_disposed"}
@@ -22766,27 +20489,10 @@ tink_core_SignalTrigger.prototype = {
 		this.handlers.invoke(event);
 	}
 	,getLength: function() {
-		return this.handlers.used;
+		return this.handlers.get_length();
 	}
 	,listen: function(cb) {
-		var _this = this.handlers;
-		if(_this.get_disposed()) {
-			return null;
-		} else {
-			var node = new tink_core__$Callback_ListCell(cb,_this);
-			_this.cells.push(node);
-			if(_this.used++ == 0) {
-				var fn = _this.onfill;
-				if(tink_core_Callback.depth < 500) {
-					tink_core_Callback.depth++;
-					fn();
-					tink_core_Callback.depth--;
-				} else {
-					tink_core_Callback.defer(fn);
-				}
-			}
-			return node;
-		}
+		return this.handlers.add(cb);
 	}
 	,clear: function() {
 		this.handlers.clear();
@@ -22811,114 +20517,88 @@ utest_Assert.processResult = function(cond,getMessage,pos) {
 	return cond;
 };
 utest_Assert.isTrue = function(cond,msg,pos) {
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected true",pos));
-	}
-	return cond;
+	return utest_Assert.processResult(cond,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected true";
+		}
+	},pos);
 };
 utest_Assert.isFalse = function(value,msg,pos) {
-	var cond = value == false;
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected false",pos));
-	}
-	return cond;
+	return utest_Assert.processResult(value == false,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected false";
+		}
+	},pos);
 };
 utest_Assert.isNull = function(value,msg,pos) {
-	var cond = value == null;
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected null but it is " + utest_Assert.q(value),pos));
-	}
-	return cond;
+	return utest_Assert.processResult(value == null,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected null but it is " + utest_Assert.q(value);
+		}
+	},pos);
 };
 utest_Assert.notNull = function(value,msg,pos) {
-	var cond = value != null;
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected not null",pos));
-	}
-	return cond;
+	return utest_Assert.processResult(value != null,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected not null";
+		}
+	},pos);
 };
 utest_Assert.is = function(value,type,msg,pos) {
 	return utest_Assert.isOfType(value,type,msg,pos);
 };
 utest_Assert.isOfType = function(value,type,msg,pos) {
-	var cond = js_Boot.__instanceof(value,type);
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected type " + utest_Assert.typeToString(type) + " but it is " + utest_Assert.typeToString(value),pos));
-	}
-	return cond;
+	return utest_Assert.processResult(utest_utils_Misc.isOfType(value,type),function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected type " + utest_Assert.typeToString(type) + " but it is " + utest_Assert.typeToString(value);
+		}
+	},pos);
 };
 utest_Assert.notEquals = function(expected,value,msg,pos) {
-	var cond = expected != value;
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected " + utest_Assert.q(expected) + " and test value " + utest_Assert.q(value) + " should be different",pos));
-	}
-	return cond;
+	return utest_Assert.processResult(expected != value,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected " + utest_Assert.q(expected) + " and test value " + utest_Assert.q(value) + " should be different";
+		}
+	},pos);
 };
 utest_Assert.equals = function(expected,value,msg,pos) {
-	var cond = expected == value;
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected " + utest_Assert.q(expected) + " but it is " + utest_Assert.q(value),pos));
-	}
-	return cond;
+	return utest_Assert.processResult(expected == value,function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected " + utest_Assert.q(expected) + " but it is " + utest_Assert.q(value);
+		}
+	},pos);
 };
 utest_Assert.match = function(pattern,value,msg,pos) {
-	var cond = pattern.match(value);
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "the value " + utest_Assert.q(value) + " does not match the provided pattern",pos));
-	}
-	return cond;
+	return utest_Assert.processResult(pattern.match(value),function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "the value " + utest_Assert.q(value) + " does not match the provided pattern";
+		}
+	},pos);
 };
 utest_Assert.floatEquals = function(expected,value,approx,msg,pos) {
-	var cond = utest_Assert._floatEquals(expected,value,approx);
-	if(utest_Assert.results == null) {
-		throw haxe_Exception.thrown("Assert at " + pos.fileName + ":" + pos.lineNumber + " out of context. Most likely you are trying to assert after a test timeout.");
-	}
-	if(cond) {
-		utest_Assert.results.add(utest_Assertation.Success(pos));
-	} else {
-		utest_Assert.results.add(utest_Assertation.Failure(msg != null ? msg : "expected " + utest_Assert.q(expected) + " but it is " + utest_Assert.q(value),pos));
-	}
-	return cond;
+	return utest_Assert.processResult(utest_Assert._floatEquals(expected,value,approx),function() {
+		if(msg != null) {
+			return msg;
+		} else {
+			return "expected " + utest_Assert.q(expected) + " but it is " + utest_Assert.q(value);
+		}
+	},pos);
 };
 utest_Assert._floatEquals = function(expected,value,approx) {
 	if(isNaN(expected)) {
@@ -22949,23 +20629,21 @@ utest_Assert.getTypeName = function(v) {
 	case 5:
 		return "function";
 	case 6:
-		var c = _g.c;
-		return c.__name__;
+		return Type.getClassName(_g.c);
 	case 7:
-		var e = _g.e;
-		return e.__ename__;
+		return Type.getEnumName(_g.e);
 	case 8:
 		return "`Unknown`";
 	}
 };
 utest_Assert.isIterable = function(v,isAnonym) {
-	if(!Lambda.has(isAnonym ? Reflect.fields(v) : Type.getInstanceFields(js_Boot.getClass(v)),"iterator")) {
+	if(!Lambda.has(isAnonym ? Reflect.fields(v) : Type.getInstanceFields(Type.getClass(v)),"iterator")) {
 		return false;
 	}
 	return Reflect.isFunction(Reflect.field(v,"iterator"));
 };
 utest_Assert.isIterator = function(v,isAnonym) {
-	var fields = isAnonym ? Reflect.fields(v) : Type.getInstanceFields(js_Boot.getClass(v));
+	var fields = isAnonym ? Reflect.fields(v) : Type.getInstanceFields(Type.getClass(v));
 	if(!Lambda.has(fields,"next") || !Lambda.has(fields,"hasNext")) {
 		return false;
 	}
@@ -23009,7 +20687,7 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 				++_g1;
 				HxOverrides.remove(tfields,field);
 				status.path = path == "" ? field : path + "." + field;
-				if(!Object.prototype.hasOwnProperty.call(value,field)) {
+				if(!Reflect.hasField(value,field)) {
 					status.error = "expected field " + status.path + " does not exist in " + utest_Assert.q(value);
 					return false;
 				}
@@ -23089,15 +20767,13 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 		}
 		return true;
 	case 6:
-		var c = _g.c;
-		var cexpected = c.__name__;
-		var c = js_Boot.getClass(value);
-		var cvalue = c.__name__;
+		var cexpected = Type.getClassName(_g.c);
+		var cvalue = Type.getClassName(Type.getClass(value));
 		if(cexpected != cvalue) {
 			status.error = "expected instance of " + utest_Assert.q(cexpected) + " but it is " + utest_Assert.q(cvalue) + (status.path == "" ? "" : " for field " + status.path);
 			return false;
 		}
-		if(typeof(expected) == "string") {
+		if(utest_utils_Misc.isOfType(expected,String)) {
 			if(expected == value) {
 				return true;
 			} else {
@@ -23105,7 +20781,7 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 				return false;
 			}
 		}
-		if(((expected) instanceof Array)) {
+		if(utest_utils_Misc.isOfType(expected,Array)) {
 			if(status.recursive || status.path == "") {
 				if(expected.length != value.length) {
 					status.error = "expected " + Std.string(expected.length) + " elements but they are " + Std.string(value.length) + (status.path == "" ? "" : " for field " + status.path);
@@ -23125,14 +20801,14 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 			}
 			return true;
 		}
-		if(((expected) instanceof Date)) {
+		if(utest_utils_Misc.isOfType(expected,Date)) {
 			if(expected.getTime() != value.getTime()) {
 				status.error = "expected " + utest_Assert.q(expected) + " but it is " + utest_Assert.q(value) + (status.path == "" ? "" : " for field " + status.path);
 				return false;
 			}
 			return true;
 		}
-		if(((expected) instanceof haxe_io_Bytes)) {
+		if(utest_utils_Misc.isOfType(expected,haxe_io_Bytes)) {
 			if(status.recursive || status.path == "") {
 				var ebytes = expected;
 				var vbytes = value;
@@ -23144,35 +20820,33 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 				var _g2 = ebytes.length;
 				while(_g1 < _g2) {
 					var i = _g1++;
-					if(ebytes.b[i] != vbytes.b[i]) {
-						status.error = "expected byte #" + i + " to be " + ebytes.b[i] + " but it is " + vbytes.b[i] + (status.path == "" ? "" : " for field " + status.path);
+					if(ebytes.get(i) != vbytes.get(i)) {
+						status.error = "expected byte #" + i + " to be " + ebytes.get(i) + " but it is " + vbytes.get(i) + (status.path == "" ? "" : " for field " + status.path);
 						return false;
 					}
 				}
 			}
 			return true;
 		}
-		if(js_Boot.__implements(expected,haxe_IMap)) {
+		if(utest_utils_Misc.isOfType(expected,haxe_IMap)) {
 			if(status.recursive || status.path == "") {
 				var map = js_Boot.__cast(expected , haxe_IMap);
 				var vmap = js_Boot.__cast(value , haxe_IMap);
 				var _g1 = [];
 				var k = map.keys();
 				while(k.hasNext()) _g1.push(k.next());
-				var keys = _g1;
-				var _g1 = [];
+				var _g2 = [];
 				var k = vmap.keys();
-				while(k.hasNext()) _g1.push(k.next());
-				var vkeys = _g1;
-				if(keys.length != vkeys.length) {
-					status.error = "expected " + keys.length + " keys but they are " + vkeys.length + (status.path == "" ? "" : " for field " + status.path);
+				while(k.hasNext()) _g2.push(k.next());
+				if(_g1.length != _g2.length) {
+					status.error = "expected " + _g1.length + " keys but they are " + _g2.length + (status.path == "" ? "" : " for field " + status.path);
 					return false;
 				}
 				var path = status.path;
-				var _g1 = 0;
-				while(_g1 < keys.length) {
-					var key = keys[_g1];
-					++_g1;
+				var _g2 = 0;
+				while(_g2 < _g1.length) {
+					var key = _g1[_g2];
+					++_g2;
 					status.path = path == "" ? "hash[" + Std.string(key) + "]" : path + "[" + Std.string(key) + "]";
 					if(!utest_Assert.sameAs(map.get(key),vmap.get(key),status,approx)) {
 						status.error = "expected " + utest_Assert.q(status.expectedValue) + " but it is " + utest_Assert.q(status.actualValue) + (status.path == "" ? "" : " for field " + status.path);
@@ -23230,7 +20904,7 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 			return true;
 		}
 		if(status.recursive || status.path == "") {
-			var fields = Type.getInstanceFields(js_Boot.getClass(expected));
+			var fields = Type.getInstanceFields(Type.getClass(expected));
 			var path = status.path;
 			var _g1 = 0;
 			while(_g1 < fields.length) {
@@ -23248,20 +20922,15 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 		}
 		return true;
 	case 7:
-		var e = _g.e;
-		var eexpected = e.__ename__;
-		var e = Type.getEnum(value);
-		var evalue = e.__ename__;
+		var eexpected = Type.getEnumName(_g.e);
+		var evalue = Type.getEnumName(Type.getEnum(value));
 		if(eexpected != evalue) {
 			status.error = "expected enumeration of " + utest_Assert.q(eexpected) + " but it is " + utest_Assert.q(evalue) + (status.path == "" ? "" : " for field " + status.path);
 			return false;
 		}
 		if(status.recursive || status.path == "") {
-			if(expected._hx_index != value._hx_index) {
-				var e = expected;
-				var tmp = "expected enum constructor " + utest_Assert.q($hxEnums[e.__enum__].__constructs__[e._hx_index]._hx_name) + " but it is ";
-				var e = value;
-				status.error = tmp + utest_Assert.q($hxEnums[e.__enum__].__constructs__[e._hx_index]._hx_name) + (status.path == "" ? "" : " for field " + status.path);
+			if(Type.enumIndex(expected) != Type.enumIndex(value)) {
+				status.error = "expected enum constructor " + utest_Assert.q(Type.enumConstructor(expected)) + " but it is " + utest_Assert.q(Type.enumConstructor(value)) + (status.path == "" ? "" : " for field " + status.path);
 				return false;
 			}
 			var eparams = Type.enumParameters(expected);
@@ -23284,7 +20953,7 @@ utest_Assert.sameAs = function(expected,value,status,approx) {
 	}
 };
 utest_Assert.q = function(v) {
-	if(typeof(v) == "string") {
+	if(utest_utils_Misc.isOfType(v,String)) {
 		return "\"" + StringTools.replace(v,"\"","\\\"") + "\"";
 	} else {
 		return Std.string(v);
@@ -23302,19 +20971,19 @@ utest_Assert.same = function(expected,value,recursive,msg,approx,pos) {
 	}
 };
 utest_Assert.raises = function(method,type,msgNotThrown,msgWrongType,pos) {
-	var name = type != null ? type.__name__ : "Dynamic";
+	var name = type != null ? Type.getClassName(type) : "Dynamic";
 	try {
 		method();
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
-		var ex = haxe_Exception.caught(_g).unwrap();
+		haxe_NativeStackTrace.saveStack(_g);
+		var _g1 = haxe_Exception.caught(_g).unwrap();
 		if(null == type) {
 			return utest_Assert.pass(null,pos);
 		} else {
 			if(null == msgWrongType) {
-				msgWrongType = "expected throw of type " + name + " but it is " + Std.string(ex);
+				msgWrongType = "expected throw of type " + name + " but it is " + Std.string(_g1);
 			}
-			return utest_Assert.isTrue(js_Boot.__instanceof(ex,type),msgWrongType,pos);
+			return utest_Assert.isTrue(utest_utils_Misc.isOfType(_g1,type),msgWrongType,pos);
 		}
 	}
 	if(null == msgNotThrown) {
@@ -23404,17 +21073,17 @@ utest_Assert.createEvent = function(f,timeout) {
 };
 utest_Assert.typeToString = function(t) {
 	try {
-		var _t = js_Boot.getClass(t);
+		var _t = Type.getClass(t);
 		if(_t != null) {
 			t = _t;
 		}
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	try {
-		return t.__name__;
+		return Type.getClassName(t);
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	try {
 		var _t = Type.getEnum(t);
@@ -23422,22 +21091,22 @@ utest_Assert.typeToString = function(t) {
 			t = _t;
 		}
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	try {
-		return t.__ename__;
+		return Type.getEnumName(t);
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	try {
 		return Std.string(Type.typeof(t));
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	try {
 		return Std.string(t);
 	} catch( _g ) {
-		haxe_NativeStackTrace.lastError = _g;
+		haxe_NativeStackTrace.saveStack(_g);
 	}
 	return "<unable to retrieve type name>";
 };
@@ -23462,7 +21131,7 @@ var utest_Async = function(timeoutMs) {
 	this.timedOut = false;
 	this.resolved = false;
 	this.timeoutMs = timeoutMs;
-	this.startTime = HxOverrides.now() / 1000;
+	this.startTime = haxe_Timer.stamp();
 	this.timer = haxe_Timer.delay($bind(this,this.setTimedOutState),timeoutMs);
 };
 utest_Async.__name__ = "utest.Async";
@@ -23504,7 +21173,7 @@ utest_Async.prototype = {
 		}
 		this.timer.stop();
 		this.timeoutMs = timeoutMs;
-		this.timer = haxe_Timer.delay($bind(this,this.setTimedOutState),timeoutMs - Math.round(1000 * (HxOverrides.now() / 1000 - this.startTime)));
+		this.timer = haxe_Timer.delay($bind(this,this.setTimedOutState),timeoutMs - Math.round(1000 * (haxe_Timer.stamp() - this.startTime)));
 	}
 	,branch: function(fn,pos) {
 		var branch = new utest_Async(this.timeoutMs);
@@ -23598,8 +21267,8 @@ utest_Dispatcher.prototype = {
 			while(_g < list.length) list[_g++](e);
 			return true;
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
-			if(js_Boot.__instanceof(haxe_Exception.caught(_g).unwrap(),utest__$Dispatcher_EventException)) {
+			haxe_NativeStackTrace.saveStack(_g);
+			if(Std.isOfType(haxe_Exception.caught(_g).unwrap(),utest__$Dispatcher_EventException)) {
 				return false;
 			} else {
 				throw _g;
@@ -23645,8 +21314,8 @@ utest_Notifier.prototype = {
 			while(_g < list.length) list[_g++]();
 			return true;
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
-			if(js_Boot.__instanceof(haxe_Exception.caught(_g).unwrap(),utest__$Dispatcher_EventException)) {
+			haxe_NativeStackTrace.saveStack(_g);
+			if(Std.isOfType(haxe_Exception.caught(_g).unwrap(),utest__$Dispatcher_EventException)) {
 				return false;
 			} else {
 				throw _g;
@@ -23671,8 +21340,8 @@ var utest_TestHandler = function(fixture) {
 	this.onTimeout = new utest_Dispatcher();
 	this.onComplete = new utest_Dispatcher();
 	this.onPrecheck = new utest_Dispatcher();
-	if(fixture.ignoringInfo != null) {
-		this.results.add(utest_Assertation.Ignore(fixture.ignoringInfo));
+	if(utest_IgnoredFixture.get_isIgnored(fixture.ignoringInfo)) {
+		this.results.add(utest_Assertation.Ignore(utest_IgnoredFixture.get_ignoreReason(fixture.ignoringInfo)));
 	}
 };
 utest_TestHandler.__name__ = "utest.TestHandler";
@@ -23697,7 +21366,7 @@ utest_TestHandler.prototype = {
 	,wasBound: null
 	,execute: function() {
 		var _gthis = this;
-		if(this.fixture.ignoringInfo != null) {
+		if(utest_IgnoredFixture.get_isIgnored(this.fixture.ignoringInfo)) {
 			this.executeFinally();
 			return;
 		}
@@ -23718,7 +21387,7 @@ utest_TestHandler.prototype = {
 				this.executeFixtureMethod();
 			}
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.SetupError(_g1,utest_TestHandler.exceptionStack()));
 		}
@@ -23731,7 +21400,7 @@ utest_TestHandler.prototype = {
 		try {
 			this.executeMethod(this.fixture.method);
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.Error(_g1,utest_TestHandler.exceptionStack()));
 		}
@@ -23743,7 +21412,7 @@ utest_TestHandler.prototype = {
 	,checkTested: function() {
 		if(this.expiration == null || this.asyncStack.length == 0) {
 			this.tested();
-		} else if(HxOverrides.now() / 1000 > this.expiration) {
+		} else if(haxe_Timer.stamp() > this.expiration) {
 			this.timeout();
 		} else {
 			haxe_Timer.delay($bind(this,this.checkTested),10);
@@ -23751,7 +21420,7 @@ utest_TestHandler.prototype = {
 	}
 	,expiration: null
 	,setTimeout: function(timeout) {
-		var newExpire = HxOverrides.now() / 1000 + timeout / 1000;
+		var newExpire = haxe_Timer.stamp() + timeout / 1000;
 		this.expiration = this.expiration == null ? newExpire : newExpire > this.expiration ? newExpire : this.expiration;
 	}
 	,bindHandler: function() {
@@ -23798,7 +21467,7 @@ utest_TestHandler.prototype = {
 				handler.bindHandler();
 				f();
 			} catch( _g ) {
-				haxe_NativeStackTrace.lastError = _g;
+				haxe_NativeStackTrace.saveStack(_g);
 				var _g1 = haxe_Exception.caught(_g).unwrap();
 				handler.results.add(utest_Assertation.AsyncError(_g1,utest_TestHandler.exceptionStack(0)));
 			}
@@ -23820,7 +21489,7 @@ utest_TestHandler.prototype = {
 				handler.bindHandler();
 				f(e);
 			} catch( _g ) {
-				haxe_NativeStackTrace.lastError = _g;
+				haxe_NativeStackTrace.saveStack(_g);
 				var _g1 = haxe_Exception.caught(_g).unwrap();
 				handler.results.add(utest_Assertation.AsyncError(_g1,utest_TestHandler.exceptionStack(0)));
 			}
@@ -23831,7 +21500,7 @@ utest_TestHandler.prototype = {
 			return;
 		}
 		this.bindHandler();
-		Reflect.field(this.fixture.target,name).apply(this.fixture.target,[]);
+		Reflect.callMethod(this.fixture.target,Reflect.field(this.fixture.target,name),[]);
 	}
 	,executeAsyncMethod: function(name,done) {
 		if(name == null) {
@@ -23839,7 +21508,7 @@ utest_TestHandler.prototype = {
 			return;
 		}
 		this.bindHandler();
-		Reflect.field(this.fixture.target,name).apply(this.fixture.target,[done]);
+		Reflect.callMethod(this.fixture.target,Reflect.field(this.fixture.target,name),[done]);
 	}
 	,tested: function() {
 		if(this.results.length == 0) {
@@ -23855,7 +21524,7 @@ utest_TestHandler.prototype = {
 	}
 	,completed: function() {
 		var _gthis = this;
-		if(this.fixture.ignoringInfo != null) {
+		if(utest_IgnoredFixture.get_isIgnored(this.fixture.ignoringInfo)) {
 			this.completedFinally();
 			return;
 		}
@@ -23872,7 +21541,7 @@ utest_TestHandler.prototype = {
 			this.executeMethod(this.fixture.teardown);
 			this.executeAsyncMethod(this.fixture.teardownAsync,complete);
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.TeardownError(_g1,utest_TestHandler.exceptionStack(2)));
 		}
@@ -23908,7 +21577,7 @@ utest_ITestHandler.prototype = $extend(utest_TestHandler.prototype,{
 	,testAsync: null
 	,teardownAsync: null
 	,execute: function() {
-		if(this.fixture.ignoringInfo != null) {
+		if(utest_IgnoredFixture.get_isIgnored(this.fixture.ignoringInfo)) {
 			this.executeFinally();
 			return;
 		}
@@ -23919,7 +21588,7 @@ utest_ITestHandler.prototype = $extend(utest_TestHandler.prototype,{
 		try {
 			this.setupAsync = this.fixture.setupMethod();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.SetupError(_g1,haxe_CallStack.exceptionStack()));
 			this.completedFinally();
@@ -23939,7 +21608,7 @@ utest_ITestHandler.prototype = $extend(utest_TestHandler.prototype,{
 		try {
 			this.testAsync = this.test.execute();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.Error(_g1,haxe_CallStack.exceptionStack()));
 			this.runTeardown();
@@ -23966,7 +21635,7 @@ utest_ITestHandler.prototype = $extend(utest_TestHandler.prototype,{
 		try {
 			this.teardownAsync = this.fixture.teardownMethod();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			var _g1 = haxe_Exception.caught(_g).unwrap();
 			this.results.add(utest_Assertation.TeardownError(_g1,haxe_CallStack.exceptionStack()));
 			this.completedFinally();
@@ -23999,10 +21668,10 @@ utest_ITestHandler.prototype = $extend(utest_TestHandler.prototype,{
 var utest_IgnoredFixture = {};
 utest_IgnoredFixture.__properties__ = {get_ignoreReason:"get_ignoreReason",get_isIgnored:"get_isIgnored"};
 utest_IgnoredFixture.NotIgnored = function() {
-	return null;
+	return utest_IgnoredFixture._new(null);
 };
 utest_IgnoredFixture.Ignored = function(reason) {
-	return reason != null ? reason : "";
+	return utest_IgnoredFixture._new(reason != null ? reason : "");
 };
 utest_IgnoredFixture._new = function(reason) {
 	return reason;
@@ -24018,7 +21687,7 @@ var utest_Runner = function() {
 	this.pos = 0;
 	this.complete = false;
 	this.globalPattern = null;
-	this.iTestFixtures = new haxe_ds_StringMap();
+	this.iTestFixtures = haxe_ds_Map.toStringMap(null);
 	this.fixtures = [];
 	this.onProgress = new utest_Dispatcher();
 	this.onStart = new utest_Dispatcher();
@@ -24057,16 +21726,15 @@ utest_Runner.prototype = {
 		if(setup == null) {
 			setup = "setup";
 		}
-		if(js_Boot.__implements(test,utest_ITest)) {
+		if(utest_utils_Misc.isOfType(test,utest_ITest)) {
 			this.addITest(test,pattern);
 		} else {
 			this.addCaseOld(test,setup,teardown,prefix,pattern,setupAsync,teardownAsync);
 		}
 	}
 	,addITest: function(testCase,pattern) {
-		var c = js_Boot.getClass(testCase);
-		var className = c.__name__;
-		if(Object.prototype.hasOwnProperty.call(this.iTestFixtures.h,className)) {
+		var className = Type.getClassName(Type.getClass(testCase));
+		if(haxe_ds_Map.exists(this.iTestFixtures,className)) {
 			throw haxe_Exception.thrown("Cannot add the same test twice.");
 		}
 		var fixtures = [];
@@ -24084,7 +21752,7 @@ utest_Runner.prototype = {
 			fixtures.push(fixture);
 		}
 		if(fixtures.length > 0) {
-			this.iTestFixtures.h[className] = { caseInstance : testCase, setupClass : utest_utils_AccessoriesUtils.getSetupClass(init.accessories), dependencies : init.dependencies, fixtures : fixtures, teardownClass : utest_utils_AccessoriesUtils.getTeardownClass(init.accessories)};
+			haxe_ds_Map.set(this.iTestFixtures,className,{ caseInstance : testCase, setupClass : utest_utils_AccessoriesUtils.getSetupClass(init.accessories), dependencies : init.dependencies, fixtures : fixtures, teardownClass : utest_utils_AccessoriesUtils.getTeardownClass(init.accessories)});
 		}
 	}
 	,addCaseOld: function(test,setup,teardown,prefix,pattern,setupAsync,teardownAsync) {
@@ -24118,9 +21786,8 @@ utest_Runner.prototype = {
 		if(!this.isMethod(test,teardownAsync)) {
 			teardownAsync = null;
 		}
-		var fields = Type.getInstanceFields(js_Boot.getClass(test));
-		var c = js_Boot.getClass(test);
-		var className = c.__name__;
+		var fields = Type.getInstanceFields(Type.getClass(test));
+		var className = Type.getClassName(Type.getClass(test));
 		var _g = 0;
 		while(_g < fields.length) {
 			var field = fields[_g];
@@ -24158,7 +21825,7 @@ utest_Runner.prototype = {
 		try {
 			return Reflect.isFunction(Reflect.field(test,name));
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			return false;
 		}
 	}
@@ -24179,15 +21846,14 @@ utest_Runner.prototype = {
 		var _g = this.pos;
 		var _g1 = this.fixtures.length;
 		while(_g < _g1) {
-			_g++;
+			++_g;
 			var fixture = this.fixtures[this.pos++];
 			if(fixture.isITest) {
 				continue;
 			}
 			if(currentCase != fixture.target) {
 				currentCase = fixture.target;
-				var c = js_Boot.getClass(currentCase);
-				c.__name__;
+				Type.getClassName(Type.getClass(currentCase));
 			}
 			var handler = this.runFixture(fixture);
 			if(!handler.finished) {
@@ -24219,15 +21885,10 @@ var utest__$Runner_ITestRunner = function(runner) {
 	var _gthis = this;
 	this.runner = runner;
 	runner.onTestComplete.add(function(handler) {
-		var _g_head = handler.results.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			if(val._hx_index != 0) {
-				_gthis.failedTestsInCurrentCase.push(handler.fixture.method);
-				var c = js_Boot.getClass(handler.fixture.target);
-				_gthis.failedCases.push(c.__name__);
-			}
+		var _g = handler.results.iterator();
+		while(_g.hasNext()) if(_g.next()._hx_index != 0) {
+			_gthis.failedTestsInCurrentCase.push(handler.fixture.method);
+			_gthis.failedCases.push(Type.getClassName(Type.getClass(handler.fixture.target)));
 		}
 	});
 };
@@ -24253,13 +21914,13 @@ utest__$Runner_ITestRunner.prototype = {
 		var error = function(testCase,msg) {
 			_gthis.runner.onProgress.dispatch({ totals : _gthis.runner.length, result : utest_TestResult.ofFailedSetupClass(testCase,utest_Assertation.SetupError(msg,[])), done : _gthis.runner.executedFixtures});
 		};
-		var added_h = Object.create(null);
+		var added = haxe_ds_Map.toStringMap(null);
 		var addClass = null;
 		addClass = function(cls,stack) {
-			if(Object.prototype.hasOwnProperty.call(added_h,cls)) {
+			if(haxe_ds_Map.exists(added,cls)) {
 				return;
 			}
-			var data = _gthis.runner.iTestFixtures.h[cls];
+			var data = haxe_ds_Map.get(_gthis.runner.iTestFixtures,cls);
 			if(stack.indexOf(cls) >= 0) {
 				error(data.caseInstance,"Circular dependencies among test classes detected: " + stack.join(" -> "));
 				return;
@@ -24270,7 +21931,7 @@ utest__$Runner_ITestRunner.prototype = {
 			while(_g < dependencies.length) {
 				var dependency = dependencies[_g];
 				++_g;
-				if(Object.prototype.hasOwnProperty.call(_gthis.runner.iTestFixtures.h,dependency)) {
+				if(haxe_ds_Map.exists(_gthis.runner.iTestFixtures,dependency)) {
 					addClass(dependency,stack);
 				} else {
 					error(data.caseInstance,"This class depends on " + dependency + ", but it cannot be found. Was it added to test runner?");
@@ -24278,12 +21939,13 @@ utest__$Runner_ITestRunner.prototype = {
 				}
 			}
 			result.push(cls);
-			added_h[cls] = true;
+			haxe_ds_Map.set(added,cls,true);
 		};
-		var cls_keys = Object.keys(this.runner.iTestFixtures.h);
-		var cls_length = cls_keys.length;
-		var cls_current = 0;
-		while(cls_current < cls_length) addClass(cls_keys[cls_current++],[]);
+		var cls = haxe_ds_Map.keys(this.runner.iTestFixtures);
+		while(cls.hasNext()) {
+			var cls1 = cls.next();
+			addClass(cls1,[]);
+		}
 		return new haxe_iterators_ArrayIterator(result);
 	}
 	,failedDependencies: function(data) {
@@ -24297,7 +21959,7 @@ utest__$Runner_ITestRunner.prototype = {
 	,runCases: function() {
 		while(this.cases.hasNext()) {
 			this.currentCaseName = this.cases.next();
-			var data = this.runner.iTestFixtures.h[this.currentCaseName];
+			var data = haxe_ds_Map.get(this.runner.iTestFixtures,this.currentCaseName);
 			this.currentCase = data.caseInstance;
 			this.failedTestsInCurrentCase = [];
 			if(this.failedDependencies(data)) {
@@ -24309,7 +21971,7 @@ utest__$Runner_ITestRunner.prototype = {
 			try {
 				this.setupAsync = data.setupClass();
 			} catch( _g ) {
-				haxe_NativeStackTrace.lastError = _g;
+				haxe_NativeStackTrace.saveStack(_g);
 				this.setupFailed(utest_Assertation.SetupError("setupClass failed: " + Std.string(haxe_Exception.caught(_g).unwrap()),haxe_CallStack.exceptionStack()));
 				return;
 			}
@@ -24354,7 +22016,7 @@ utest__$Runner_ITestRunner.prototype = {
 		try {
 			this.teardownAsync = this.teardownClass();
 		} catch( _g ) {
-			haxe_NativeStackTrace.lastError = _g;
+			haxe_NativeStackTrace.saveStack(_g);
 			this.teardownFailed(utest_Assertation.TeardownError("teardownClass failed: " + Std.string(haxe_Exception.caught(_g).unwrap()),haxe_CallStack.exceptionStack()));
 			return true;
 		}
@@ -24418,8 +22080,8 @@ utest_TestFixture.prototype = {
 		}
 	}
 	,getIgnored: function() {
-		var metasForTestMetas = Reflect.getProperty(haxe_rtti_Meta.getFields(js_Boot.getClass(this.target)),this.method);
-		if(metasForTestMetas == null || !Object.prototype.hasOwnProperty.call(metasForTestMetas,"Ignored")) {
+		var metasForTestMetas = Reflect.getProperty(haxe_rtti_Meta.getFields(Type.getClass(this.target)),this.method);
+		if(metasForTestMetas == null || !Reflect.hasField(metasForTestMetas,"Ignored")) {
 			return utest_IgnoredFixture.NotIgnored();
 		}
 		var ignoredArgs = Reflect.getProperty(metasForTestMetas,"Ignored");
@@ -24435,8 +22097,7 @@ var utest_TestResult = function() {
 utest_TestResult.__name__ = "utest.TestResult";
 utest_TestResult.ofHandler = function(handler) {
 	var r = new utest_TestResult();
-	var c = js_Boot.getClass(handler.fixture.target);
-	var path = c.__name__.split(".");
+	var path = Type.getClassName(Type.getClass(handler.fixture.target)).split(".");
 	r.cls = path.pop();
 	r.pack = path.join(".");
 	r.method = handler.fixture.method;
@@ -24449,8 +22110,7 @@ utest_TestResult.ofHandler = function(handler) {
 };
 utest_TestResult.ofFailedSetupClass = function(testCase,assertation) {
 	var r = new utest_TestResult();
-	var c = js_Boot.getClass(testCase);
-	var path = c.__name__.split(".");
+	var path = Type.getClassName(Type.getClass(testCase)).split(".");
 	r.cls = path.pop();
 	r.pack = path.join(".");
 	r.method = "setup";
@@ -24460,8 +22120,7 @@ utest_TestResult.ofFailedSetupClass = function(testCase,assertation) {
 };
 utest_TestResult.ofFailedTeardownClass = function(testCase,assertation) {
 	var r = new utest_TestResult();
-	var c = js_Boot.getClass(testCase);
-	var path = c.__name__.split(".");
+	var path = Type.getClassName(Type.getClass(testCase)).split(".");
 	r.cls = path.pop();
 	r.pack = path.join(".");
 	r.method = "setup";
@@ -24516,7 +22175,7 @@ utest_ui_Report.create = function(runner,displaySuccessResults,headerDisplayMode
 	return report;
 };
 var utest_ui_common_ClassResult = function(className,setupName,teardownName) {
-	this.fixtures = new haxe_ds_StringMap();
+	this.fixtures = haxe_ds_Map.toStringMap(null);
 	this.className = className;
 	this.setupName = setupName;
 	this.hasSetup = setupName != null;
@@ -24536,28 +22195,26 @@ utest_ui_common_ClassResult.prototype = {
 	,methods: null
 	,stats: null
 	,add: function(result) {
-		if(Object.prototype.hasOwnProperty.call(this.fixtures.h,result.methodName)) {
+		if(haxe_ds_Map.exists(this.fixtures,result.methodName)) {
 			throw haxe_Exception.thrown("invalid duplicated fixture: " + this.className + "." + result.methodName);
 		}
 		this.stats.wire(result.stats);
 		this.methods++;
-		this.fixtures.h[result.methodName] = result;
+		haxe_ds_Map.set(this.fixtures,result.methodName,result);
 	}
 	,get: function(method) {
-		return this.fixtures.h[method];
+		return haxe_ds_Map.get(this.fixtures,method);
 	}
 	,exists: function(method) {
-		return Object.prototype.hasOwnProperty.call(this.fixtures.h,method);
+		return haxe_ds_Map.exists(this.fixtures,method);
 	}
 	,methodNames: function(errorsHavePriority) {
 		if(errorsHavePriority == null) {
 			errorsHavePriority = true;
 		}
 		var names = [];
-		var name_keys = Object.keys(this.fixtures.h);
-		var name_length = name_keys.length;
-		var name_current = 0;
-		while(name_current < name_length) names.push(name_keys[name_current++]);
+		var name = haxe_ds_Map.keys(this.fixtures);
+		while(name.hasNext()) names.push(name.next());
 		if(errorsHavePriority) {
 			var me = this;
 			names.sort(function(a,b) {
@@ -24627,7 +22284,7 @@ utest_ui_common_FixtureResult.prototype = {
 	,stats: null
 	,list: null
 	,iterator: function() {
-		return new haxe_ds__$List_ListIterator(this.list.h);
+		return this.list.iterator();
 	}
 	,add: function(assertation) {
 		this.list.add(assertation);
@@ -24691,8 +22348,8 @@ utest_ui_common_IReport.prototype = {
 var utest_ui_common_PackageResult = function(packageName) {
 	this.isEmpty = true;
 	this.packageName = packageName;
-	this.classes = new haxe_ds_StringMap();
-	this.packages = new haxe_ds_StringMap();
+	this.classes = haxe_ds_Map.toStringMap(null);
+	this.packages = haxe_ds_Map.toStringMap(null);
 	this.stats = new utest_ui_common_ResultStats();
 };
 utest_ui_common_PackageResult.__name__ = "utest.ui.common.PackageResult";
@@ -24708,38 +22365,36 @@ utest_ui_common_PackageResult.prototype = {
 	}
 	,addClass: function(result) {
 		this.isEmpty = false;
-		this.classes.h[result.className] = result;
+		haxe_ds_Map.set(this.classes,result.className,result);
 		this.stats.wire(result.stats);
 	}
 	,addPackage: function(result) {
 		this.isEmpty = false;
-		this.packages.h[result.packageName] = result;
+		haxe_ds_Map.set(this.packages,result.packageName,result);
 		this.stats.wire(result.stats);
 	}
 	,existsPackage: function(name) {
-		return Object.prototype.hasOwnProperty.call(this.packages.h,name);
+		return haxe_ds_Map.exists(this.packages,name);
 	}
 	,existsClass: function(name) {
-		return Object.prototype.hasOwnProperty.call(this.classes.h,name);
+		return haxe_ds_Map.exists(this.classes,name);
 	}
 	,getPackage: function(name) {
 		if(this.packageName == null && name == "") {
 			return this;
 		}
-		return this.packages.h[name];
+		return haxe_ds_Map.get(this.packages,name);
 	}
 	,getClass: function(name) {
-		return this.classes.h[name];
+		return haxe_ds_Map.get(this.classes,name);
 	}
 	,classNames: function(errorsHavePriority) {
 		if(errorsHavePriority == null) {
 			errorsHavePriority = true;
 		}
 		var names = [];
-		var name_keys = Object.keys(this.classes.h);
-		var name_length = name_keys.length;
-		var name_current = 0;
-		while(name_current < name_length) names.push(name_keys[name_current++]);
+		var name = haxe_ds_Map.keys(this.classes);
+		while(name.hasNext()) names.push(name.next());
 		if(errorsHavePriority) {
 			var me = this;
 			names.sort(function(a,b) {
@@ -24794,10 +22449,8 @@ utest_ui_common_PackageResult.prototype = {
 		if(this.packageName == null) {
 			names.push("");
 		}
-		var name_keys = Object.keys(this.packages.h);
-		var name_length = name_keys.length;
-		var name_current = 0;
-		while(name_current < name_length) names.push(name_keys[name_current++]);
+		var name = haxe_ds_Map.keys(this.packages);
+		while(name.hasNext()) names.push(name.next());
 		if(errorsHavePriority) {
 			var me = this;
 			names.sort(function(a,b) {
@@ -24957,23 +22610,21 @@ utest_ui_common_ResultAggregator.prototype = {
 			if(!fixture.isITest) {
 				++total;
 				if(first == null) {
-					var c = js_Boot.getClass(fixture.target);
-					first = c.__name__;
+					first = Type.getClassName(Type.getClass(fixture.target));
 				}
 			}
 		}
 		if(total > 0) {
-			var baseMsg = "implement utest.ITest. Non-ITest tests are deprecated. Implement utest.ITest or extend utest.Test.";
 			var msg;
 			switch(total) {
 			case 1:
-				msg = "" + first + " doesn't " + baseMsg;
+				msg = "" + first + " doesn't " + "implement utest.ITest. Non-ITest tests are deprecated. Implement utest.ITest or extend utest.Test.";
 				break;
 			case 2:
-				msg = "" + first + " and 1 other don't " + baseMsg;
+				msg = "" + first + " and 1 other don't " + "implement utest.ITest. Non-ITest tests are deprecated. Implement utest.ITest or extend utest.Test.";
 				break;
 			default:
-				msg = "" + first + " and " + total + " others don't " + baseMsg;
+				msg = "" + first + " and " + total + " others don't " + "implement utest.ITest. Non-ITest tests are deprecated. Implement utest.ITest or extend utest.Test.";
 			}
 			haxe_Log.trace(msg,{ fileName : "utest/ui/common/ResultAggregator.hx", lineNumber : 54, className : "utest.ui.common.ResultAggregator", methodName : "checkNonITest"});
 		}
@@ -25009,12 +22660,8 @@ utest_ui_common_ResultAggregator.prototype = {
 	}
 	,createFixture: function(result) {
 		var f = new utest_ui_common_FixtureResult(result.method);
-		var _g_head = result.assertations.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			f.add(val);
-		}
+		var _g = result.assertations.iterator();
+		while(_g.hasNext()) f.add(_g.next());
 		return f;
 	}
 	,progress: function(e) {
@@ -25200,14 +22847,14 @@ utest_ui_text_HtmlReport.prototype = {
 	}
 	,_traceTime: null
 	,_trace: function(v,infos) {
-		var time = HxOverrides.now() / 1000;
+		var time = haxe_Timer.stamp();
 		var delta = this._traceTime == null ? 0 : time - this._traceTime;
 		this._traces.push({ msg : StringTools.htmlEscape(Std.string(v)), infos : infos, time : time - this.startTime, delta : delta, stack : haxe_CallStack.callStack()});
-		this._traceTime = HxOverrides.now() / 1000;
+		this._traceTime = haxe_Timer.stamp();
 	}
 	,startTime: null
 	,start: function(e) {
-		this.startTime = HxOverrides.now() / 1000;
+		this.startTime = haxe_Timer.stamp();
 	}
 	,cls: function(stats) {
 		if(stats.hasErrors) {
@@ -25249,14 +22896,12 @@ utest_ui_text_HtmlReport.prototype = {
 		} else if(stats.warnings > 0) {
 			numbers.push("<strong>" + stats.warnings + "</strong> warnings");
 		}
-		var x = numbers.join(", ");
-		buf.b += Std.string(x);
+		buf.add(numbers.join(", "));
 	}
 	,blockNumbers: function(buf,stats) {
-		var x = "<div class=\"" + this.cls(stats) + "bg statnumbers\">";
-		buf.b += Std.string(x);
+		buf.add("<div class=\"" + this.cls(stats) + "bg statnumbers\">");
 		this.resultNumbers(buf,stats);
-		buf.b += "</div>";
+		buf.add("</div>");
 	}
 	,formatStack: function(stack,addNL) {
 		if(addNL == null) {
@@ -25291,66 +22936,66 @@ utest_ui_text_HtmlReport.prototype = {
 		if(utest_ui_common_ReportTools.skipResult(this,result.stats,isOk)) {
 			return;
 		}
-		buf.b += "<li class=\"fixture\"><div class=\"li\">";
-		var x = "<span class=\"" + this.cls(result.stats) + "bg fixtureresult\">";
-		buf.b += Std.string(x);
+		buf.add("<li class=\"fixture\"><div class=\"li\">");
+		buf.add("<span class=\"" + this.cls(result.stats) + "bg fixtureresult\">");
 		if(result.stats.isOk) {
-			buf.b += "OK ";
+			buf.add("OK ");
 		} else if(result.stats.hasErrors) {
-			buf.b += "ERROR ";
+			buf.add("ERROR ");
 		} else if(result.stats.hasFailures) {
-			buf.b += "FAILURE ";
+			buf.add("FAILURE ");
 		} else if(result.stats.hasWarnings) {
-			buf.b += "WARNING ";
+			buf.add("WARNING ");
 		}
-		buf.b = (buf.b += "</span>") + "<div class=\"fixturedetails\">";
-		buf.b = (buf.b += Std.string("<strong>" + name + "</strong>")) + ": ";
+		buf.add("</span>");
+		buf.add("<div class=\"fixturedetails\">");
+		buf.add("<strong>" + name + "</strong>");
+		buf.add(": ");
 		this.resultNumbers(buf,result.stats);
 		var messages = [];
 		var _g = result.iterator();
-		while(_g.head != null) {
-			var val = _g.head.item;
-			_g.head = _g.head.next;
-			switch(val._hx_index) {
+		while(_g.hasNext()) {
+			var assertation = _g.next();
+			switch(assertation._hx_index) {
 			case 0:
 				break;
 			case 1:
-				messages.push("<strong>line " + val.pos.lineNumber + "</strong>: <em>" + StringTools.htmlEscape(val.msg) + "</em>");
+				messages.push("<strong>line " + assertation.pos.lineNumber + "</strong>: <em>" + StringTools.htmlEscape(assertation.msg) + "</em>");
 				break;
 			case 2:
-				var _g1 = val.e;
-				messages.push("<strong>error</strong>: <em>" + this.getErrorDescription(_g1) + "</em>\n<br/><strong>stack</strong>:" + this.getErrorStack(val.stack,_g1));
+				var _g1 = assertation.e;
+				messages.push("<strong>error</strong>: <em>" + this.getErrorDescription(_g1) + "</em>\n<br/><strong>stack</strong>:" + this.getErrorStack(assertation.stack,_g1));
 				break;
 			case 3:
-				var _g2 = val.e;
-				messages.push("<strong>setup error</strong>: " + this.getErrorDescription(_g2) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(val.stack,_g2));
+				var _g2 = assertation.e;
+				messages.push("<strong>setup error</strong>: " + this.getErrorDescription(_g2) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(assertation.stack,_g2));
 				break;
 			case 4:
-				var _g3 = val.e;
-				messages.push("<strong>tear-down error</strong>: " + this.getErrorDescription(_g3) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(val.stack,_g3));
+				var _g3 = assertation.e;
+				messages.push("<strong>tear-down error</strong>: " + this.getErrorDescription(_g3) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(assertation.stack,_g3));
 				break;
 			case 5:
-				messages.push("<strong>missed async call(s)</strong>: " + val.missedAsyncs);
+				messages.push("<strong>missed async call(s)</strong>: " + assertation.missedAsyncs);
 				break;
 			case 6:
-				var _g4 = val.e;
-				messages.push("<strong>async error</strong>: " + this.getErrorDescription(_g4) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(val.stack,_g4));
+				var _g4 = assertation.e;
+				messages.push("<strong>async error</strong>: " + this.getErrorDescription(_g4) + "\n<br/><strong>stack</strong>:" + this.getErrorStack(assertation.stack,_g4));
 				break;
 			case 7:
-				messages.push(StringTools.htmlEscape(val.msg));
+				messages.push(StringTools.htmlEscape(assertation.msg));
 				break;
 			case 8:
-				messages.push(StringTools.htmlEscape(val.reason));
+				messages.push(StringTools.htmlEscape(assertation.reason));
 				break;
 			}
 		}
 		if(messages.length > 0) {
-			buf.b += "<div class=\"testoutput\">";
-			var x = messages.join("<br/>");
-			buf.b += Std.string(x);
-			buf.b += "</div>\n";
+			buf.add("<div class=\"testoutput\">");
+			buf.add(messages.join("<br/>"));
+			buf.add("</div>\n");
 		}
-		buf.b = (buf.b += "</div>\n") + "</div></li>\n";
+		buf.add("</div>\n");
+		buf.add("</div></li>\n");
 	}
 	,getErrorDescription: function(e) {
 		return Std.string(e);
@@ -25362,9 +23007,10 @@ utest_ui_text_HtmlReport.prototype = {
 		if(utest_ui_common_ReportTools.skipResult(this,result.stats,isOk)) {
 			return;
 		}
-		buf.b = (buf.b += "<li>") + Std.string("<h2 class=\"classname\">" + name + "</h2>");
+		buf.add("<li>");
+		buf.add("<h2 class=\"classname\">" + name + "</h2>");
 		this.blockNumbers(buf,result.stats);
-		buf.b += "<ul>\n";
+		buf.add("<ul>\n");
 		var _g = 0;
 		var _g1 = result.methodNames();
 		while(_g < _g1.length) {
@@ -25372,13 +23018,14 @@ utest_ui_text_HtmlReport.prototype = {
 			++_g;
 			this.addFixture(buf,result.get(mname),mname,isOk);
 		}
-		buf.b = (buf.b += "</ul>\n") + "</li>\n";
+		buf.add("</ul>\n");
+		buf.add("</li>\n");
 	}
 	,addPackages: function(buf,result,isOk) {
 		if(utest_ui_common_ReportTools.skipResult(this,result.stats,isOk)) {
 			return;
 		}
-		buf.b += "<ul id=\"utest-results-packages\">\n";
+		buf.add("<ul id=\"utest-results-packages\">\n");
 		var _g = 0;
 		var _g1 = result.packageNames(false);
 		while(_g < _g1.length) {
@@ -25386,7 +23033,7 @@ utest_ui_text_HtmlReport.prototype = {
 			++_g;
 			this.addPackage(buf,result.getPackage(name),name,isOk);
 		}
-		buf.b += "</ul>\n";
+		buf.add("</ul>\n");
 	}
 	,addPackage: function(buf,result,name,isOk) {
 		if(utest_ui_common_ReportTools.skipResult(this,result.stats,isOk)) {
@@ -25395,9 +23042,10 @@ utest_ui_text_HtmlReport.prototype = {
 		if(name == "" && result.classNames().length == 0) {
 			return;
 		}
-		buf.b = (buf.b += "<li>") + Std.string("<h2>" + name + "</h2>");
+		buf.add("<li>");
+		buf.add("<h2>" + name + "</h2>");
 		this.blockNumbers(buf,result.stats);
-		buf.b += "<ul>\n";
+		buf.add("<ul>\n");
 		var _g = 0;
 		var _g1 = result.classNames();
 		while(_g < _g1.length) {
@@ -25405,7 +23053,8 @@ utest_ui_text_HtmlReport.prototype = {
 			++_g;
 			this.addClass(buf,result.getClass(cname),cname,isOk);
 		}
-		buf.b = (buf.b += "</ul>\n") + "</li>\n";
+		buf.add("</ul>\n");
+		buf.add("</li>\n");
 	}
 	,getTextResults: function() {
 		var newline = "\n";
@@ -25435,7 +23084,7 @@ utest_ui_text_HtmlReport.prototype = {
 			}
 			return r.join(newline);
 		};
-		var buf_b = "";
+		var buf = new StringBuf();
 		var _g = 0;
 		var _g1 = this.result.packageNames();
 		while(_g < _g1.length) {
@@ -25454,7 +23103,7 @@ utest_ui_text_HtmlReport.prototype = {
 				if(utest_ui_common_ReportTools.skipResult(this,cls.stats,this.result.stats.isOk)) {
 					continue;
 				}
-				buf_b += Std.string((pname == "" ? "" : pname + ".") + cname + newline);
+				buf.add((pname == "" ? "" : pname + ".") + cname + newline);
 				var _g4 = 0;
 				var _g5 = cls.methodNames();
 				while(_g4 < _g5.length) {
@@ -25464,75 +23113,74 @@ utest_ui_text_HtmlReport.prototype = {
 					if(utest_ui_common_ReportTools.skipResult(this,fix.stats,this.result.stats.isOk)) {
 						continue;
 					}
-					buf_b += Std.string(indents(1) + mname + ": ");
+					buf.add(indents(1) + mname + ": ");
 					if(fix.stats.isOk) {
-						buf_b += "OK ";
+						buf.add("OK ");
 					} else if(fix.stats.hasErrors) {
-						buf_b += "ERROR ";
+						buf.add("ERROR ");
 					} else if(fix.stats.hasFailures) {
-						buf_b += "FAILURE ";
+						buf.add("FAILURE ");
 					} else if(fix.stats.hasWarnings) {
-						buf_b += "WARNING ";
+						buf.add("WARNING ");
 					}
 					var messages = "";
 					var _g6 = fix.iterator();
-					while(_g6.head != null) {
-						var val = _g6.head.item;
-						_g6.head = _g6.head.next;
-						switch(val._hx_index) {
+					while(_g6.hasNext()) {
+						var assertation = _g6.next();
+						switch(assertation._hx_index) {
 						case 0:
-							buf_b += ".";
+							buf.add(".");
 							break;
 						case 1:
-							buf_b += "F";
-							messages += indents(2) + "line: " + val.pos.lineNumber + ", " + val.msg + newline;
+							buf.add("F");
+							messages += indents(2) + "line: " + assertation.pos.lineNumber + ", " + assertation.msg + newline;
 							break;
 						case 2:
-							buf_b += "E";
-							messages += indents(2) + Std.string(val.e) + dumpStack(val.stack) + newline;
+							buf.add("E");
+							messages += indents(2) + Std.string(assertation.e) + dumpStack(assertation.stack) + newline;
 							break;
 						case 3:
-							buf_b += "S";
-							messages += indents(2) + Std.string(val.e) + dumpStack(val.stack) + newline;
+							buf.add("S");
+							messages += indents(2) + Std.string(assertation.e) + dumpStack(assertation.stack) + newline;
 							break;
 						case 4:
-							buf_b += "T";
-							messages += indents(2) + Std.string(val.e) + dumpStack(val.stack) + newline;
+							buf.add("T");
+							messages += indents(2) + Std.string(assertation.e) + dumpStack(assertation.stack) + newline;
 							break;
 						case 5:
-							buf_b += "O";
-							messages += indents(2) + "missed async calls: " + val.missedAsyncs + dumpStack(val.stack) + newline;
+							buf.add("O");
+							messages += indents(2) + "missed async calls: " + assertation.missedAsyncs + dumpStack(assertation.stack) + newline;
 							break;
 						case 6:
-							buf_b += "A";
-							messages += indents(2) + Std.string(val.e) + dumpStack(val.stack) + newline;
+							buf.add("A");
+							messages += indents(2) + Std.string(assertation.e) + dumpStack(assertation.stack) + newline;
 							break;
 						case 7:
-							buf_b += "W";
-							messages += indents(2) + val.msg + newline;
+							buf.add("W");
+							messages += indents(2) + assertation.msg + newline;
 							break;
 						case 8:
-							var _g7 = val.reason;
-							buf_b += "I";
+							var _g7 = assertation.reason;
+							buf.add("I");
 							if(_g7 != null && _g7 != "") {
 								messages += indents(2) + ("With reason: " + _g7) + newline;
 							}
 							break;
 						}
 					}
-					buf_b += newline == null ? "null" : "" + newline;
-					buf_b += messages == null ? "null" : "" + messages;
+					buf.add(newline);
+					buf.add(messages);
 				}
 			}
 		}
-		return buf_b;
+		return buf.toString();
 	}
 	,getHeader: function() {
 		var buf = new StringBuf();
 		if(!utest_ui_common_ReportTools.hasHeader(this,this.result.stats)) {
 			return "";
 		}
-		var time = ((HxOverrides.now() / 1000 - this.startTime) * 1000 | 0) / 1000;
+		var time = Std.int((haxe_Timer.stamp() - this.startTime) * 1000) / 1000;
 		var msg = "TEST OK";
 		if(this.result.stats.hasErrors) {
 			msg = "TEST ERRORS";
@@ -25541,45 +23189,44 @@ utest_ui_text_HtmlReport.prototype = {
 		} else if(this.result.stats.hasWarnings) {
 			msg = "WARNING REPORTED";
 		}
-		var x = "<h1 class=\"" + this.cls(this.result.stats) + "bg header\">" + msg + "</h1>\n";
-		buf.b += Std.string(x);
-		buf.b += "<div class=\"headerinfo\">";
+		buf.add("<h1 class=\"" + this.cls(this.result.stats) + "bg header\">" + msg + "</h1>\n");
+		buf.add("<div class=\"headerinfo\">");
 		this.resultNumbers(buf,this.result.stats);
-		buf.b += Std.string(" performed on <strong>" + utest_ui_text_HtmlReport.platform + "</strong>, executed in <strong> " + time + " sec. </strong></div >\n ");
-		return buf.b;
+		buf.add(" performed on <strong>" + utest_ui_text_HtmlReport.platform + "</strong>, executed in <strong> " + time + " sec. </strong></div >\n ");
+		return buf.toString();
 	}
 	,getTrace: function() {
-		var buf_b = "";
+		var buf = new StringBuf();
 		if(this._traces == null || this._traces.length == 0) {
 			return "";
 		}
-		buf_b = "<div class=\"trace\"><h2>traces</h2><ol>";
+		buf.add("<div class=\"trace\"><h2>traces</h2><ol>");
 		var _g = 0;
 		var _g1 = this._traces;
 		while(_g < _g1.length) {
 			var t = _g1[_g];
 			++_g;
-			buf_b += "<li><div class=\"li\">";
+			buf.add("<li><div class=\"li\">");
 			var stack = StringTools.replace(this.formatStack(t.stack,false),"'","\\'");
 			var method = "<span class=\"tracepackage\">" + t.infos.className + "</span><br/>" + t.infos.methodName + "(" + t.infos.lineNumber + ")";
-			buf_b += Std.string("<span class=\"tracepos\" onmouseover=\"utestTooltip(this.parentNode, '" + stack + "')\" onmouseout=\"utestRemoveTooltip()\">");
-			buf_b += method == null ? "null" : "" + method;
-			buf_b += "</span><span class=\"tracetime\">";
-			buf_b += Std.string("@ " + this.formatTime(t.time));
+			buf.add("<span class=\"tracepos\" onmouseover=\"utestTooltip(this.parentNode, '" + stack + "')\" onmouseout=\"utestRemoveTooltip()\">");
+			buf.add(method);
+			buf.add("</span><span class=\"tracetime\">");
+			buf.add("@ " + this.formatTime(t.time));
 			if(Math.round(t.delta * 1000) > 0) {
-				buf_b += Std.string(", ~" + this.formatTime(t.delta));
+				buf.add(", ~" + this.formatTime(t.delta));
 			}
-			buf_b += "</span><span class=\"tracemsg\">";
-			buf_b += Std.string(StringTools.replace(StringTools.trim(t.msg),"\n","<br/>\n"));
-			buf_b += "</span><div class=\"clr\"></div></div></li>";
+			buf.add("</span><span class=\"tracemsg\">");
+			buf.add(StringTools.replace(StringTools.trim(t.msg),"\n","<br/>\n"));
+			buf.add("</span><div class=\"clr\"></div></div></li>");
 		}
-		buf_b += "</ol></div>";
-		return buf_b;
+		buf.add("</ol></div>");
+		return buf.toString();
 	}
 	,getResults: function() {
 		var buf = new StringBuf();
 		this.addPackages(buf,this.result,this.result.stats.isOk);
-		return buf.b;
+		return buf.toString();
 	}
 	,getAll: function() {
 		if(!utest_ui_common_ReportTools.hasOutput(this,this.result.stats)) {
@@ -25702,7 +23349,7 @@ utest_ui_text_PlainTextReport.prototype = {
 		this.startTime = this.getTime();
 	}
 	,getTime: function() {
-		return HxOverrides.now() / 1000;
+		return haxe_Timer.stamp();
 	}
 	,indents: function(c) {
 		var s = "";
@@ -25730,16 +23377,16 @@ utest_ui_text_PlainTextReport.prototype = {
 		if(!utest_ui_common_ReportTools.hasHeader(this,result.stats)) {
 			return;
 		}
-		var time = ((this.getTime() - this.startTime) * 1000 | 0) / 1000;
-		buf.b += Std.string("\nassertations: " + result.stats.assertations + this.newline);
-		buf.b += Std.string("successes: " + result.stats.successes + this.newline);
-		buf.b += Std.string("errors: " + result.stats.errors + this.newline);
-		buf.b += Std.string("failures: " + result.stats.failures + this.newline);
-		buf.b += Std.string("warnings: " + result.stats.warnings + this.newline);
-		buf.b += Std.string("execution time: " + time + this.newline);
-		buf.b += Std.string(this.newline);
-		buf.b += Std.string("results: " + (result.stats.isOk ? "ALL TESTS OK (success: true)" : "SOME TESTS FAILURES (success: false)"));
-		buf.b += Std.string(this.newline);
+		var time = Std.int((this.getTime() - this.startTime) * 1000) / 1000;
+		buf.add("\nassertations: " + result.stats.assertations + this.newline);
+		buf.add("successes: " + result.stats.successes + this.newline);
+		buf.add("errors: " + result.stats.errors + this.newline);
+		buf.add("failures: " + result.stats.failures + this.newline);
+		buf.add("warnings: " + result.stats.warnings + this.newline);
+		buf.add("execution time: " + time + this.newline);
+		buf.add(this.newline);
+		buf.add("results: " + (result.stats.isOk ? "ALL TESTS OK (success: true)" : "SOME TESTS FAILURES (success: false)"));
+		buf.add(this.newline);
 	}
 	,result: null
 	,getResults: function() {
@@ -25763,7 +23410,7 @@ utest_ui_text_PlainTextReport.prototype = {
 				if(utest_ui_common_ReportTools.skipResult(this,cls.stats,this.result.stats.isOk)) {
 					continue;
 				}
-				buf.b += Std.string((pname == "" ? "" : pname + ".") + cname + this.newline);
+				buf.add((pname == "" ? "" : pname + ".") + cname + this.newline);
 				var _g4 = 0;
 				var _g5 = cls.methodNames();
 				while(_g4 < _g5.length) {
@@ -25773,68 +23420,67 @@ utest_ui_text_PlainTextReport.prototype = {
 					if(utest_ui_common_ReportTools.skipResult(this,fix.stats,this.result.stats.isOk)) {
 						continue;
 					}
-					var x = this.indents(1) + mname + ": ";
-					buf.b += Std.string(x);
+					buf.add(this.indents(1) + mname + ": ");
 					if(fix.stats.isOk) {
-						buf.b += "OK ";
+						buf.add("OK ");
 					} else if(fix.stats.hasErrors) {
-						buf.b += "ERROR ";
+						buf.add("ERROR ");
 					} else if(fix.stats.hasFailures) {
-						buf.b += "FAILURE ";
+						buf.add("FAILURE ");
 					} else if(fix.stats.hasWarnings) {
-						buf.b += "WARNING ";
+						buf.add("WARNING ");
 					}
 					var messages = "";
 					var _g6 = fix.iterator();
-					while(_g6.head != null) {
-						var val = _g6.head.item;
-						_g6.head = _g6.head.next;
-						switch(val._hx_index) {
+					while(_g6.hasNext()) {
+						var assertation = _g6.next();
+						switch(assertation._hx_index) {
 						case 0:
-							buf.b += ".";
+							buf.add(".");
 							break;
 						case 1:
-							buf.b += "F";
-							messages += this.indents(2) + "line: " + val.pos.lineNumber + ", " + val.msg + this.newline;
+							buf.add("F");
+							messages += this.indents(2) + "line: " + assertation.pos.lineNumber + ", " + assertation.msg + this.newline;
 							break;
 						case 2:
-							buf.b += "E";
-							messages += this.indents(2) + Std.string(val.e) + this.dumpStack(val.stack) + this.newline;
+							buf.add("E");
+							messages += this.indents(2) + Std.string(assertation.e) + this.dumpStack(assertation.stack) + this.newline;
 							break;
 						case 3:
-							buf.b += "S";
-							messages += this.indents(2) + Std.string(val.e) + this.dumpStack(val.stack) + this.newline;
+							buf.add("S");
+							messages += this.indents(2) + Std.string(assertation.e) + this.dumpStack(assertation.stack) + this.newline;
 							break;
 						case 4:
-							buf.b += "T";
-							messages += this.indents(2) + Std.string(val.e) + this.dumpStack(val.stack) + this.newline;
+							buf.add("T");
+							messages += this.indents(2) + Std.string(assertation.e) + this.dumpStack(assertation.stack) + this.newline;
 							break;
 						case 5:
-							buf.b += "O";
-							messages += this.indents(2) + "missed async calls: " + val.missedAsyncs + this.dumpStack(val.stack) + this.newline;
+							buf.add("O");
+							messages += this.indents(2) + "missed async calls: " + assertation.missedAsyncs + this.dumpStack(assertation.stack) + this.newline;
 							break;
 						case 6:
-							buf.b += "A";
-							messages += this.indents(2) + Std.string(val.e) + this.dumpStack(val.stack) + this.newline;
+							buf.add("A");
+							messages += this.indents(2) + Std.string(assertation.e) + this.dumpStack(assertation.stack) + this.newline;
 							break;
 						case 7:
-							buf.b += "W";
-							messages += this.indents(2) + val.msg + this.newline;
+							buf.add("W");
+							messages += this.indents(2) + assertation.msg + this.newline;
 							break;
 						case 8:
-							var _g7 = val.reason;
-							buf.b += "I";
+							var _g7 = assertation.reason;
+							buf.add("I");
 							if(_g7 != null && _g7 != "") {
 								messages += this.indents(2) + ("With reason: " + _g7) + this.newline;
 							}
 							break;
 						}
 					}
-					buf.b = (buf.b += Std.string(this.newline)) + (messages == null ? "null" : "" + messages);
+					buf.add(this.newline);
+					buf.add(messages);
 				}
 			}
 		}
-		return buf.b;
+		return buf.toString();
 	}
 	,complete: function(result) {
 		this.result = result;
@@ -25912,7 +23558,7 @@ utest_utils_AsyncUtils.orResolved = function(_async) {
 var utest_utils_Misc = function() { };
 utest_utils_Misc.__name__ = "utest.utils.Misc";
 utest_utils_Misc.isOfType = function(v,t) {
-	return js_Boot.__instanceof(v,t);
+	return Std.isOfType(v,t);
 };
 var utest_utils_Print = function() { };
 utest_utils_Print.__name__ = "utest.utils.Print";
@@ -25924,6 +23570,7 @@ utest_utils_Print.startCase = function(caseName) {
 utest_utils_Print.startTest = function(name) {
 };
 function $iterator(o) { if( o instanceof Array ) return function() { return new haxe_iterators_ArrayIterator(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; }
+function $keyValueIterator(o) { if( o instanceof Array ) return function() { return HxOverrides.keyValueIter(o); }; return typeof(o.keyValueIterator) == 'function' ? $bind(o,o.keyValueIterator) : o.keyValueIterator; }
 function $getIterator(o) { if( o instanceof Array ) return new haxe_iterators_ArrayIterator(o); else return o.iterator(); }
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $global.$haxeUID++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = m.bind(o); o.hx__closures__[m.__id__] = f; } return f; }
 $global.$haxeUID |= 0;
@@ -25946,8 +23593,7 @@ haxe_Resource.content = [];
 haxe_ds_ObjectMap.count = 0;
 js_Boot.__toStr = ({ }).toString;
 var facade = stx_log_Facade.unit();
-var this1 = stx_log_Signal.get_instance();
-this1.attach(stx_log_Facade.toLoggerApi(facade));
+stx_log_Signal._new().attach(stx_log_Facade.toLoggerApi(facade));
 stx_log_Signal.is_custom = false;
 haxe_EntryPoint.pending = [];
 haxe_EntryPoint.threadCount = 0;
@@ -25963,15 +23609,15 @@ hre_RegExpMatcher.whiteSpaces = [9,11,12,32,160,65279];
 hre_RegExpMatcher.separators = hre_RegExpMatcher.lineTerminators.concat(hre_RegExpMatcher.whiteSpaces);
 stx_log_Logic._ = stx_log_LogicLift;
 stx_log_Facade.ZERO = stx_log_Facade.unit();
-stx_log_Signal.ZERO = stx_log_Signal.get_instance();
+stx_log_Signal.ZERO = stx_log_Signal._new();
 stx_log_Signal.is_custom = false;
 stx_log_LogPosition.id = "306cccf1-89a7-44a4-b99a-7c69772a528d";
 stx_Log._ = stx_LogLift;
 stx_Log.ZERO = stx_Log.LOG;
 stx_Test.pokey = "poke";
 stx_arw_Arrange._ = stx_arw_ArrangeLift;
-stx_arw_arrowlet_ArrowletLift.__meta__ = { statics : { then : { doc : ["left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`."]}, first : { doc : ["Takes an Arrowlet<A,B>, and produces one taking a Couple that runs the Arrowlet on the left-hand side, leaving the right-handside liftuched."]}, second : { doc : ["Takes an Arrowlet<A,B>, and produces one taking a Couple that runs the Arrowlet on the right-hand side, leaving the left-hand side liftuched."]}, split : { doc : ["Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with the same input."]}, both : { doc : ["Takes two Arrowlets and produces on that runs them in parallel, waiting for both responses before output."]}, swap : { doc : ["Changes <B,C> to <C,B> on the output of an Arrowlet"]}, fan : { doc : ["Produces a Couple output of any Arrowlet."]}, joint : { doc : ["Runs the first Arrowlet, then the second, preserving the output of the first on the left-hand side."]}, bound : { doc : ["Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet."]}, or : { doc : ["Produces an Arrowlet that will run `or_` if the input is Left(in), or '_or' if the input is Right(in);"]}, left : { doc : ["Produces an Arrowlet that will run only if the input is Left."]}, right : { doc : ["Produces an Arrowlet that will run only if the input is Right."]}}};
-stx_arw_Arrowlet._ = stx_arw_arrowlet_ArrowletLift;
+stx_arw_arrowlet_Lift.__meta__ = { statics : { then : { doc : ["left to right composition of Arrowlets. Produces an Arrowlet running `before` and placing it's value in `after`."]}, first : { doc : ["Takes an ArrowletDef<A,B>, and produces one taking a Couple that runs the Arrowlet on the left-hand side, leaving the right-handside liftuched."]}, second : { doc : ["Takes an ArrowletDef<A,B>, and produces one taking a Couple that runs the Arrowlet on the right-hand side, leaving the left-hand side liftuched."]}, split : { doc : ["Takes two Arrowlets with the same input type, and produces one which applies each Arrowlet with the same input."]}, both : { doc : ["Takes two Arrowlets and produces on that runs them in parallel, waiting for both responses before output."]}, swap : { doc : ["Changes <B,C> to <C,B> on the output of an Arrowlet"]}, fan : { doc : ["Produces a Couple output of any Arrowlet."]}, joint : { doc : ["Runs the first Arrowlet, then the second, preserving the output of the first on the left-hand side."]}, bound : { doc : ["Runs the first Arrowlet and places the input of that Arrowlet and the output in the second Arrowlet."]}, or : { doc : ["Produces an Arrowlet that will run `or_` if the input is Left(in), or '_or' if the input is Right(in);"]}, left : { doc : ["Produces an Arrowlet that will run only if the input is Left."]}, right : { doc : ["Produces an Arrowlet that will run only if the input is Right."]}}};
+stx_arw_Arrowlet._ = stx_arw_arrowlet_Lift;
 stx_arw_Attempt._ = stx_arw_AttemptLift;
 stx_arw_Cascade._ = stx_arw_CascadeLift;
 stx_arw_Command._ = stx_arw_CommandLift;
@@ -25994,16 +23640,14 @@ stx_assert_Equaled.NotEqual = false;
 stx_assert_OrderedSum.LessThan = true;
 stx_assert_OrderedSum.NotLessThan = false;
 stx_assert_Predicate._ = stx_assert_PredicateLift;
+stx_async_Counter.val = 0;
 stx_async_LogicalClock.lifetime = 0;
 stx_async_LogicalClock.counter = 0;
 stx_async_Loop.ZERO = stx_async_Loop.Event();
 stx_async_Task.counter = 0;
 stx_async_Task._ = stx_async_TaskLift;
-stx_log_Stamp.ZERO = new stx_log_Stamp();
-stx_nano_Position.ZERO = stx_nano_Position.make(null,null,null,null);
-stx_nano_Position._ = stx_nano_PositionLift;
-stx_async_Terminal.ZERO = stx_async_Terminal._new();
-stx_async_Work.ZERO = new stx_async_work_term_Unit();
+stx_async_Work.ZERO = stx_async_Work.Unit();
+stx_async_Terminal.ZERO = stx_async_Terminal._new(null,{ fileName : "stx/async/Terminal.hx", lineNumber : 11, className : "stx.async._Terminal.Terminal_Impl_", methodName : "ZERO"});
 stx_ext_CharsLift.__meta__ = { statics : { underscore : { thx : null}}};
 stx_ext_Chars._ = stx_ext_CharsLift;
 stx_ext_Chunk._ = stx_ext_ChunkLift;
@@ -26020,6 +23664,7 @@ stx_fn_Block.ZERO = function() {
 };
 stx_fn_Block._ = stx_fn_BlockLift;
 stx_fn_Dual._ = stx_fn_DualLift;
+stx_fn_Sink._ = stx_fn_SinkLift;
 stx_fn_Ternary._ = stx_fn_TernaryLift;
 stx_fn__$Thunk_Constructor.ZERO = new stx_fn__$Thunk_Constructor();
 stx_fn_Destructure.__meta__ = { fields : { cache : { params : ["The Thunk to call once"], returns : ["A Thunk which will call the input Thunk once."]}}};
@@ -26027,6 +23672,7 @@ stx_fn_Unary._ = stx_fn_UnaryLift;
 stx_fp_Continuation._ = stx_fp_ContinuationLift;
 stx_fp_LazyStream.ZERO = stx_fp_LazyStream.unit();
 stx_fp_StateLift.__meta__ = { statics : { exec : { doc : ["Run `State` with `s`, dropping the result and returning `s`."]}, 'eval' : { doc : ["Run `State` with `s`, returning the result."]}}};
+stx_log_Stamp.ZERO = new stx_log_Stamp();
 stx_nano_Couple._ = stx_nano_CoupleLift;
 stx_nano_FailCode.E_ResourceNotFound = "E_ResourceNotFound";
 stx_nano_FailCode.E_IteratorExhaustedUnexpectedly = "E_IteratorExhaustedUnexpectedly";
@@ -26038,6 +23684,8 @@ stx_nano_FailCode.E_IndexOutOfBounds = "E_IndexOutOfBounds";
 stx_nano_FailCode.E_UndefinedError = "E_UndefinedError";
 stx_nano_Failure._ = stx_nano_FailureLift;
 stx_nano_Iter._ = stx_nano_IterLift;
+stx_nano_Position.ZERO = stx_nano_Position.make(null,null,null,null);
+stx_nano_Position._ = stx_nano_PositionLift;
 stx_nano_Res._ = stx_nano_ResLift;
 stx_nano_Slot._ = stx_nano_SlotLift;
 stx_nano_Triple._ = stx_nano_TripleLift;
@@ -26048,17 +23696,17 @@ tink_core_Callback.depth = 0;
 tink_core_Callback.MAX_DEPTH = 500;
 tink_core_AlreadyDisposed.INST = new tink_core_AlreadyDisposed();
 tink_core__$Future_NeverFuture.inst = new tink_core__$Future_NeverFuture();
-tink_core_Future.NOISE = new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(null));
+tink_core_Lazy.NOISE = tink_core_Lazy.ofConst(null);
+tink_core_Lazy.NULL = tink_core_Lazy.NOISE;
+tink_core_Future.NOISE = tink_core_Future.sync(null);
 tink_core_Future.NULL = tink_core_Future.NOISE;
 tink_core_Future.NEVER = tink_core__$Future_NeverFuture.inst;
-tink_core_Lazy.NOISE = new tink_core__$Lazy_LazyConst(null);
-tink_core_Lazy.NULL = tink_core_Lazy.NOISE;
 tink_core_Noise.Noise = null;
-tink_core_ProgressValue.ZERO = new tink_core_MPair(0,haxe_ds_Option.None);
+tink_core_ProgressValue.ZERO = tink_core_ProgressValue._new(0,haxe_ds_Option.None);
 tink_core_Progress.INIT = tink_core_ProgressValue.ZERO;
-tink_core_Promise.NOISE = new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(null)));
+tink_core_Promise.NOISE = tink_core_Future.sync(tink_core_Outcome.Success(null));
 tink_core_Promise.NULL = tink_core_Promise.NOISE;
-tink_core_Promise.NEVER = tink_core_Future.map(tink_core_Future.NEVER,tink_core_Outcome.Success);
+tink_core_Promise.NEVER = tink_core_Promise.ofFuture(tink_core_Future.NEVER);
 tink_core__$Signal_Disposed.INST = new tink_core__$Signal_Disposed();
 utest_TestHandler.POLLING_TIME = 10;
 utest_AccessoryName.SETUP_NAME = "setup";

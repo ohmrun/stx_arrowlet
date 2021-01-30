@@ -6,7 +6,7 @@ class ArrowletCommand<P,E> extends ArrowletCls<P,Report<E>,Noise>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(p:P):Report<E>{
+  public function apply(p:P):Report<E>{
     return try{
       this.delegate.toInternal().apply(p);
       Report.unit();
@@ -14,7 +14,7 @@ class ArrowletCommand<P,E> extends ArrowletCls<P,Report<E>,Noise>{
       Report.pure(e);
     }
   }
-  override public function defer(p:P,cont:Terminal<Report<E>,Noise>):Work{
+  public function defer(p:P,cont:Terminal<Report<E>,Noise>):Work{
     return this.delegate.toInternal().defer(
       p,
       cont.joint(joint.bind(_,cont))

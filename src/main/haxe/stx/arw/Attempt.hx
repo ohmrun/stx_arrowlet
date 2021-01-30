@@ -2,6 +2,7 @@ package stx.arw;
         
 typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
 
+@:using(stx.arw.arrowlet.Lift)
 @:using(stx.arw.Attempt.AttemptLift)
 @:forward abstract Attempt<I,O,E>(AttemptDef<I,O,E>) from AttemptDef<I,O,E> to AttemptDef<I,O,E>{
   static public var _(default,never) = AttemptLift;
@@ -62,7 +63,7 @@ typedef AttemptDef<I,O,E>               = ArrowletDef<I,Res<O,E>,Noise>;
       Arrowlet.Anon((i,cont) -> cont.value(__.accept(fn(i))).serve())
     );
   }
-  @:to public inline function toArrowlet():ArrowletDef<I,Res<O,E>,Noise>{
+  @:to public inline function toArrowlet():Arrowlet<I,Res<O,E>,Noise>{
     return this;
   }
   public function toCascade():Cascade<I,O,E>{

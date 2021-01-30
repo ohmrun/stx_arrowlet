@@ -1,8 +1,8 @@
 package stx.arw;
 
-abstract class ArrowletCls<P,O,E> implements ArrowletApi<P,O,E> extends TaskCls<O,E>{
-	public function new(){
-    super();
+abstract class ArrowletCls<P,O,E> implements ArrowletApi<P,O,E> extends stx.arw.Task<O,E>{
+	public function new(?pos:Pos){
+    super(pos);
   }
   abstract public function apply(p:P):O;
   abstract public function defer(p:P,cont:Terminal<O,E>):Work;
@@ -18,7 +18,6 @@ abstract class ArrowletCls<P,O,E> implements ArrowletApi<P,O,E> extends TaskCls<
     return std.Type.getClassName(__.definition(this)).split(".").last().defv('');
   }
   override public function pursue(){
-    this.status = Secured;
+    this.set_status(Secured);
   }
-  
 }

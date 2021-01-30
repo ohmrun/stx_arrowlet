@@ -7,7 +7,7 @@ class CommandCascade<T,E> extends ArrowletCls<Res<T,E>,Res<T,E>,Noise>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(p:Res<T,E>):Res<T,E>{
+  public function apply(p:Res<T,E>):Res<T,E>{
     return p.fold(
       (ok) -> Arrowlet.lift(delegate).toInternal().apply(ok).fold(
         er -> __.reject(er),
@@ -16,7 +16,7 @@ class CommandCascade<T,E> extends ArrowletCls<Res<T,E>,Res<T,E>,Noise>{
       (no) -> __.reject(no)
     );
   }
-  override public function defer(p:Res<T,E>,cont:Terminal<Res<T,E>,Noise>):Work{
+  public function defer(p:Res<T,E>,cont:Terminal<Res<T,E>,Noise>):Work{
     return p.fold(
       ok -> Arrowlet.lift(delegate).toInternal().defer(
         ok,

@@ -16,9 +16,9 @@ class Test{
   public function new(){}
   static public function main(){
     var f = Facade.unit();
-        f.includes.push("stx.async");
-        f.includes.push("stx.async.Loop");
-        f.includes.push("stx.async.loop.term.Thread");
+        //f.includes.push("stx.async");
+        //f.includes.push("stx.async.Loop");
+        //f.includes.push("stx.async.loop.term.Thread");
         f.includes.push("stx.arw.test");
         f.includes.push("stx.arw");
         f.includes.push(stx.async.Terminal.identifier());

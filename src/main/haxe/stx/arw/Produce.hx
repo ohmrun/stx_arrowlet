@@ -2,8 +2,8 @@ package stx.arw;
 
 typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
+@:using(stx.arw.arrowlet.Lift)
 @:using(stx.arw.Produce.ProduceLift)
-@:using(stx.arw.arrowlet.ArrowletLift)
 @:forward(then) abstract Produce<O,E>(ProduceDef<O,E>) from ProduceDef<O,E> to ProduceDef<O,E>{
   static public var _(default,never) = ProduceLift;
 
@@ -11,34 +11,45 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
 
   @:noUsing static public inline function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return new Produce(self);
 
+  @:noUsing static public function Sync<O,E>(result:Res<O,E>):Produce<O,E>{
+    return new stx.arw.produce.term.Sync(result);
+  }
+  @:noUsing static public function Thunk<O,E>(result:Thunk<Res<O,E>>):Produce<O,E>{
+    return new stx.arw.produce.term.Thunk(result);
+  }
   @:from @:noUsing static public function fromFunXProduce<O,E>(self:Void->Produce<O,E>):Produce<O,E>{
     return lift(Arrowlet.Anon(
       (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> self().prepare(cont)
     ));
   }
   @:noUsing static public function fromErr<O,E>(e:Err<E>):Produce<O,E>{
-    return lift(Arrowlet.pure(__.reject(e)));
+    return Sync(__.reject(e));
   }
   @:noUsing static public function pure<O,E>(v:O):Produce<O,E>{
-    return lift(Arrowlet.fromFun1R((_:Noise) -> __.accept(v)));
+    return Sync(__.accept(v));
   }
   @:from @:noUsing static public function fromRes<O,E>(res:Res<O,E>):Produce<O,E>{
-    return lift(Arrowlet.fromFun1R((_:Noise) -> res));
+    return Sync(res);
   }
   @:from @:noUsing static public function fromFunXRes<O,E>(fn:Void->Res<O,E>):Produce<O,E>{
-    return lift(Arrowlet.fromFun1R((_:Noise) -> fn()));
+    return Thunk(fn);
   }
-  #if stx_ext
+  
   @:from @:noUsing static public function fromPledge<O,E>(pl:Pledge<O,E>):Produce<O,E>{
     return lift(
       Arrowlet.Anon(      
         (_:Noise,cont:Terminal<Res<O,E>,Noise>) -> {
-          return cont.later(pl.map(Success)).serve();
+          return cont.later(
+            pl.fold(
+              (x) -> __.success(__.accept(x)),
+              (e) -> __.success(__.reject(Defect.fromErr(e)))
+            )
+          ).serve();
         }
       )
     );
   }
-  #end
+  
   @:noUsing static public function fromFunXR<O,E>(fn:Void->O):Produce<O,E>{
     return lift(
       Arrowlet.fromFun1R(
@@ -83,11 +94,20 @@ typedef ProduceDef<O,E> = ArrowletDef<Noise,Res<O,E>,Noise>;
     return this;
   }
   @:to public function toPropose():Propose<O,E>{
-    return Propose.lift(this.then((res:Res<O,E>) -> res.fold(Val,End)));
+    return Propose.lift(Arrowlet._.then(this,((res:Res<O,E>) -> res.fold(Val,End))));
   }
   private var self(get,never):Produce<O,E>;
   private function get_self():Produce<O,E> return this;
 
+  public inline function prepare(cont){
+    return Arrowlet._.prepare(this,Noise,cont);
+  }
+  public inline function fudge<O,E>(){
+    return _.fudge(this);
+  }
+  public function flat_map<Oi>(fn:O->Produce<Oi,E>):Produce<Oi,E>{
+    return _.flat_map(this,fn);
+  }
 }
 class ProduceLift{
   @:noUsing static private function lift<O,E>(self:ProduceDef<O,E>):Produce<O,E> return Produce.lift(self);
@@ -221,7 +241,7 @@ class ProduceLift{
   static public inline function fudge<O,E>(self:Produce<O,E>):O{
     return Arrowlet._.fudge(self,Noise).fudge();
   }
-  static public function flat_map<O,Oi,E>(self:Produce<O,E>,that:O->Produce<Oi,E>):Produce<Oi,E>{
+  static public function flat_map<O,Oi,E>(self:ProduceDef<O,E>,that:O->Produce<Oi,E>):Produce<Oi,E>{
     return lift(
       Arrowlet.FlatMap(
         self,
@@ -237,5 +257,8 @@ class ProduceLift{
       self,
       that
     ));
+  }
+  static public inline function contextualize<O,E>(self:Produce<O,E>,?success:Res<O,E>->Void,?failure:Defect<Noise>->Void):Fiber{
+    return Contextualize.make(Noise,success,failure).load(self.toArrowlet().asArrowletDef());
   }
 }

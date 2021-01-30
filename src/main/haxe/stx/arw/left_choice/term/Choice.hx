@@ -6,10 +6,10 @@ class Choice<I,O,E> extends ArrowletCls<Either<I,I>,Either<O,I>,E>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(i:Either<I,I>):Either<O,I>{
+  public function apply(i:Either<I,I>):Either<O,I>{
     return throw E_Arw_IncorrectCallingConvention;
   }
-	override public function defer(either:Either<I,I>,cont:Terminal<Either<O,I>,E>):Work{
+	public function defer(either:Either<I,I>,cont:Terminal<Either<O,I>,E>):Work{
     return switch(either){
       case Left(i)      : Arrowlet.Applier().prepare(__.couple(delegate,i),cont);
       case Right(oii)   : 

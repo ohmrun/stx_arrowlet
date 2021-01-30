@@ -1,6 +1,8 @@
 package stx.arw;
 
+
 typedef ArrangeDef<I,S,O,E>             = CascadeDef<Couple<I,S>,O,E>;
+@:using(stx.arw.arrowlet.Lift)
 @:using(stx.arw.Arrange.ArrangeLift)
 @:forward abstract Arrange<I,S,O,E>(ArrangeDef<I,S,O,E>) from ArrangeDef<I,S,O,E> to ArrangeDef<I,S,O,E>{
   static public var _(default,never) = ArrangeLift;

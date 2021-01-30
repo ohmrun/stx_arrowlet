@@ -7,9 +7,6 @@ class Arw{
   @:noUsing static public function Fun<I,O,E>(fn:I->O):Arrowlet<I,O,E>{
     return Arrowlet.Sync(fn);
   }
-  static public function name<I,O,E>(arw:ArrowletDef<I,O,E>):String{
-    return __.definition(arw).identifier().name();
-  }
   // static public inline function after<I,O,E>(self:stx.async.Terminal.Receiver<O,E>,arrowlet:Arrowlet<I,O,E>,i:I,cont:Terminal<O,E>):Work{
   //   return Arrowlet._.prepare(arrowlet,i,cont).seq(lift(self).serve());
   // }
@@ -19,7 +16,6 @@ typedef ArrowletDef<I,O,E>                      = stx.arw.ArrowletDef<I,O,E>;
 typedef ArrowletApi<I,O,E>                      = stx.arw.ArrowletApi<I,O,E>;
 typedef ArrowletCls<I,O,E>                      = stx.arw.ArrowletCls<I,O,E>;
 typedef Arrowlet<I,O,E>                         = stx.arw.Arrowlet<I,O,E>;
-typedef ArrowletLift                            = stx.arw.arrowlet.ArrowletLift;
 
 typedef ApplierDef<I,O,E>                         = stx.arw.arrowlet.term.Applier.Applier<I,O,E>;
 typedef Applier<I,O,E>                            = stx.arw.arrowlet.term.Applier<I,O,E>;

@@ -18,12 +18,12 @@ class ApplierLift{
   
 }
 private class ApplierImplementation<I,O,E> extends ArrowletCls<Couple<Arrowlet<I,O,E>,I>,O,E>{
-  override public function defer(i:Couple<Arrowlet<I,O,E>,I>,cont:Terminal<O,E>):Work{
+  public function defer(i:Couple<Arrowlet<I,O,E>,I>,cont:Terminal<O,E>):Work{
     return i.decouple(
       (arw:Arrowlet<I,O,E>,i:I) -> arw.prepare(i,cont)
     );
   }
-  override public function apply(i:Couple<Arrowlet<I,O,E>,I>):O{
+  public function apply(i:Couple<Arrowlet<I,O,E>,I>):O{
     return i.fst().toInternal().convention.fold(
       () -> throw E_Arw_IncorrectCallingConvention,
       () -> i.fst().toInternal().apply(i.snd())

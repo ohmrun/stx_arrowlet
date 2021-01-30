@@ -13,11 +13,11 @@ class Pure<I,O,E> extends stx.async.task.term.Pure<O,E> implements ArrowletApi<I
     return this;
   }
   override public function toString(){
-    var defined = __.option(result).is_defined().if_else(
+    var defined = __.option(get_result()).is_defined().if_else(
       () -> '<defined>',
       () -> '<undefined>'
     );
-    return 'Pure($status ? $defined)';
+    return 'Pure(${get_status()} ? $defined)';
   }
   public var convention(get,default):Convention;
   public function get_convention():Convention{

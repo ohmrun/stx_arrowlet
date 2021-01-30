@@ -2,6 +2,7 @@ package stx.arw;
 
 typedef ProvideDef<O> = ConvertDef<Noise,O>;
 @:using(stx.arw.Provide.ProvideLift)
+@:using(stx.arw.arrowlet.Lift)
 abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   static public var _(default,never) = ProvideLift;
   public inline function new(self) this = self;
@@ -15,7 +16,7 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   //   );
   // }
   @:noUsing static public inline function pure<O>(v:O):Provide<O>{
-    return lift(Arrowlet.pure(v));
+    return lift(new stx.arw.provide.term.Sync(v));
   }
   @:noUsing static public inline function fromFuture<O>(future:Future<O>):Provide<O>{
     return lift(new stx.arw.provide.term.Later(future));
@@ -56,6 +57,10 @@ abstract Provide<O>(ProvideDef<O>) from ProvideDef<O> to ProvideDef<O>{
   public function prj():ProvideDef<O> return this;
   private var self(get,never):Provide<O>;
   private function get_self():Provide<O> return lift(this);
+
+  public inline function fudge(){
+    return _.fudge(this);
+  }
 }
 
 class ProvideLift{
@@ -89,20 +94,13 @@ class ProvideLift{
   static public inline function prepare<O>(self:ProvideDef<O>,cont:Terminal<O,Noise>):Work{
     return Arrowlet._.prepare(self,Noise,cont);
   }
-  static public inline function fudge<O>(self:Provide<O>):O{
-    var v = null;
-    self.environment(
-      (o) -> v = o
-    ).crunch();
-    return v;
-  }
   static public function toProduce<O,E>(self:ProvideDef<O>):Produce<O,E>{
     return Produce.lift(Arrowlet.Then(self,Arrowlet.Sync(__.accept)));
   }
   static public function attempt<O,Oi,E>(self:Provide<O>,that:Attempt<O,Oi,E>):Produce<Oi,E>{
     return toProduce(self).attempt(that);
   }
-  static public function postfix<O,Oi>(self:Provide<O>,fn:O->Oi):Provide<Oi>{
+  static public function postfix<O,Oi>(self:ProvideDef<O>,fn:O->Oi):Provide<Oi>{
     return Provide.lift(
       Arrowlet.Then(
         self,
@@ -110,4 +108,11 @@ class ProvideLift{
       )
     );
   }
+  static public inline function fudge<O>(self:Provide<O>):O{
+    return Arrowlet._.fudge(self,Noise);
+  }
+  static public inline function contextualize<O>(self:Provide<O>,?success:O->Void,?failure:Defect<Noise>->Void):Fiber{
+    return Contextualize.make(Noise,success,failure).load(self.toArrowlet().asArrowletDef());
+  }
+  
 }

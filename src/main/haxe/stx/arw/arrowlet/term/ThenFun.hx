@@ -12,10 +12,10 @@ class ThenFun<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public inline function apply(i:I):Oii{
+  public inline function apply(i:I):Oii{
     return this.rhs(this.lhs.apply(i));
   }
-  override public inline function defer(i:I,cont:Terminal<Oii,E>):Work{
+  public inline function defer(i:I,cont:Terminal<Oii,E>):Work{
     return lhs.defer(i,cont.joint(joint.bind(_,cont)));
   }
   private function joint(outcome:Outcome<Oi,Defect<E>>,cont:Terminal<Oii,E>){
@@ -25,7 +25,7 @@ class ThenFun<I,Oi,Oii,E> extends ArrowletCls<I,Oii,E>{
     return this.lhs.convention;
   }
   override public function toString(){
-    var n = this.name();
+    var n = this.identifier().name;
     return '$n($lhs -> $rhs)';
   }
 }

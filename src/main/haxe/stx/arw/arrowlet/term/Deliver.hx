@@ -1,23 +1,19 @@
 package stx.arw.arrowlet.term;
 
-class Deliver<I,O,E> implements ArrowletApi<I,Noise,Noise>{
+class Deliver<I,O,E> implements ArrowletApi<I,Noise,Noise> extends stx.arw.Task<Noise,Noise>{
   var success  : O -> Void;
   var failure  : Defect<E> -> Void;
   var arrow    : Internal<I,O,E>;
 
-  public inline function new(arrow,success:O->Void,failure:Defect<E> -> Void){
+  public function new(arrow,success:O->Void,failure:Defect<E> -> Void,?pos:Pos){
+    super(pos);
     this.arrow   = arrow;
     this.success = success;
     this.failure = failure;
   }
   inline public function apply(i:I):Noise{
-    return convention.fold(
-      () -> throw E_Arw_IncorrectCallingConvention,
-      () -> {
-        success(this.arrow.apply(i));
-        return Noise;
-      }
-    );
+    success(this.arrow.apply(i));
+    return Noise;
   }
   inline public function defer(i:I,cont:Terminal<Noise,Noise>):Work{
     //__.log().debug('environment: $arrow');
@@ -33,42 +29,24 @@ class Deliver<I,O,E> implements ArrowletApi<I,Noise,Noise>{
   }
   public function asArrowletDef():ArrowletDef<I,Noise,Noise> return null;
 
-  public var loaded(get,null):Bool;
-  public inline function get_loaded(){
-    return this.status == Secured;
-  }
-  public inline function toWork():Work return Work.lift(this);
-  public inline function toTaskApi():TaskApi<Noise,Noise> return this;
-
-  public var signal(get,null):tink.core.Signal<Noise>;
-  public inline function get_signal():tink.core.Signal<Noise>{
+  override public inline function get_signal():tink.core.Signal<Noise>{
     return this.arrow.signal;
   }
-  public var defect(get,null):Defect<Noise>;
-  public inline function get_defect():Defect<Noise>{
+  override public inline function get_defect():Defect<Noise>{
     return Defect.unit();
   }
-  public var result(get,null):Null<Noise>;
-  public inline function get_result():Null<Noise>{
+  override public inline function get_result():Null<Noise>{
     return Noise;
   }
-  public var status(get,null):GoalStatus;
-  public inline function get_status():GoalStatus{ return this.arrow.status; }
+  override public inline function get_status():GoalStatus{ return this.arrow.get_status(); }
 
-  public inline function pursue(){
+  override public inline function pursue(){
     this.arrow.toWork().pursue();
   }
-  public inline function escape(){
+  override public inline function escape(){
     this.arrow.toWork().escape();
   }
-  public function toString(){
+  override public function toString(){
     return 'Deliver($arrow)';
-  }
-  @:isVar public var id(get,null):Int;
-  public function get_id():Int{
-    return id == null ? id = Task.counter++ : id;
-  }
-  public function equals<Q:{id:Int}>(that:Q):Bool{
-    return this.id == that.id;
   }
 }

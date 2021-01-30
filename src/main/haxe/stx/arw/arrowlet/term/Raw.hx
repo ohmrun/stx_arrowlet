@@ -7,10 +7,10 @@ class Raw<I,O,E> extends ArrowletCls<I,O,E>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(i:I):O{
+  public function apply(i:I):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public inline function defer(i:I,cont:Terminal<O,E>):Work{
+  public inline function defer(i:I,cont:Terminal<O,E>):Work{
     //__.log().debug('defer');
     return cont.later(Future.irreversible(
       (cb) -> {

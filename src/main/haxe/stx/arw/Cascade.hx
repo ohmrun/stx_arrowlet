@@ -2,6 +2,7 @@ package stx.arw;
 
 typedef CascadeDef<I, O, E> = ArrowletDef<Res<I, E>, Res<O, E>, Noise>;
 
+@:using(stx.arw.arrowlet.Lift)
 @:using(stx.arw.Cascade.CascadeLift)
 @:forward abstract Cascade<I, O, E>(CascadeDef<I, O, E>) from CascadeDef<I, O, E> to CascadeDef<I, O, E> {
 	static public var _(default, never) = CascadeLift;
@@ -208,4 +209,5 @@ class CascadeLift {
       )
     );
   }
+	
 }

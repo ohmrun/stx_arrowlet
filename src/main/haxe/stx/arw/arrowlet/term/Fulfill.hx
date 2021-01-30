@@ -1,14 +1,11 @@
 package stx.arw.arrowlet.term;
 
-class Fulfill<I,O,E> implements ArrowletApi<Noise,O,E>{
-  @:isVar public var id(get,null):Int;
-  public function get_id():Int{
-    return id == null ? id = Task.counter++ : id;
-  }  
+class Fulfill<I,O,E> implements ArrowletApi<Noise,O,E> extends stx.arw.Task<O,E>{
   var input    : I;
   var arrow    : Internal<I,O,E>;
 
-  public function new(arrow:Internal<I,O,E>,input:I){
+  public function new(arrow:Internal<I,O,E>,input:I,?pos:Pos){
+    super(pos);
     this.arrow    = arrow;
     this.input    = input;
   }
@@ -24,38 +21,24 @@ class Fulfill<I,O,E> implements ArrowletApi<Noise,O,E>{
   }
   public function asArrowletDef():ArrowletDef<Noise,O,E> return null;
 
-  public var loaded(get,null):Bool;
-  public inline function get_loaded(){
-    return this.status == Secured;
+  override public function get_defect():Defect<E>{
+    return this.arrow.get_defect();
   }
-  public function toWork():Work return Work.lift(this);
-  public function toTaskApi():TaskApi<O,E> return this;
+  override public function get_result():Null<O>{
+    return this.arrow.get_result();
+  }
+  override public function get_status():GoalStatus{ return this.arrow.get_status(); }
 
-  public var defect(get,null):Defect<E>;
-  public function get_defect():Defect<E>{
-    return this.arrow.defect;
-  }
-  public var result(get,null):Null<O>;
-  public function get_result():Null<O>{
-    return this.arrow.result;
-  }
-  public var status(get,null):GoalStatus;
-  public function get_status():GoalStatus{ return this.arrow.status; }
-
-  public var signal(get,null):tink.core.Signal<Noise>;
-  public function get_signal():tink.core.Signal<Noise>{
+  override public function get_signal():tink.core.Signal<Noise>{
     return this.arrow.toWork().signal;
   }
-  public function pursue(){
+  override public function pursue(){
     this.arrow.toWork().pursue();
   }
-  public function escape(){
+  override public function escape(){
     this.arrow.toWork().escape();
   }
-  public function toString(){
+  override public function toString(){
     return 'FulFill($arrow($input))';
-  }
-  public function equals<Q:{id:Int}>(that:Q):Bool{
-    return this.id == that.id;
   }
 }

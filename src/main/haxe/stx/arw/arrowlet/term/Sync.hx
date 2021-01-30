@@ -4,16 +4,16 @@ class Sync<P,O,E> extends ArrowletCls<P,O,E>{
   var delegate : P -> O;
   public function new(delegate:P->O){
     super();
-    this.status     = Applied;
+    this.set_status(Applied);
     this.delegate   = delegate;
   }
-  override inline public function apply(p:P):O{
+  inline public function apply(p:P):O{
     return delegate(p);
   }
   override public inline function pursue():Void{
     super.pursue();
   }
-  override public inline function defer(p:P,cont:Terminal<O,E>):Work{
+  public inline function defer(p:P,cont:Terminal<O,E>):Work{
     return cont.value(apply(p)).serve();
   }
   override public function get_convention() return SYNC;

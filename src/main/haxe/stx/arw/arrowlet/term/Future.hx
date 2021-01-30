@@ -7,10 +7,10 @@ class Future<O,E> extends ArrowletCls<Noise,O,E>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(i:Noise):O{
+  public function apply(i:Noise):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public function defer(i:Noise,cont:Terminal<O,E>):Work{
+  public function defer(i:Noise,cont:Terminal<O,E>):Work{
     var outcome = delegate.map(Success);
     return cont.later(outcome).serve();
   }

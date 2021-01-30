@@ -10,10 +10,10 @@ class Delay<I,E> extends ArrowletCls<I,I,E>{
     super();
     this.milliseconds = milliseconds;
   }
-  override public function apply(i:I):I{
+  public function apply(i:I):I{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public function defer(i:I,cont:Terminal<I,E>):Work{
+  public function defer(i:I,cont:Terminal<I,E>):Work{
     var ft = TinkFuture.trigger();
     //trace('here:$milliseconds');
     Timer.delay(

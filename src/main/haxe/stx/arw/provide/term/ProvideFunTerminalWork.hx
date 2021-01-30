@@ -6,10 +6,10 @@ class ProvideFunTerminalWork<O> extends ArrowletCls<Noise,O,Noise>{
     super();
     this.delegate = delegate;
   }
-  override inline public function apply(p:Noise):O{
+  inline public function apply(p:Noise):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override inline public function defer(p:Noise,cont:Terminal<O,Noise>):Work{
+  inline public function defer(p:Noise,cont:Terminal<O,Noise>):Work{
     return delegate(cont);
   }
 }

@@ -15,11 +15,11 @@ class Thunk<O> extends ArrowletCls<Noise,O,Noise>{
       this.result = delegate();
     }
   }
-  override inline public function apply(p:Noise):O{
+  inline public function apply(p:Noise):O{
     initialize();
     return result;
   }
-  override inline public function defer(p:Noise,cont:Terminal<O,Noise>):Work{
+  inline public function defer(p:Noise,cont:Terminal<O,Noise>):Work{
     return cont.value(apply(p)).serve();
   }
   override public function get_convention(){

@@ -6,14 +6,14 @@ class Handler<O,E> extends ArrowletCls<Noise,O,E>{
     super();
     this.delegate = delegate;
   }
-  override public function apply(i:Noise):O{
+  public function apply(i:Noise):O{
     return throw E_Arw_IncorrectCallingConvention;
   }
-  override public function defer(i:Noise,cont:Terminal<O,E>):Work{
+  public function defer(i:Noise,cont:Terminal<O,E>):Work{
     var defer = Future.trigger();
     delegate(
       (o) -> defer.trigger(Success(o))
     );
-    return cont.later(defer).serve();
+    return cont.later(defer.asFuture()).serve();
   }
 }

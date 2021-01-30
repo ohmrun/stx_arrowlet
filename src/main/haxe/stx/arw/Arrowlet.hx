@@ -2,11 +2,11 @@ package stx.arw;
 
 import stx.arw.arrowlet.term.*;
 
-@:using(stx.arw.arrowlet.ArrowletLift)
-abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
+@:using(stx.arw.arrowlet.Lift)
+@:forward(asArrowletDef) abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to ArrowletDef<I,O,E>{
   
   private inline function new(self:ArrowletDef<I,O,E>) this  = self;
-  static public var _(default,never) = stx.arw.arrowlet.ArrowletLift;
+  static public var _(default,never) = stx.arw.arrowlet.Lift;
 
   @:noUsing static public inline function lift<I,O,E>(self:ArrowletDef<I,O,E>):Arrowlet<I,O,E>{
     return new Arrowlet(self);
@@ -73,9 +73,9 @@ abstract Arrowlet<I,O,E>(ArrowletDef<I,O,E>) from ArrowletDef<I,O,E> to Arrowlet
       (i:I,cont) -> fn(i,(o) -> cont(__.success(o)))
     ));
   }
- public inline function environment(i:I,success:O->Void,failure:Defect<E>->Void):Fiber{
-  return _.environment(this,i,success,failure);
- }
+  public inline function environment(i:I,success:O->Void,failure:Defect<E>->Void):Fiber{
+    return _.environment(this,i,success,failure);
+  }
   //@:from static public function fromFunXX
   //@:from static public function fromFun1X
   @:allow(stx) @:to private inline function toInternal():Internal<I,O,E>{

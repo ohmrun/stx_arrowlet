@@ -10,10 +10,10 @@ class SplitFun<P,Ri,Rii,E> extends ArrowletCls<P,Couple<Ri,Rii>,E>{
     this.lhs = lhs;
     this.rhs = rhs;
   }
-  override public function apply(p:P):Couple<Ri,Rii>{
+  public function apply(p:P):Couple<Ri,Rii>{
     return __.couple(lhs.apply(p),rhs(p));
   }
-  override public function defer(p:P,cont:Terminal<Couple<Ri,Rii>,E>):Work{
+  public function defer(p:P,cont:Terminal<Couple<Ri,Rii>,E>):Work{
     return lhs.defer(
       p,
       cont.joint(

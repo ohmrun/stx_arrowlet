@@ -9,7 +9,7 @@ class ContextualizeCls<P,R,E>{
     __.crack(e);
   }
   public dynamic function on_value(r:R):Void{
-    //__.log().debug(r);
+    __.log().debug((ctr) -> ctr.pure(r));
   }
 }
 @:forward abstract Contextualize<P,R,E>(ContextualizeCls<P,R,E>) from ContextualizeCls<P,R,E> to ContextualizeCls<P,R,E>{
