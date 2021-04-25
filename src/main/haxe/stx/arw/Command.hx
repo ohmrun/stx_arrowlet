@@ -22,7 +22,7 @@ typedef CommandDef<I,E>                 = ArrowletDef<I,Report<E>,Noise>;
     return lift(Arrowlet.fromFun1R((i) -> fn(i)));
   }
   static public function fromFun1Option<I,E>(fn:I->Option<Err<E>>):Command<I,E>{
-    return lift(Arrowlet.fromFun1R((i) -> new Report(fn(i))));
+    return lift(Arrowlet.fromFun1R((i) -> Report.fromOption(fn(i))));
   } 
   static public function fromArrowlet<I,E>(self:Arrowlet<I,Noise,E>):Command<I,E>{
     return lift(new stx.arw.command.term.ArrowletCommand(self));

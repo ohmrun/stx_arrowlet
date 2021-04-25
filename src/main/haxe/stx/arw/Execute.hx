@@ -48,7 +48,7 @@ abstract Execute<E>(ExecuteDef<E>) from ExecuteDef<E> to ExecuteDef<E>{
   private function get_self():Execute<E> return lift(this);
 
   @:noUsing static public function fromOption<E>(err:Option<Err<E>>):Execute<E>{
-    return fromFunXR(() -> new Report(err));
+    return fromFunXR(() -> Report.fromOption(err));
   }
   @:noUsing static public function fromErr<E>(err:Err<E>):Execute<E>{
     return fromFunXR(() -> Report.pure(err));
